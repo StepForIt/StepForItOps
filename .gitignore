@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.next/
+.next-*/
+.env
+*.pem
+*.key
+.claude/settings.local.json
+*.tsbuildinfo
+coverage/
+
+# Playwright : rapports, traces et captures des parcours en échec
+test-results/
+playwright-report/
+.DS_Store
+
+# Surcharges locales (Next : apps/web/.env.local)
+.env*.local
+
+# Graphe de connaissance local (graphify) : régénéré par `graphify update .`
+graphify-out/

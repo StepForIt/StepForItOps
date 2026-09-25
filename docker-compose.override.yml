@@ -1,0 +1,109 @@
+# Dev local uniquement — chargé automatiquement par `docker compose up` par-dessus
+# docker-compose.yml (la prod). Il publie les ports sur la machine et passe en
+# hot reload ; en prod, on déploie `docker compose -f docker-compose.yml`.
+#
+# Les variables requises par docker-compose.yml le restent ici : les valeurs de
+# dev sont dans .env.example.
+#
+# Hot reload : les images sont buildées au target `dev` (deps installées,
+# pas de build applicatif) et seuls les dossiers de sources sont montés en
+# bind mount (jamais node_modules, qui reste celui de l'image Linux).
+# - API : `nest start --watch` recompile à chaud (y compris packages/*).
+# - Web : `next dev` avec Fast Refresh.
+#
+# Rebuild nécessaire uniquement si package.json / pnpm-lock.yaml changent :
+#   docker compose up -d --build
+# Après modification de apps/api/prisma/schema.prisma, un simple restart
+# suffit (prisma generate + db push sont rejoués au boot) :
+#   docker compose restart api
+services:
+  postgres:
+    ports:
+      - '${POSTGRES_HOST_PORT:-5432}:5432'
+
+  # En dev, l'api au target `dev` applique le schéma par `db push` : le conteneur
+  # de migration ne tourne pas (`docker compose --profile migrate up migrate` pour
+  # le jouer à la main).
+  migrate:
+    profiles: ['migrate']
+
+  api:
+    build:
+      target: dev
+    ports:
+      - '${API_HOST_PORT:-3001}:3001'
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+    environment:
+      # API ouverte en local : le jeton exigé par docker-compose.yml est vidé.
+      API_ACCESS_TOKEN: ''
+      # Dev : les 500 renvoient la cause réelle (message + stack) dans le corps
+      # de la réponse, en plus d'être journalisées. Jamais posé en prod.
+      DEBUG_ERRORS: '1'
+      # L'export de config sort tous les secrets en clair en un seul GET : il
+      # n'est ouvert qu'ici, où le fichier ne quitte pas la machine. La prod
+      # (docker-compose.yml) ne pose pas cette variable — la route y répond 403.
+      CONFIG_EXPORT_ENABLED: '1'
+      # Si le watcher ne voit pas les changements (selon config Docker Desktop),
+      # décommenter pour forcer le polling :
+      # CHOKIDAR_USEPOLLING: "1"
+    volumes:
+      - ./apps/api/src:/repo/apps/api/src
+      - ./apps/api/prisma:/repo/apps/api/prisma
+      - ./apps/api/nest-cli.json:/repo/apps/api/nest-cli.json
+      - ./apps/api/tsconfig.json:/repo/apps/api/tsconfig.json
+      - ./apps/api/tsconfig.build.json:/repo/apps/api/tsconfig.build.json
+      - ./packages/core/src:/repo/packages/core/src
+      - ./packages/adapters/n8n-api/src:/repo/packages/adapters/n8n-api/src
+      - ./packages/adapters/make-api/src:/repo/packages/adapters/make-api/src
+      - ./packages/adapters/node-catalog/src:/repo/packages/adapters/node-catalog/src
+      - ./packages/adapters/model-pricing/src:/repo/packages/adapters/model-pricing/src
+      - ./packages/adapters/github/src:/repo/packages/adapters/github/src
+      - ./packages/adapters/gdrive/src:/repo/packages/adapters/gdrive/src
+      - ./packages/adapters/anthropic/src:/repo/packages/adapters/anthropic/src
+      - ./packages/adapters/mistral/src:/repo/packages/adapters/mistral/src
+      - ./packages/adapters/uptime-kuma/src:/repo/packages/adapters/uptime-kuma/src
+      - ./packages/adapters/notify/src:/repo/packages/adapters/notify/src
+      - ./packages/adapters/docs/src:/repo/packages/adapters/docs/src
+
+  web:
+    build:
+      target: dev
+    ports:
+      - '${WEB_HOST_PORT:-3000}:3000'
+    # `next dev` accumule de la mémoire à chaque recompilation (les pages qui
+    # tirent mermaid — /dep-graph, /workflow-map — pèsent ~12 000 modules) et ne
+    # se stabilise pas : sans borne il finissait par vider la VM Docker et se
+    # faisait tuer par l'OOM killer — `Exited (0)` + `OOMKilled: true`, 3005 muet
+    # et rien dans les logs applicatifs.
+    # On borne donc le conteneur, et on le laisse redémarrer seul quand il tape
+    # le plafond : ~5 s d'indisponibilité au lieu d'une plateforme morte.
+    restart: unless-stopped
+    environment:
+      # 3072 : la compilation dev de /dep-graph est le pic — en dessous, V8 meurt
+      # en « Reached heap limit ». S'applique à chaque process node du conteneur
+      # (les workers de next dev héritent de NODE_OPTIONS).
+      NODE_OPTIONS: --max-old-space-size=3072
+      # Dev local uniquement : sans auth configurée, la plateforme reste ouverte
+      # au lieu de forcer /setup. Jamais posé en prod — hors de ce mode, une
+      # installation vierge ne sert QUE la page /setup.
+      AUTH_OPTIONAL: '1'
+      API_ACCESS_TOKEN: ''
+      # Si Fast Refresh ne voit pas les changements, décommenter :
+      # WATCHPACK_POLLING: "true"
+    # ~900 Mo de natif (SWC/webpack) s'ajoutent au tas V8 : 3072 + natif ≈ 4 Go.
+    mem_limit: 4g
+    volumes:
+      - ./apps/web/src:/repo/apps/web/src
+      - ./apps/web/next.config.js:/repo/apps/web/next.config.js
+      # Remontée des erreurs : ces fichiers vivent à la racine du projet Next
+      # (imposé par Next et par le plugin Sentry), hors du src/ déjà monté.
+      - ./apps/web/instrumentation.ts:/repo/apps/web/instrumentation.ts
+      - ./apps/web/sentry.shared.ts:/repo/apps/web/sentry.shared.ts
+      - ./apps/web/sentry.client.config.ts:/repo/apps/web/sentry.client.config.ts
+      - ./apps/web/sentry.server.config.ts:/repo/apps/web/sentry.server.config.ts
+      - ./apps/web/sentry.edge.config.ts:/repo/apps/web/sentry.edge.config.ts
+      # Manifeste, icônes et service worker : montés comme les sources, sinon
+      # l'installation ne se teste qu'après un rebuild de l'image.
+      - ./apps/web/public:/repo/apps/web/public

@@ -1,0 +1,34 @@
+/*
+ * Colonne « Actions » des listes : boutons révélés au survol de la ligne pour épurer les tableaux.
+ * On joue sur l'opacité (et non `display`) pour ne pas faire sauter la largeur des colonnes.
+ */
+.row-actions .ant-btn {
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.ant-table-row:hover .row-actions .ant-btn,
+.row-actions .ant-btn:focus-visible,
+.row-actions .ant-btn-loading {
+  opacity: 1;
+}
+
+/* Écrans tactiles (pas de survol possible) et navigation clavier : toujours visibles. */
+@media (hover: none) {
+  .row-actions .ant-btn {
+    opacity: 1;
+  }
+}
+
+/*
+ * Le sider Refine pose sur mobile son propre bouton de menu, fixé à gauche par-dessus
+ * la page : il recouvrait le premier contrôle de chaque écran. C'est la barre du haut
+ * (`MobileTopBar`) qui ouvre le menu, en haut à droite.
+ */
+.app-sider {
+  display: contents;
+}
+
+.app-sider > .ant-btn {
+  display: none;
+}

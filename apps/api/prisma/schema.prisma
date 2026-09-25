@@ -1,0 +1,1246 @@
+generator client {
+  provider      = "prisma-client-js"
+  // native = dev local ; musl = images Docker alpine (arm64 = Mac, x64 = serveur)
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// L'environnement n'est PAS porté par l'instance : sur un même n8n cohabitent
+// "Workflow 1 - DEV" et "Workflow 1 - PROD". L'env d'un workflow est déduit de
+// ses tags (env:dev) ou de son nom (cf. packages/core/src/domain/workflow-env.ts).
+/// Client de l'agence : regroupe des instances n8n pour les vues agrégées
+/// (dashboard, coûts, temps gagné). Purement organisationnel — aucune isolation.
+model Client {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  instances Instance[]
+}
+
+model Instance {
+  id                  String                    @id @default(uuid())
+  name                String
+  baseUrl             String
+  apiKey              String
+  /// Plateforme servie par cette instance : `n8n` ou `make`. Le contenu d'un
+  /// `Workflow.raw` ne se lit qu'avec le code de SA plateforme (un blueprint Make
+  /// n'a ni `nodes` ni `connections`), et c'est cette colonne qui dit lequel —
+  /// jamais une heuristique sur le JSON.
+  platform            String                    @default("n8n")
+  /// Make seulement : la zone qui sert l'API (`eu1.make.com`, `us2.make.com`…).
+  /// Elle fait partie de l'identité du compte, pas seulement de son adresse.
+  zone                String?
+  /// Make seulement : l'organisation et la team dont on liste les scénarios.
+  /// n8n n'a pas d'équivalent — chez lui, une instance EST le périmètre.
+  externalOrgId       String?
+  externalTeamId      String?
+  /// Compte n8n (facultatif). La clé API n'ouvre que `/api/v1` ; la description
+  /// des types de nœuds est servie par `/types/*.json`, que n8n protège par le
+  /// cookie de session. Secret : jamais renvoyé à l'UI, qui n'en voit que l'email.
+  n8nEmail            String?
+  n8nPassword         String?
+  clientId            String?
+  client              Client?                   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                  @default(now())
+  workflows           Workflow[]
+  groups              WorkflowGroup[]
+  executionErrors     ExecutionError[]
+  errorGroups         ErrorGroup[]
+  executionStats      ExecutionStat[]
+  executionStatCursor ExecutionStatCursor?
+  llmUsages           LlmUsage[]
+  llmUsageCursor      LlmUsageCursor?
+  nodeTypes           InstanceNodeType[]
+  nodeTypeVersions    InstanceNodeTypeVersion[]
+}
+
+// Groupe fonctionnel de workflows : découverte de mappings agrégée, vue credentials,
+// et à terme duplication/synchronisation d'un env à l'autre.
+model WorkflowGroup {
+  id         String     @id @default(uuid())
+  instanceId String
+  instance   Instance   @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  name       String
+  workflows  Workflow[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([instanceId, name])
+}
+
+model Workflow {
+  id                       String                     @id @default(uuid())
+  instanceId               String
+  instance                 Instance                   @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  externalId               String
+  name                     String
+  active                   Boolean                    @default(false)
+  tags                     String[]                   @default([])
+  hash                     String
+  raw                      Json
+  /// Minutes de travail manuel économisées par exécution réussie (ROI), SAISIES
+  /// à la main. Null = personne n'a tranché, et c'est l'estimation ci-dessous
+  /// qui sert : un chiffre posé par un humain n'est jamais recalculé.
+  minutesSavedPerExecution Float?
+  /// Même chose, ESTIMÉE depuis le contenu du workflow (`time-saved.ts`) et
+  /// recalculée à chaque changement de contenu. Sans elle le ROI du dashboard
+  /// restait à zéro tant que personne n'avait rempli le parc à la main.
+  minutesSavedEstimate     Float?
+  /// Sur quoi repose l'estimation, en clair : elle s'affiche à côté du chiffre,
+  /// sans quoi il n'y a pas moyen de juger s'il faut la corriger.
+  minutesSavedEstimateWhy  String?
+  /// `rules` (calcul déterministe) ou `ai` (affiné à la demande sur un workflow).
+  minutesSavedEstimateFrom String?
+  /// Version sémantique de CET exemplaire (« 1.2.11 »), posée par la promotion :
+  /// éditer en dev ne bouge rien, promouvoir aligne tous les exemplaires du chemin
+  /// sur un même numéro. Null tant que le workflow n'a jamais été promu.
+  version                  String?
+  /// Archivé CHEZ LA PLATEFORME D'ORIGINE (`isArchived` du JSON n8n ; Make n'a
+  /// qu'une corbeille), par opposition à l'archivage doux d'ici (tag + préfixe).
+  /// Colonne et non lecture du JSON : un filtre `NOT` sur une clé absente du JSON
+  /// écarte la ligne au lieu de la garder.
+  archivedUpstream         Boolean                    @default(false)
+  /// Date à laquelle la plateforme d'origine a cessé de connaître ce workflow
+  /// (404 à la resynchro). Non nul = supprimé là-bas ; la ligne est gardée ici
+  /// pour ses versions et son historique.
+  missingUpstreamAt        DateTime?
+  /// Dernière modification CHEZ LA PLATEFORME D'ORIGINE (`updatedAt` n8n, `lastEdit`
+  /// Make). `updatedAt` ci-dessous bouge à chaque synchro, contenu changé ou non.
+  upstreamUpdatedAt        DateTime?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  versions                 WorkflowVersion[]
+  findings                 Finding[]
+  testRuns                 TestRun[]
+  testCases                TestCase[]
+  monitors                 Monitor[]
+  doc                      WorkflowDoc?
+  analysisRuns             AnalysisRun[]
+  groups                   WorkflowGroup[]
+  llmNodeTasks             LlmNodeTask[]
+  linksOut                 WorkflowLink[]             @relation("linkFrom")
+  linksIn                  WorkflowLink[]             @relation("linkTo")
+  executionErrors          ExecutionError[]
+  errorGroups              ErrorGroup[]
+  findingIgnores           FindingIgnore[]
+  chatSessions             WorkflowChatSession[]
+  chatProposals            WorkflowChatProposal[]
+  chatProposalParts        WorkflowChatProposalPart[]
+  chatCreation             WorkflowChatCreation?      @relation("chatCreated")
+  chatCreatedHere          WorkflowChatCreation[]     @relation("chatCreatedFrom")
+  chatMemories             WorkflowChatMemory[]
+  corrections              AssistantCorrection[]
+  exportRefs               WorkflowExportRef[]
+  lock                     WorkflowLock?
+  lockOverrides            WorkflowLockOverride[]
+
+  @@unique([instanceId, externalId])
+}
+
+/// Verrou posé sur UN exemplaire : aucune écriture de la plateforme ne le modifie
+/// (promotion vers lui, IA, restauration, renommage, rebranchement, publication,
+/// archivage, tags…) sans un forçage explicite et justifié. Une ligne = verrouillé.
+/// Ne protège pas d'une édition faite directement dans n8n.
+model WorkflowLock {
+  workflowId String   @id
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  lockedBy   String?
+  note       String?
+  lockedAt   DateTime @default(now())
+}
+
+/// Journal des écritures passées MALGRÉ le verrou : qui, quand, quel geste, pourquoi.
+/// Gardé au déverrouillage — c'est justement là qu'on voudra le relire.
+model WorkflowLockOverride {
+  id         String   @id @default(uuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  /// Route qui a écrit (`POST /env-switcher/promote/…`) : le geste, lisible tel quel.
+  action     String
+  reason     String
+  author     String?
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId, createdAt])
+}
+
+/// Dernier emplacement connu d'un workflow dans une cible d'export.
+/// Le workflow est identifié par son externalId (le nom change, l'id non) : quand
+/// le nom change, on déplace le fichier au lieu d'en créer un second.
+model WorkflowExportRef {
+  id         String       @id @default(uuid())
+  workflowId String
+  workflow   Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  targetId   String
+  target     ExportTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  /// Chemin relatif (GitHub) ou nom de fichier (Drive) du dernier export réussi.
+  path       String
+  /// Identifiant du fichier côté cible (fileId Google Drive).
+  remoteId   String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([workflowId, targetId])
+}
+
+model WorkflowVersion {
+  id         String    @id @default(uuid())
+  workflowId String
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  hash       String
+  raw        Json
+  message    String?
+  origin     String    @default("sync") // sync | manual | restore
+  createdAt  DateTime  @default(now())
+  // Dernier export réussi (GitHub / Drive) et vers quelles cibles
+  exportedAt DateTime?
+  exportedTo String[]  @default([])
+  /// Version sémantique publiée par la promotion qui a produit ce snapshot.
+  /// Null pour un snapshot de synchro : seule une release porte un numéro.
+  semver     String?
+}
+
+model ExportTarget {
+  id         String              @id @default(uuid())
+  kind       String // github | gdrive
+  name       String
+  config     Json // github: {owner, repo, branch, token?} | gdrive: {folderId?, accessToken?}
+  enabled    Boolean             @default(true)
+  createdAt  DateTime            @default(now())
+  exportRefs WorkflowExportRef[]
+}
+
+model Finding {
+  id         String    @id @default(uuid())
+  workflowId String
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  module     String // verifier | js-checker | optimizer | field-checker
+  severity   String // info | warning | error
+  code       String
+  message    String
+  nodeName   String?
+  data       Json?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+// Règle « ce finding est normal / voulu » : les analyses ne le remontent plus.
+// Trois portées, de la plus étroite à la plus large : workflowId = ce workflow seul ;
+// familyKey = le même workflow métier dans tous ses environnements (dev/preprod/prod,
+// cf. workflow-family.ts) ; les deux à null = partout. nodeName null = tous les nœuds.
+// La portée famille est le défaut de l'UI : un finding déclaré normal en dev l'est
+// aussi en prod, sinon la même règle se re-crée à chaque environnement.
+model FindingIgnore {
+  id               String    @id @default(uuid())
+  workflowId       String?
+  workflow         Workflow? @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  familyKey        String?
+  // Workflow d'origine d'une règle de portée « famille ». La familyKey est calculée
+  // depuis le NOM : un renommage la rendait caduque, et la règle cessait sans bruit
+  // de s'appliquer. L'ancre suit le renommage ; pas de clé étrangère, la règle doit
+  // survivre à la disparition du workflow (familyKey prend alors le relais).
+  familyWorkflowId String?
+  module           String // verifier | js-checker | optimizer | field-checker
+  code             String
+  nodeName         String?
+  // Id n8n du nœud visé : stable au renommage, contrairement à nodeName.
+  nodeId           String?
+  // Message du finding d'origine : mémo pour l'humain, et matière donnée aux
+  // revues IA pour qu'elles cessent de resignaler ce qui est déjà déclaré normal.
+  message          String?
+  // Forme normalisée de ce message : chemin d'appariement supplémentaire quand
+  // ni le nom du nœud ni son id ne correspondent plus.
+  messageKey       String?
+  reason           String?
+  createdAt        DateTime  @default(now())
+
+  @@index([module, code])
+  @@index([familyKey])
+  @@index([familyWorkflowId])
+}
+
+model ResourceMapping {
+  id          String   @id @default(uuid())
+  provider    String // airtable | google-sheets | notion | nocodb | postgres | credential
+  logicalName String
+  // { dev: { baseId, tableIds: {logical: id}, credentialId... }, preprod: {...}, prod: {...} }
+  values      Json
+  // Mêmes clés que `values`, mais les noms lisibles : { dev: { baseId: "CRM (dev)" } }.
+  // Rempli par la découverte ; sert à remettre à jour le libellé affiché par n8n
+  // après une bascule, qui sinon garde le nom de l'ancienne ressource.
+  labels      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Nom lisible d'une ressource externe, découvert auprès du provider lui-même.
+// Cache reconstructible : NocoDB ne range que des ids dans le JSON n8n (pas de
+// cachedResultName), le vrai titre n'existe que dans NocoDB.
+model ResourceLabel {
+  key       String   @id // clé canonique d'une ResourceRef, ex: nocodb:pXXX/mYYY
+  provider  String
+  label     String
+  updatedAt DateTime @updatedAt
+}
+
+// Host d'un provider auto-hébergé, par credential n8n : NocoDB range l'URL de son
+// API dans le credential, que l'API n8n ne rend jamais. Saisi une fois par l'humain.
+model ProviderEndpoint {
+  provider     String
+  credentialId String
+  host         String
+  updatedAt    DateTime @updatedAt
+
+  @@id([provider, credentialId])
+}
+
+// Nom lisible posé à la main sur une ressource externe (clé d'une ResourceRef).
+// Ce n'est pas un cache : c'est une donnée saisie, jamais recalculée. Elle sert
+// aussi de rattachement — un `http:<host>` renommé « NocoDB · … » devient
+// trouvable sous ce nom, ce qu'aucune lecture du JSON n8n ne permettrait.
+model DepNodeAlias {
+  key       String   @id
+  label     String
+  updatedAt DateTime @updatedAt
+}
+
+// Lien workflow → workflow posé à la main : ce que la détection automatique ne peut pas
+// voir (enchaînement via un système tiers, dépendance métier, ordre d'exécution).
+model WorkflowLink {
+  id             String   @id @default(uuid())
+  fromWorkflowId String
+  from           Workflow @relation("linkFrom", fields: [fromWorkflowId], references: [id], onDelete: Cascade)
+  toWorkflowId   String
+  to             Workflow @relation("linkTo", fields: [toWorkflowId], references: [id], onDelete: Cascade)
+  /// Libellé porté par la flèche, ex: "envoie la facture".
+  label          String   @default("")
+  note           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([fromWorkflowId, toWorkflowId])
+}
+
+/// Cas de test enregistré depuis une exécution réelle : payload du webhook à
+/// rejouer + snapshot attendu (sortie du dernier nœud), comparé normalisé
+/// (test-snapshot.ts). lastStatus alimente le quality gate de la promotion.
+model TestCase {
+  id                String    @id @default(uuid())
+  workflowId        String
+  workflow          Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  name              String
+  payload           Json?
+  expected          Json
+  sourceExecutionId String?
+  enabled           Boolean   @default(true)
+  lastStatus        String? // passed | failed | error
+  lastRunAt         DateTime?
+  /// Divergences du dernier rejeu (SnapshotDiff[]), pour l'affichage.
+  lastDiff          Json?
+  /// Pourquoi le rejeu n'a rien pu comparer (statut error) : le toast disparaît, pas ça.
+  lastMessage       String?
+  /// Exécution n8n déclenchée par le dernier rejeu, pour aller voir sur place.
+  lastExecutionId   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([workflowId])
+}
+
+model TestRun {
+  id         String    @id @default(uuid())
+  workflowId String
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  mode       String // webhook | mocked-copy
+  status     String    @default("pending") // pending | running | success | error
+  input      Json?
+  output     Json?
+  error      String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+}
+
+model Monitor {
+  id          String    @id @default(uuid())
+  workflowId  String?
+  workflow    Workflow? @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  name        String
+  kind        String // heartbeat | active | error-watch
+  token       String    @unique @default(uuid()) // pour l'endpoint /beat/:token
+  kumaPushUrl String?
+  // active : { url, method, intervalSeconds, expectedStatus }
+  // heartbeat : { graceSeconds }
+  // error-watch : { instanceId, intervalSeconds, limit }
+  config      Json?
+  // État runtime du check (jamais édité par l'UI) — error-watch : { lastSeenExecutionId }
+  state       Json?
+  enabled     Boolean   @default(true)
+  lastStatus  String?
+  lastCheckAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// Historique des exécutions n8n en erreur, alimenté par le monitor `error-watch`
+// (ingestion temps réel) et par le backfill. On ne stocke JAMAIS le JSON complet de
+// l'exécution (trop volumineux) : seulement le nœud fautif et le message extraits.
+model ExecutionError {
+  id                 String      @id @default(uuid())
+  instanceId         String
+  instance           Instance    @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  executionId        String // id de l'exécution côté n8n
+  externalWorkflowId String
+  workflowId         String? // FK locale, null si le workflow n'est pas (ou plus) synchronisé
+  workflow           Workflow?   @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  workflowName       String
+  startedAt          DateTime
+  stoppedAt          DateTime?
+  mode               String? // trigger | webhook | manual…
+  // Détail « qu'est-ce qui a fail », récupéré via GET /executions/:id?includeData=true
+  detailState        String      @default("pending") // pending | fetched | unavailable
+  failedNode         String?
+  failedNodeType     String?
+  message            String?
+  stack              String?
+  // Groupe « même erreur » (cf. ErrorGroup) : posé à l'ingestion, recalculé quand
+  // le détail arrive (le message change la signature).
+  groupId            String?
+  group              ErrorGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt          DateTime    @default(now())
+
+  @@unique([instanceId, executionId])
+  @@index([instanceId, startedAt])
+  @@index([workflowId, startedAt])
+  @@index([groupId, startedAt])
+}
+
+/// Un problème récurrent : toutes les exécutions qui ont cassé pour la même raison
+/// (même workflow, même nœud, même forme de message — cf. `errorSignature`).
+/// C'est l'unité qu'on marque « traité » ; si l'erreur revient après ça, le groupe
+/// se rouvre tout seul et l'historique (ErrorGroupEvent) garde la trace du cycle.
+model ErrorGroup {
+  id                 String            @id @default(uuid())
+  instanceId         String
+  instance           Instance          @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  signature          String // clé issue de errorSignature()
+  externalWorkflowId String
+  workflowId         String?
+  workflow           Workflow?         @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  workflowName       String
+  failedNode         String?
+  failedNodeType     String?
+  /// Message normalisé (parties variables remplacées) — le libellé du groupe.
+  pattern            String
+  /// Dernier message réel vu, pour illustrer le pattern.
+  sample             String?
+  /// Genre de problème, déduit du message (categorizeError) : auth | rate-limit | timeout | network | data | other.
+  category           String            @default("other")
+  status             String            @default("open") // open | resolved | ignored
+  occurrences        Int               @default(0)
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  resolvedAt         DateTime?
+  resolvedBy         String?
+  resolutionNote     String?
+  /// Dernière rechute (erreur revenue alors que le groupe était traité).
+  reopenedAt         DateTime?
+  /// Combien de fois le problème est revenu après avoir été marqué traité.
+  regressions        Int               @default(0)
+  /// Date de l'alerte « nouveau problème ». Tant qu'elle est nulle le groupe n'a jamais
+  /// été annoncé ; une fois posée, les occurrences suivantes ne sont plus des nouveautés.
+  notifiedAt         DateTime?
+  events             ErrorGroupEvent[]
+  errors             ExecutionError[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([instanceId, signature])
+  @@index([instanceId, status, lastSeenAt])
+  @@index([workflowId])
+}
+
+/// Journal d'un groupe : traité, rouvert (manuellement ou par rechute), commenté.
+model ErrorGroupEvent {
+  id          String     @id @default(uuid())
+  groupId     String
+  group       ErrorGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  type        String // resolved | reopened | regression | ignored | note
+  note        String?
+  /// Email de l'utilisateur connecté quand l'action vient de l'UI, sinon null (auto).
+  author      String?
+  /// Compteur d'occurrences au moment de l'événement : rend le journal lisible seul.
+  occurrences Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  @@index([groupId, createdAt])
+}
+
+/// Exécution historisée (succès comme échec), version maigre : juste ce qu'il faut
+/// pour les tendances de durée et le taux de succès (module performance).
+/// Purgée au-delà de la rétention — contrairement à ExecutionError, rien ici n'est précieux.
+model ExecutionStat {
+  id                 String    @id @default(uuid())
+  instanceId         String
+  instance           Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  executionId        String // id de l'exécution côté n8n
+  externalWorkflowId String
+  status             String // success | error | crashed | canceled…
+  mode               String? // trigger | webhook | manual…
+  startedAt          DateTime
+  stoppedAt          DateTime?
+  /// stoppedAt - startedAt, précalculée : les percentiles se font en mémoire, pas en SQL.
+  durationMs         Int?
+
+  @@unique([instanceId, executionId])
+  @@index([instanceId, externalWorkflowId, startedAt])
+  @@index([instanceId, startedAt])
+}
+
+/// Curseur du poll des exécutions (une ligne par instance) : chaque exécution
+/// n'est historisée qu'une fois, même logique que le state du monitor error-watch.
+model ExecutionStatCursor {
+  instanceId          String    @id
+  instance            Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  lastSeenExecutionId String?
+  lastPolledAt        DateTime?
+}
+
+/// Un appel LLM extrait du runData d'une exécution (module ai-cost) : un Chat Model
+/// LangChain écrit `tokenUsage` (réel) ou `tokenUsageEstimate` (estimation) dans les
+/// données de son propre sub-node. Le coût est figé à l'ingestion avec le tarif du
+/// moment ; null quand le modèle est inconnu de la table ModelPrice — jamais 0.
+model LlmUsage {
+  id                 String   @id @default(uuid())
+  instanceId         String
+  instance           Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  executionId        String // id de l'exécution côté n8n
+  externalWorkflowId String
+  nodeName           String // le sub-node Chat Model, pas l'Agent
+  runIndex           Int
+  callIndex          Int
+  itemIndex          Int
+  model              String?
+  promptTokens       Int
+  completionTokens   Int
+  totalTokens        Int
+  /// true = tokenUsageEstimate (streaming, provider muet) : chiffres approximatifs.
+  isEstimate         Boolean  @default(false)
+  costUsd            Float?
+  /// Date de l'exécution (pas de l'ingestion) : les courbes se calent dessus.
+  startedAt          DateTime
+  createdAt          DateTime @default(now())
+
+  @@unique([instanceId, executionId, nodeName, runIndex, callIndex, itemIndex])
+  @@index([instanceId, startedAt])
+  @@index([instanceId, externalWorkflowId, startedAt])
+}
+
+/// Curseur du poll des coûts LLM (une ligne par instance), même logique que
+/// ExecutionStatCursor : chaque exécution n'est décortiquée qu'une fois.
+model LlmUsageCursor {
+  instanceId          String    @id
+  instance            Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  lastSeenExecutionId String?
+  lastPolledAt        DateTime?
+}
+
+/// Ce que la plateforme sait d'un modèle : son tarif (USD par million de tokens)
+/// ET son cycle de vie. `pattern` matche en exact puis en préfixe (insensible à la
+/// casse, cf. llm-pricing.ts). Une seule table et non deux à clé `pattern`
+/// identique : « moins cher à capacité égale » lit tarif et aptitudes dans la même
+/// phrase, et deux tables divergeraient au premier modèle ajouté d'un seul côté.
+/// Vit dans `infra/model-catalog/` : une donnée de référence partagée par
+/// plusieurs modules ne vit pas dans un module désactivable (cf. NodeType).
+/// Une ligne `source: custom` survit au re-seed.
+model ModelCatalog {
+  id                       String    @id @default(uuid())
+  pattern                  String    @unique
+  provider                 String    @default("other")
+  inputPerMTok             Float
+  outputPerMTok            Float
+  /// active | preview | deprecated | retired
+  status                   String    @default("active")
+  deprecatedAt             DateTime?
+  /// Retrait ANNONCÉ par le provider ; null = pas d'échéance connue.
+  retiresAt                DateTime?
+  /// Successeur recommandé, en `pattern` de cette même table.
+  replacedByPattern        String?
+  /// light | standard | reasoning — le seul jugement de « puissance » porté ici.
+  tier                     String    @default("standard")
+  /// null = ON NE SAIT PAS, et le contrôle correspondant se tait. Jamais false par défaut.
+  supportsVision           Boolean?
+  supportsTools            Boolean?
+  supportsStructuredOutput Boolean?
+  contextWindow            Int?
+  maxOutputTokens          Int?
+  /// Exceptions nommées à la main : « ce modèle dément son tier sur ces tâches ».
+  weakAtTasks              String[]  @default([])
+  source                   String    @default("seed") // seed | custom | refresh
+  /// Dernière CONFRONTATION à une source, même sans changement : c'est la seule
+  /// façon de distinguer « toujours actif » de « personne n'a regardé ».
+  checkedAt                DateTime  @default(now())
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+}
+
+/// Mise à jour du catalogue PROPOSÉE par le rafraîchissement (source déclarative
+/// ou IA), jamais appliquée d'office : un tarif halluciné écrit tout seul
+/// empoisonne les coûts figés, les économies annoncées et les alertes, sans que
+/// rien ne dise ensuite d'où venait le chiffre.
+model ModelCatalogProposal {
+  id            String    @id @default(uuid())
+  pattern       String
+  field         String // inputPerMTok | status | retiresAt | supportsVision | …
+  currentValue  Json?
+  proposedValue Json?
+  origin        String // litellm | ai
+  /// Ce sur quoi la proposition s'appuie : révision du fichier amont, ou phrase du modèle.
+  evidence      String?
+  createdAt     DateTime  @default(now())
+  appliedAt     DateTime?
+  rejectedAt    DateTime?
+
+  @@unique([pattern, field])
+  @@index([appliedAt])
+}
+
+/// Tier minimal jugé suffisant pour une tâche. Livré avec des valeurs par défaut,
+/// éditable : c'est un arbitrage d'équipe, pas une vérité, et il doit se contredire
+/// à un endroit précis plutôt que dans le prompt d'un modèle.
+model ModelTaskProfile {
+  task      String   @id
+  minTier   String // light | standard | reasoning
+  /// Pourquoi ce plancher, affiché à côté du réglage.
+  rationale String?
+  source    String   @default("seed") // seed | custom
+  updatedAt DateTime @updatedAt
+}
+
+/// La tâche d'un nœud LLM, classée une fois par GABARIT de prompt (`promptHash`)
+/// et non par passe : deux exécutions ne donnent jamais le même texte, et une
+/// empreinte sur l'échantillon reclasserait le nœud chaque nuit pour redire la
+/// même étiquette. Une classification `manual` n'est jamais réécrite par l'IA.
+model LlmNodeTask {
+  id         String   @id @default(uuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  nodeName   String
+  promptHash String
+  task       String
+  confidence Float    @default(0)
+  /// La phrase du prompt qui a produit l'étiquette : sans elle, rien à contredire.
+  evidence   String?
+  source     String   @default("ai") // ai | manual
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([workflowId, nodeName])
+  @@index([task])
+}
+
+/// Journal des rafraîchissements du catalogue des modèles. Même rôle que
+/// NodeCatalogSync : ne rien retélécharger quand l'amont n'a pas bougé, et
+/// garder les ÉCHECS — sinon un catalogue périmé ressemble à un catalogue à jour.
+model ModelCatalogSync {
+  id        String   @id @default(uuid())
+  /// `litellm` ou `ai`.
+  source    String
+  revision  String?
+  proposed  Int      @default(0)
+  /// Renseigné quand la passe a échoué.
+  error     String?
+  at        DateTime @default(now())
+
+  @@index([source, at])
+}
+
+/// Dernier statut ANNONCÉ pour un modèle du parc (module model-audit). Une ligne
+/// par modèle et non par workflow : quarante nœuds touchés font quarante fois la
+/// même nouvelle. État dérivé, reconstructible, comme PerfDriftAlert.
+model ModelLifecycleAlert {
+  pattern   String   @id
+  status    String
+  alertedAt DateTime @default(now())
+}
+
+/// Réglages du module model-audit (ligne unique id = "default").
+model ModelAuditSettings {
+  id                  String   @id
+  savingsThresholdPct Float    @default(30)
+  minAnnualSavingsUsd Float    @default(5)
+  /// Au-delà, tout ce qui dépend de la fraîcheur du catalogue se tait — en le disant.
+  catalogStaleDays    Int      @default(60)
+  minTaskConfidence   Float    @default(0.7)
+  /// Le premier remplissage du catalogue n'alerte sur rien : sans ça, la mise en
+  /// service annoncerait comme une nouvelle tout ce qui est déprécié depuis deux ans.
+  lifecycleArmed      Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+}
+
+/// Dérive de durée déjà signalée (module performance) : une ligne par workflow en
+/// dérive active — créée à l'alerte, supprimée quand la médiane redescend (hystérésis),
+/// pour ré-alerter à la PROCHAINE dérive et jamais à chaque contrôle. Pas de relation :
+/// état dérivé, reconstructible, les lignes orphelines d'une instance supprimée sont inertes.
+model PerfDriftAlert {
+  id                 String   @id @default(uuid())
+  instanceId         String
+  externalWorkflowId String
+  ratio              Float
+  alertedAt          DateTime @default(now())
+
+  @@unique([instanceId, externalWorkflowId])
+}
+
+/// Canal d'alerte du module notifier (Slack incoming webhook ou webhook générique).
+/// L'`url` est un secret : jamais renvoyée à l'UI (le controller la masque).
+model NotificationChannel {
+  id            String   @id @default(uuid())
+  name          String
+  type          String // slack | webhook
+  url           String
+  enabled       Boolean  @default(true)
+  /// Alerter quand un problème apparaît (nouveau ErrorGroup).
+  onNewGroup    Boolean  @default(true)
+  /// Alerter quand un problème traité revient (rechute).
+  onRegression  Boolean  @default(true)
+  /// Alerter quand un workflow entre en dérive de durée (module performance).
+  onPerfDrift   Boolean  @default(true)
+  /// Alerter quand le coût LLM du jour dépasse le budget (module ai-cost).
+  onBudget      Boolean  @default(true)
+  /// Alerter quand le push vers la sonde de monitoring échoue — la surveillance elle-même.
+  onRelayBroken Boolean  @default(true)
+  /// Alerter quand un modèle du parc est déprécié ou retiré (module model-audit).
+  onModelLifecycle Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// Réglages du module ai-cost (ligne unique id = "default") : budget quotidien en
+/// USD (null = pas d'alerte) et dernier jour alerté — une seule alerte par jour,
+/// le compteur continue de monter mais ne re-notifie pas.
+model AiCostSettings {
+  id              String   @id
+  dailyBudgetUsd  Float?
+  lastAlertedDate String?
+  updatedAt       DateTime @updatedAt
+}
+
+/// Compte configuré au premier lancement (page /setup) : un seul, ligne unique id = "default".
+/// Le hash est du scrypt (`salt:hash` hex) ; sessionSecret signe les cookies du front
+/// quand aucun secret d'environnement n'existe. Jamais renvoyé à l'UI — servi
+/// uniquement au serveur Next par la route interne de bootstrap.
+model AuthSettings {
+  id            String   @id
+  /// null tant que /setup n'a pas créé le compte — la ligne peut n'exister que
+  /// pour porter sessionSecret (généré au premier passage, jamais écrasé).
+  username      String?
+  passwordHash  String?
+  sessionSecret String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// Dernière consultation du dashboard, par utilisateur (x-user-email) : la home
+/// affiche « depuis ta dernière visite », jamais une fenêtre fixe arbitraire.
+model DashboardVisit {
+  userEmail  String   @id
+  lastSeenAt DateTime @updatedAt
+}
+
+// Réglages du module monitoring (ligne unique, id = "kuma") : credentials admin Uptime Kuma.
+// Prioritaires sur les variables d'env KUMA_* ; le mot de passe n'est jamais renvoyé à l'UI.
+model MonitoringSettings {
+  id           String   @id
+  kumaUrl      String?
+  kumaUsername String?
+  kumaPassword String?
+  updatedAt    DateTime @updatedAt
+}
+
+// Réglages IA (ligne unique, id = "anthropic") : clé API + modèle.
+// Prioritaires sur les variables d'env ANTHROPIC_* ; la clé n'est jamais renvoyée à l'UI.
+// Réglages transverses de la plateforme (ligne unique, id = "default").
+model PlatformSettings {
+  id              String   @id
+  /// Inclure les workflows archivés dans les listes, analyses, graphes et monitoring.
+  includeArchived Boolean  @default(false)
+  /// Inclure les workflows que n8n ne connaît plus (supprimés côté n8n).
+  includeMissing  Boolean  @default(false)
+  /// Chaîne de promotion, du plus amont au plus aval. Héritée : `envs` la remplace
+  /// et la relit quand elle est absente.
+  envChain        String[] @default(["dev", "preprod", "prod"])
+  /// Environnements déclarés, dans l'ordre d'affichage : `{ id, label, color,
+  /// monitored, canonicalWebhookPath, after }`. `after` dit de QUI un env dépend,
+  /// ce qui autorise des branches (une recette par client repartant de dev).
+  envs            Json?
+  /// `warn` : sauter une étape s'annonce et se confirme. `block` : la promotion est
+  /// refusée, et un env aval ne se modifie plus qu'en y promouvant depuis l'amont.
+  envChainMode    String   @default("warn")
+  updatedAt       DateTime @updatedAt
+}
+
+// Une ligne PAR fournisseur (id = "anthropic" | "mistral") : les deux clés
+// cohabitent, et basculer n'oblige pas à ressaisir celle qu'on quitte.
+model AiSettings {
+  id        String   @id
+  apiKey    String?
+  model     String?
+  /// Fournisseur servant les appels IA. Une seule ligne à true, garantie par le service.
+  active    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+// Trace chaque exécution d'analyse : une analyse "propre" (0 finding) reste visible.
+model AnalysisRun {
+  id            String   @id @default(uuid())
+  workflowId    String
+  workflow      Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  module        String // verifier | js-checker | optimizer | field-checker
+  findingsCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([workflowId, module])
+}
+
+model WorkflowDoc {
+  id         String   @id @default(uuid())
+  workflowId String   @unique
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  mermaid    String
+  summary    String?
+  updatedAt  DateTime @updatedAt
+}
+
+model ModuleState {
+  id        String   @id // module id
+  enabled   Boolean  @default(true)
+  settings  Json?
+  updatedAt DateTime @updatedAt
+}
+
+model EventLog {
+  id        String   @id @default(uuid())
+  name      String
+  payload   Json?
+  createdAt DateTime @default(now())
+}
+
+// --- Module workflow-chat : conversation IA sur un workflow ---
+
+// Ce que l'assistant doit garder d'une conversation à l'autre : contraintes, règles
+// métier, identifiants dictés à l'oral — tout ce que le JSON du workflow ne dit pas.
+// Porté par le WORKFLOW et non par la session : une information donnée lundi ne se
+// redonne pas à chaque nouvelle conversation, et l'historique renvoyé au modèle est
+// borné (les premiers tours en sortent les premiers, donc justement le cadrage).
+model WorkflowChatMemory {
+  id         String               @id @default(uuid())
+  workflowId String
+  workflow   Workflow             @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  content    String
+  // Conversation qui a établi le fait : sert à remonter au contexte quand il surprend.
+  // Effacée avec elle (SetNull), le fait survit — c'est tout l'intérêt.
+  sessionId  String?
+  session    WorkflowChatSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  createdAt  DateTime             @default(now())
+
+  @@unique([workflowId, content])
+  @@index([workflowId, createdAt])
+}
+
+model WorkflowChatSession {
+  id         String                 @id @default(uuid())
+  workflowId String
+  workflow   Workflow               @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  title      String
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  messages   WorkflowChatMessage[]
+  proposals  WorkflowChatProposal[]
+  memories   WorkflowChatMemory[]
+  creations  WorkflowChatCreation[]
+
+  @@index([workflowId, updatedAt])
+}
+
+/// D'où vient un workflow que l'assistant a créé lui-même (`create_sub_workflow`).
+///
+/// Provenance SEULEMENT, jamais un état : « à supprimer » se recalcule sur le
+/// workflow réel — encore vide, et appelé par personne. Un drapeau posé au refus
+/// mentirait dès que quelqu'un adopte le workflow entre-temps, et c'est le genre
+/// de mensonge qui finit par faire supprimer un workflow qui servait.
+model WorkflowChatCreation {
+  id               String               @id @default(uuid())
+  workflowId       String               @unique
+  workflow         Workflow             @relation("chatCreated", fields: [workflowId], references: [id], onDelete: Cascade)
+  /// La conversation qui l'a demandé. Null si elle a été supprimée depuis.
+  sessionId        String?
+  session          WorkflowChatSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  /// Le workflow depuis lequel la découpe a été demandée : l'appelant attendu.
+  parentWorkflowId String?
+  parent           Workflow?            @relation("chatCreatedFrom", fields: [parentWorkflowId], references: [id], onDelete: SetNull)
+  createdAt        DateTime             @default(now())
+
+  @@index([parentWorkflowId])
+}
+
+model WorkflowChatMessage {
+  id          String                   @id @default(uuid())
+  sessionId   String
+  session     WorkflowChatSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role        String // user | assistant
+  content     String
+  // Proposition de modification attachée à une réponse de l'assistant
+  proposalId  String?
+  // Outils appelés pour produire cette réponse (cf. AiToolTrace). Stocké à part du
+  // texte : glissé dedans, il s'affichait tel quel, balises comprises, et polluait
+  // l'export autant que la lecture. À part, l'UI le replie et l'ouvre à la demande.
+  toolTrace   Json?
+  // Résumé du raisonnement du modèle, tour par tour. La chaîne de pensée brute
+  // n'est jamais exposée par l'API : ce qu'on garde est le résumé qu'elle rend.
+  thinking    Json?
+  createdAt   DateTime                 @default(now())
+  attachments WorkflowChatAttachment[]
+
+  @@index([sessionId, createdAt])
+}
+
+// Pièce jointe d'un message : capture d'écran, ou fichier texte (JSON, CSV, log).
+// Les octets vivent en base : la plateforme n'a pas de stockage d'objets, et une
+// pièce perdue rendrait la conversation incompréhensible longtemps après
+// (l'export, lui, ne porte que le texte du fil).
+model WorkflowChatAttachment {
+  id        String              @id @default(uuid())
+  messageId String
+  message   WorkflowChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mediaType String
+  // Nom d'origine du fichier. Nul pour une capture collée, qui n'en a pas — et
+  // c'est le nom, jamais le mediaType, qui dit au modèle CE QU'EST le fichier.
+  name      String?
+  size      Int
+  data      Bytes
+  createdAt DateTime            @default(now())
+
+  @@index([messageId])
+}
+
+// Modification proposée par l'IA : jamais appliquée sans revue de diff explicite.
+model WorkflowChatProposal {
+  id         String                     @id @default(uuid())
+  workflowId String
+  workflow   Workflow                   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sessionId  String?
+  session    WorkflowChatSession?       @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  // Hash du workflow au moment de la proposition : si le workflow bouge, la proposition devient obsolète.
+  baseHash   String
+  summary    String
+  operations Json // opérations d'édition demandées par l'IA
+  raw        Json // workflow candidat complet (résultat des opérations)
+  status     String                     @default("pending") // pending | applied | discarded
+  createdAt  DateTime                   @default(now())
+  appliedAt  DateTime?
+  /// Les AUTRES workflows touchés par la même proposition (sous-workflows appelés).
+  parts      WorkflowChatProposalPart[]
+
+  @@index([workflowId, createdAt])
+}
+
+/// Un workflow ANNEXE d'une proposition : un sous-workflow appelé par celui de la
+/// conversation, modifié par le même geste.
+///
+/// Table à part plutôt qu'un JSON dans la proposition : chaque workflow a sa
+/// propre empreinte de départ, sa propre porte et son propre sort à l'écriture —
+/// écrire l'appelé puis échouer sur l'appelant est un état qu'il faut pouvoir
+/// lire après coup, pas deviner.
+model WorkflowChatProposalPart {
+  id         String               @id @default(uuid())
+  proposalId String
+  proposal   WorkflowChatProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  workflowId String
+  workflow   Workflow             @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  /// Empreinte du workflow annexe au moment de la proposition (péremption, comme la racine).
+  baseHash   String
+  operations Json
+  raw        Json
+  status     String               @default("pending") // pending | applied | discarded
+  appliedAt  DateTime?
+  createdAt  DateTime             @default(now())
+
+  @@unique([proposalId, workflowId])
+}
+
+// Sélection des contrôles d'analyse à jouer, par périmètre (cf. `check-profile.ts`).
+// On enregistre ce qui est DÉCOCHÉ : une règle ajoutée plus tard est active
+// partout sans avoir à rouvrir les profils déjà enregistrés.
+model CheckProfile {
+  id        String   @id @default(uuid())
+  // global | instance | group | family
+  scope     String
+  // instanceId, WorkflowGroup.id, ou workflow d'ancrage de la famille ; "" pour global.
+  // Pas de clé étrangère : le profil doit survivre à la disparition de sa cible
+  // (il cesse alors simplement de s'appliquer), comme les règles FindingIgnore.
+  targetId  String   @default("")
+  // Clé de famille (portée family) : chemin d'appariement quand l'ancre a été renommée.
+  familyKey String?
+  disabled  String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, targetId])
+  @@index([familyKey])
+}
+
+// ─── Assistant auto-apprenant ────────────────────────────────────────────────
+//
+// Une leçon est une LIGNE, jamais un fichier. Le corpus grossit en nombre de
+// lignes, ce qui ne coûte rien ; ce qui coûte est le nombre de lignes SERVIES au
+// modèle, borné dans `assistant-lesson.ts` (six par tour, 1200 caractères). Une
+// leçon nouvelle qui redit une existante la RÉÉCRIT au lieu de s'y ajouter.
+//
+// À comparer avec `WorkflowChatMemory`, qui lui ressemble et ne fait pas la même
+// chose : la mémoire porte des FAITS propres à UN workflow, enseignés par
+// l'humain, et tous réinjectés. Une leçon porte une RÈGLE, vaut pour tout le
+// parc, s'apprend toute seule, et n'est servie que si le tour la concerne.
+model AssistantLesson {
+  id               String    @id @default(uuid())
+  /// La règle, formulée pour être comprise hors de son cas d'origine.
+  content          String
+  /// Types de nœuds n8n concernés : la voie de rappel déterministe, celle qui
+  /// remonte parce que le nœud est dans le workflow, sans rien calculer.
+  /// Vide = leçon générale, qui ne remonte que par les mots de la question.
+  nodeTypes        String[]  @default([])
+  /// Mots signifiants, pour l'appariement lexical (cf. `keywordsOf`).
+  keywords         String[]  @default([])
+  /// candidate | active | retired. Une candidate n'est JAMAIS servie au modèle :
+  /// un seul incident n'est pas une règle, et l'injecter généraliserait sur un
+  /// exemple. Elle reste visible à l'écran, où un humain peut l'activer.
+  status           String    @default("candidate")
+  /// Occurrences indépendantes observées : deux promeuvent une candidate.
+  occurrences      Int       @default(1)
+  /// Fois où la leçon a été servie : sert à retirer celles qui ne servent jamais.
+  recalls          Int       @default(0)
+  lastRecallAt     DateTime?
+  /// human-answer | human-correction | gate-refusal — sa fiabilité, dans cet ordre.
+  origin           String
+  /// Workflow où elle est née. Pas de clé étrangère : la leçon vaut pour le parc
+  /// entier et doit survivre à la disparition du workflow qui l'a révélée.
+  originWorkflowId String?
+  /// Email de l'humain qui l'a confirmée, quand elle l'a été.
+  confirmedBy      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([content])
+  @@index([status])
+}
+
+/// Une correction humaine observée : ce que l'assistant avait écrit, ce que
+/// l'humain a laissé, et ce qu'on a su en lire (cf. `correction-lesson.ts`).
+///
+/// Persistée même quand elle n'apprend rien : c'est la trace qui permet de dire
+/// pourquoi on n'a rien appris, et de rejouer la lecture si les règles changent.
+model AssistantCorrection {
+  id         String    @id @default(uuid())
+  workflowId String
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  /// La proposition corrigée. Une seule correction par proposition : la deuxième
+  /// passe lirait le travail de l'humain, pas la correction de l'assistant.
+  proposalId String    @unique
+  /// La version qui porte l'état corrigé, pour remonter au contenu.
+  versionId  String?
+  /// Les changements lus, verdicts compris (`CorrectionChange[]`).
+  changes    Json
+  /// pending | answered | resolved — `pending` tant que la question n'a pas été
+  /// posée ET répondue ; `resolved` quand il n'y avait rien à demander.
+  status     String    @default("pending")
+  /// La question à poser au tour suivant. Null quand le déterminisme a tranché.
+  question   String?
+  answer     String?
+  answeredAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([workflowId, status])
+}
+
+// ─── Catalogue des types de nœuds n8n ────────────────────────────────────────
+//
+// Ce que n8n dit de ses propres nœuds : quels paramètres existent, de quel type,
+// et sous quelles conditions ils s'appliquent. Rien d'autre dans la plateforme ne
+// le savait — le corpus (`param-shape.ts`) ne pouvait qu'inférer une norme des
+// nœuds déjà présents, et restait muet sur un type jamais employé.
+//
+// Deux sources, deux tables, à dessein :
+//   NodeType         — catalogue mutualisé, importé d'un amont (n8n-mcp).
+//   InstanceNodeType — ce que SERT une instance donnée : sa version de n8n, ses
+//                      nœuds communautaires installés.
+// L'instance prime quand elle a répondu ; le catalogue est le repli. Une seule
+// table avec une colonne `source` obligerait à trancher au moment de l'écriture,
+// alors que la question ne se pose qu'à la lecture.
+//
+// Le catalogue est STOCKÉ CHEZ NOUS : l'amont peut disparaître, la plateforme
+// continue de vérifier. C'est la raison d'être de cette table, pas un cache.
+
+/// Un type de nœud tel qu'un catalogue mutualisé le décrit.
+model NodeType {
+  /// Forme LONGUE, celle du JSON n8n : `n8n-nodes-base.slack`.
+  nodeType      String   @id
+  packageName   String
+  displayName   String
+  description   String?
+  /// Version la plus haute décrite. Un nœud d'une `typeVersion` supérieure n'est
+  /// pas contrôlé : le schéma décrit alors un n8n plus ancien que le sien.
+  version       Float?
+  isTrigger     Boolean  @default(false)
+  isWebhook     Boolean  @default(false)
+  isVersioned   Boolean  @default(false)
+  /// Tableau `INodeProperties` de n8n : c'est lui qui porte les `displayOptions`.
+  properties    Json
+  operations    Json?
+  credentials   Json?
+  /// Doc officielle du nœud (markdown), servie à l'assistant sans appel réseau.
+  documentation String?
+  /// Nom de la source amont, pour savoir ce qu'on relit.
+  source        String
+  fetchedAt     DateTime @default(now())
+
+  @@index([source])
+}
+
+/// Un type de nœud tel qu'une instance n8n le sert vraiment (`/types/nodes.json`).
+/// Plus juste que le catalogue — c'est SA version de n8n — mais demande un compte
+/// n8n sur l'instance, ces fichiers étant hors de l'API publique.
+model InstanceNodeType {
+  id          String   @id @default(uuid())
+  instanceId  String
+  instance    Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  nodeType    String
+  displayName String
+  description String?
+  version     Float?
+  /// Toutes les `typeVersion` connues de l'instance (`types/node-versions.json`).
+  /// Le catalogue mutualisé ne donne que la plus haute : c'est ici, et nulle part
+  /// ailleurs, qu'on sait qu'un nœud en typeVersion 2 est encore une version servie.
+  versions    Float[]  @default([])
+  isTrigger   Boolean  @default(false)
+  isWebhook   Boolean  @default(false)
+  properties  Json
+  credentials Json?
+  fetchedAt   DateTime @default(now())
+
+  @@unique([instanceId, nodeType])
+  @@index([instanceId])
+}
+
+/// Le schéma d'un type de nœud POUR UNE `typeVersion` précise, tel que l'instance
+/// le décrit (`POST /rest/node-types`, la route que l'éditeur n8n s'appelle à
+/// lui-même pour dessiner un vieux nœud).
+///
+/// Pourquoi une table de plus : `InstanceNodeType` ne porte qu'UNE description
+/// par type, la courante, or plus d'un nœud sur deux tourne sur une version
+/// antérieure dont les paramètres portaient d'autres noms. Sans schéma daté, le
+/// contrôle se tait — c'est la règle « version pour version » — et la moitié du
+/// parc n'est jamais vérifiée.
+///
+/// On ne garde QUE les couples (type, version) réellement employés par les
+/// workflows de l'instance : décrire les 800 types dans toutes leurs versions
+/// coûterait des milliers de lignes pour des nœuds que personne n'utilise.
+model InstanceNodeTypeVersion {
+  id          String   @id @default(uuid())
+  instanceId  String
+  instance    Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  nodeType    String
+  /// La `typeVersion` DEMANDÉE, celle qu'écrivent les nœuds — et non celle que
+  /// la description dit d'elle-même, qui liste toutes les versions de son
+  /// implémentation.
+  version     Float
+  displayName String
+  properties  Json
+  fetchedAt   DateTime @default(now())
+
+  @@unique([instanceId, nodeType, version])
+  @@index([instanceId, nodeType])
+}
+
+/// Journal des synchronisations du catalogue. Sert à deux choses : ne rien
+/// retélécharger quand l'amont n'a pas bougé (`revision`), et pouvoir dire depuis
+/// quand le catalogue date quand un contrôle s'appuie dessus.
+model NodeCatalogSync {
+  id         String   @id @default(uuid())
+  /// Nom de la source, ou `instance:<id>` pour une synchronisation d'instance.
+  source     String
+  /// Identifiant opaque de la version amont (sha de blob, tag).
+  revision   String?
+  /// Version de n8n que ce catalogue décrit, quand la source la donne.
+  n8nVersion String?
+  added      Int      @default(0)
+  updated    Int      @default(0)
+  removed    Int      @default(0)
+  /// Renseigné quand la synchronisation a échoué : le journal garde les échecs,
+  /// sinon un catalogue périmé ressemble à un catalogue à jour.
+  error      String?
+  at         DateTime @default(now())
+
+  @@index([source, at])
+}
+
+/// Procédure de mise en ligne enregistrée comme une macro (module `release-procedures`).
+model ReleaseProcedure {
+  id         String                 @id @default(uuid())
+  name       String
+  /// `recording` tant que l'enregistrement tourne, puis `ready`.
+  status     String                 @default("recording")
+  recordedBy String?
+  /// Le saut enregistré (dev → preprod) : c'est lui que le rejeu décale.
+  sourceEnv  String?
+  targetEnv  String?
+  steps      ReleaseProcedureStep[]
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  @@index([status, recordedBy])
+}
+
+model ReleaseProcedureStep {
+  id          String           @id @default(uuid())
+  procedureId String
+  procedure   ReleaseProcedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  position    Int
+  /// `auto` (geste rejoué) ou `manual` (à valider par un humain).
+  kind        String
+  action      String?
+  familyKey   String?
+  familyName  String?
+  sourceEnv   String?
+  targetEnv   String?
+  options     Json?
+  label       String
+  /// Consigne libre posée sur l'étape, montrée au rejeu sans rien bloquer.
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([procedureId, position])
+}
+
+/// « Publier comme la source » après une promotion : les exemplaires de la cible à
+/// publier, appelés d'abord. Persisté parce qu'un refus de n8n met la chaîne en PAUSE
+/// et qu'on la reprend plus tard, d'un autre écran ou d'un autre appareil.
+model PromotionPublishRun {
+  id               String   @id @default(uuid())
+  /// Le workflow promu, côté source.
+  sourceWorkflowId String
+  /// Le workflow promu, côté cible (dernière étape de chaîne) : c'est sur sa fiche que la pause se voit.
+  targetWorkflowId String?
+  /// running | paused | done | abandoned
+  status           String
+  /// `PublicationStep[]` (@nwm/core), dans l'ordre où ils se publient.
+  steps            Json
+  createdBy        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([sourceWorkflowId, status])
+  @@index([targetWorkflowId, status])
+}

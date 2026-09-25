@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "../..",
+    "baseUrl": ".",
+    "noEmit": false,
+    "paths": {
+      "@nwm/core": ["../../packages/core/src"],
+      // Wildcard : tout @nwm/adapter-<x> vit dans packages/adapters/<x>/src —
+      // le nom du dossier DOIT égaler le suffixe de l'alias. Un nouvel adapter
+      // n'a plus rien à déclarer ici (ni dans register-aliases.ts, qui découvre
+      // les dossiers au boot).
+      "@nwm/adapter-*": ["../../packages/adapters/*/src"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    // Les tests sont typés comme le reste : une doublure qui ne respecte plus la
+    // forme d'un port doit échouer au typecheck, pas au premier test rouge.
+    "test/**/*",
+    "vitest.config.ts",
+    "../../packages/core/src/**/*",
+    "../../packages/adapters/*/src/**/*"
+  ]
+}

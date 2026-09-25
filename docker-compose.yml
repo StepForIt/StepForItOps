@@ -1,0 +1,102 @@
+# Stack de prod. Aucun port publié : le reverse proxy route vers les ports
+# internes des services — `web` 3000 (domaine du front, le seul indispensable)
+# et, au besoin, `api` 3001 (cf. API_PUBLIC_URL).
+# Les variables sensibles sont requises (`${VAR:?}`) : un oubli arrête le
+# déploiement au lieu de démarrer une plateforme ouverte.
+# En local, docker-compose.override.yml est chargé en plus (ports, hot reload).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nwm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      POSTGRES_DB: ${POSTGRES_DB:-nwm}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nwm}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Conteneur de migration : joué avant l'api, une seule fois, et qui doit
+  # sortir en succès pour qu'elle démarre. Un échec de migration reste donc un
+  # échec de migration — il ne se déguise pas en crash de l'application.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['./apps/api/scripts/migrate.sh']
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nwm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nwm}?schema=public
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nwm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nwm}?schema=public
+      API_PORT: 3001
+      # Optionnel : les appels passent par le proxy Next (même origine). À définir
+      # seulement si tu exposes l'API sur son propre domaine.
+      WEB_ORIGIN: ${WEB_ORIGIN:-}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:?API_PUBLIC_URL requis (URL publique de l'API)}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-medium-latest}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GDRIVE_ACCESS_TOKEN: ${GDRIVE_ACCESS_TOKEN:-}
+      KUMA_URL: ${KUMA_URL:-}
+      KUMA_USERNAME: ${KUMA_USERNAME:-}
+      KUMA_PASSWORD: ${KUMA_PASSWORD:-}
+      # Domaine public de l'API = accès anonyme à toute la plateforme sans ce
+      # jeton. Le heartbeat (/monitoring/beat/:token) reste public.
+      API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:?API_ACCESS_TOKEN requis (jeton front → API)}
+      # Remontée des erreurs (Sentry ou GlitchTip, cf. docs/sentry.md). Vide = rien
+      # n'est initialisé.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-}
+    expose:
+      - '3001'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Inliné dans le bundle au build (préfixe NEXT_PUBLIC_) : une variable
+        # posée au runtime n'atteindrait jamais le navigateur.
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-}
+        NEXT_PUBLIC_SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+    # Le navigateur passe par le proxy Next /backend → http://api:3001 (réseau interne) :
+    # seul le domaine du front est indispensable. Un domaine public API n'est requis que
+    # pour les heartbeats si ton n8n est à l'extérieur (cf. API_PUBLIC_URL).
+    environment:
+      # Authentification de l'équipe (cf. .env.example). APP_BASE_URL doit être
+      # le domaine public du front : il sert de redirect_uri OAuth.
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL requis (URL publique du front)}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_ALLOWED_DOMAIN: ${GOOGLE_ALLOWED_DOMAIN:-}
+      APP_USERNAME: ${APP_USERNAME:-}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:?API_ACCESS_TOKEN requis (jeton front → API)}
+    expose:
+      - '3000'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

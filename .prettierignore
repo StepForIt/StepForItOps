@@ -1,0 +1,15 @@
+node_modules
+dist
+.next
+.next-*
+coverage
+pnpm-lock.yaml
+playwright-report
+test-results
+# La documentation est écrite à la main, ligne par ligne : Prettier y
+# recomposerait les tableaux et les listes sans rien apporter.
+*.md
+# Généré par Prisma, jamais édité à la main.
+apps/api/prisma/migrations
+# Les mesures et captures de l'audit UX : des sorties, jamais du code.
+apps/web/audit-ux/.out

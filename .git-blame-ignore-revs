@@ -1,0 +1,8 @@
+# Révisions à ignorer par `git blame` : elles ne changent que la mise en forme.
+#
+# Pour qu'il en tienne compte, une fois par clone :
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub le lit tout seul.)
+
+# style: passer tout le dépôt à Prettier
+d4c71d34fc0e327bff1472ea37fac9a442648413

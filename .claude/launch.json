@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "AUTH_OPTIONAL=1 pnpm --filter @nwm/web dev --port 3002"],
+      "port": 3002
+    },
+    {
+      "name": "web-dev-auto",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "AUTH_OPTIONAL=1 NEXT_DIST_DIR=\".next-dev-$PORT\" pnpm --filter @nwm/web exec next dev"
+      ],
+      "port": 3006,
+      "autoPort": true
+    }
+  ]
+}

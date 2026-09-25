@@ -1,0 +1,23 @@
+{
+  "name": "StepForIt Ops",
+  "short_name": "SFI Ops",
+  "description": "Versioning, vérification et monitoring de workflows n8n",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#1677ff",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Workflows", "url": "/workflows" },
+    { "name": "Erreurs", "url": "/errors" },
+    { "name": "Findings", "url": "/findings" }
+  ]
+}

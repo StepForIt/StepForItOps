@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  // Le build ne compile que l'application : les tests et leurs doublures sont
+  // typés (ils sont dans l'`include` du tsconfig) mais n'ont rien à faire dans
+  // `dist`, ni dans l'image de production.
+  "exclude": ["node_modules", "dist", "test", "vitest.config.ts", "**/*.spec.ts"]
+}

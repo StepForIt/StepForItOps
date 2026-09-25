@@ -1,0 +1,197 @@
+# Le gate annoncé par CONTRIBUTING.md, joué pour de vrai sur chaque PR.
+#
+# Ce qu'il attrape, et que rien n'attrapait avant lui :
+# - `typecheck` : un export oublié dans `packages/core` compile chez celui qui
+#   l'écrit et fait échouer le démarrage de l'api chez tous les autres ;
+# - `test` : les 706 tests du domaine pur, qui tournent en 3 s ;
+# - `build` : `nest build` et `next build`, seuls à voir ce que le typecheck
+#   ignore (résolution des alias, tracing `output: standalone`).
+#
+# `prisma generate` précède le typecheck : sans le client généré, la moitié
+# des services de l'api ne compilent pas, et l'échec ne parlerait pas du code.
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  # Une seule vérification par branche : les pushes successifs d'une PR
+  # annulent la précédente au lieu de faire la queue.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck · tests · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Les tests de l'api écrivent dans une VRAIE base : ce qu'ils vérifient est
+    # justement ce que les services persistent. Elle est jetable et s'appelle
+    # `…_test` — les suites vident ses tables entre deux cas, et le helper refuse
+    # de tourner sur une base dont le nom ne le dit pas.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nwm
+          POSTGRES_PASSWORD: nwm
+          POSTGRES_DB: nwm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nwm"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgresql://nwm:nwm@localhost:5432/nwm_test
+    steps:
+      - uses: actions/checkout@v7
+
+      # La version de pnpm est lue dans `packageManager` du package.json racine.
+      # `setup-node` vient APRÈS : son cache `pnpm` a besoin du binaire pour
+      # résoudre le store.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          # Alignée sur l'image de prod de l'api (node:22-alpine).
+          node-version: 22
+          cache: pnpm
+
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      # Avant le typecheck : ces deux-là ne demandent ni client Prisma ni build,
+      # et une PR qui n'a qu'une virgule de travers doit l'apprendre en trente
+      # secondes.
+      - name: Format
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Générer le client Prisma
+        run: pnpm --filter @nwm/api prisma:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests unitaires
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  migrations:
+    name: migrations · schéma
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Une base neuve à chaque fois : c'est le seul état où « les migrations
+    # produisent le schéma » veut dire quelque chose. Comparer la base de dev au
+    # schéma serait vert quoi qu'il arrive, l'api la maintenant alignée par
+    # `db push`.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nwm
+          POSTGRES_PASSWORD: nwm
+          POSTGRES_DB: nwm
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nwm"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://nwm:nwm@localhost:5432/nwm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Générer le client Prisma
+        run: pnpm --filter @nwm/api prisma:generate
+
+      # Le script du conteneur `migrate` de la prod, joué tel quel sur une base
+      # neuve : il déroule les migrations, puis compare la base obtenue au
+      # schéma. Une modification de schema.prisma partie sans sa migration
+      # échoue ICI, au lieu du déploiement. Ce qu'il ne couvre pas : la branche
+      # baseline (base déjà peuplée sans historique), qui demanderait de
+      # reconstituer une base d'avant les migrations.
+      - name: Déployer les migrations sur une base neuve
+        run: ./apps/api/scripts/migrate.sh
+
+      # L'autre moitié, complémentaire : les migrations rejouées dans une base
+      # jetable et confrontées au schéma. La précédente compare la BASE au
+      # schéma, celle-ci les MIGRATIONS — une migration éditée à la main après
+      # coup ne se voit que là.
+      - name: Rejouer les migrations dans une shadow database
+        run: pnpm --filter @nwm/api prisma:check
+
+  image:
+    name: image api · démarrage à blanc
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # La dernière couche de l'image joue `smoke-boot.sh` : elle refuse le
+      # build si un paquet importé n'est pas déclaré dans apps/api/package.json.
+      # Le typecheck ne voit que les types, et une dépendance seulement
+      # transitive compile puis meurt au boot de l'arbre `--prod` — en silence
+      # quand c'est un module métier, que `loadFeatureModules` avale en warning.
+      - name: Construire l'image de production de l'api
+        run: docker build -f apps/api/Dockerfile -t nwm-api:ci .
+
+  e2e:
+    name: parcours · navigateur
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nwm
+          POSTGRES_PASSWORD: nwm
+          POSTGRES_DB: nwm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nwm"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgresql://nwm:nwm@localhost:5432/nwm_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Générer le client Prisma
+        run: pnpm --filter @nwm/api prisma:generate
+      # Chromium seul : les parcours vérifient le câblage de la console, pas le
+      # rendu de trois moteurs. Un second navigateur doublerait le temps du job
+      # pour des différences que ces tests ne regardent pas.
+      - name: Installer Chromium
+        run: pnpm --filter @nwm/web exec playwright install --with-deps chromium
+      # Playwright démarre lui-même l'api (compilée) et la console (`next dev`),
+      # pose le schéma et le jeu d'essai : cf. apps/web/playwright.config.ts.
+      - name: Parcours
+        run: pnpm --filter @nwm/web test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

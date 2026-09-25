@@ -1,0 +1,41 @@
+{
+  "name": "@nwm/web",
+  "version": "0.1.0",
+  "license": "BUSL-1.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@mermaid-js/layout-elk": "^0.1.9",
+    "@refinedev/antd": "^5.44.0",
+    "@refinedev/core": "^4.56.0",
+    "@refinedev/nextjs-router": "^6.2.0",
+    "@refinedev/simple-rest": "^5.0.10",
+    "@sentry/nextjs": "^10.73.0",
+    "antd": "^5.21.0",
+    "mermaid": "^11.4.0",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "use-long-press": "^3.3.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^20.16.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
