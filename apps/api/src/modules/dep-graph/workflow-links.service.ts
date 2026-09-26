@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { Prisma, WorkflowLink } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -24,13 +25,11 @@ export class WorkflowLinksService {
 
   async create(input: WorkflowLinkInput): Promise<WorkflowLink> {
     const { fromWorkflowId, toWorkflowId } = input;
-    if (!fromWorkflowId || !toWorkflowId)
-      throw new BadRequestException('Workflow de départ et d’arrivée requis');
-    if (fromWorkflowId === toWorkflowId)
-      throw new BadRequestException('Un workflow ne peut pas se lier à lui-même');
+    if (!fromWorkflowId || !toWorkflowId) throw new BadRequestException(msg('platform.linkEndsRequired'));
+    if (fromWorkflowId === toWorkflowId) throw new BadRequestException(msg('platform.linkSelf'));
 
     const known = await this.prisma.workflow.count({ where: { id: { in: [fromWorkflowId, toWorkflowId] } } });
-    if (known < 2) throw new NotFoundException('Workflow inconnu — synchronise l’instance puis réessaie');
+    if (known < 2) throw new NotFoundException(msg('platform.linkUnknownWorkflow'));
 
     try {
       return await this.prisma.workflowLink.create({
@@ -43,7 +42,7 @@ export class WorkflowLinksService {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('Ces deux workflows sont déjà liés dans ce sens');
+        throw new ConflictException(msg('platform.linkDuplicate'));
       }
       throw error;
     }
@@ -67,7 +66,7 @@ export class WorkflowLinksService {
 
   private async get(id: string): Promise<WorkflowLink> {
     const link = await this.prisma.workflowLink.findUnique({ where: { id } });
-    if (!link) throw new NotFoundException(`Lien inconnu : ${id}`);
+    if (!link) throw new NotFoundException(msg('platform.linkNotFound', { id }));
     return link;
   }
 }

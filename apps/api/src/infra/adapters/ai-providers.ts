@@ -24,7 +24,7 @@ export const AI_PROVIDER_INFOS: AiProviderInfo[] = [
 
 export function aiProviderInfo(provider: AiProvider): AiProviderInfo {
   const info = AI_PROVIDER_INFOS.find((candidate) => candidate.id === provider);
-  if (!info) throw new Error(`Fournisseur IA inconnu : ${provider}`);
+  if (!info) throw new Error(`Unknown AI provider: ${provider}`);
   return info;
 }
 

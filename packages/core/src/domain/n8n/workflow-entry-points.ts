@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { declaredEntryPath } from './entry-path';
 import { TriggerKind, isTriggerNode, triggerKindOf } from './workflow-graph';
@@ -51,11 +52,11 @@ function entryOf(node: N8nNode): WorkflowEntryPoint | null {
 
   switch (kind) {
     case 'schedule':
-      return { kind, nodeName: node.name, label: 'planifié' };
+      return { kind, nodeName: node.name, label: msg('env.entryScheduled') };
     case 'error':
-      return { kind, nodeName: node.name, label: "erreur d'un workflow" };
+      return { kind, nodeName: node.name, label: msg('env.entryError') };
     case 'manual':
-      return { kind, nodeName: node.name, label: 'lancé à la main' };
+      return { kind, nodeName: node.name, label: msg('env.entryManual') };
     // Un sous-workflow est déjà montré par les flèches de ses appelants : pas de porte
     // à dessiner, sinon on double l'information sur chaque enfant.
     case 'sub-workflow':

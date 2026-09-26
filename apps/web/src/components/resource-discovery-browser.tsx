@@ -16,6 +16,7 @@ import {
   message,
 } from 'antd';
 import { ArrowLeftOutlined, TableOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useInstanceScope } from '../lib/instance-scope';
 import { useEnvs } from '../lib/envs';
@@ -90,6 +91,8 @@ export function ResourceDiscoveryBrowser({
   onClose: () => void;
   onPick: (item: DiscoveredItem, env: string) => void;
 }) {
+  const t = useTranslations('settings.discovery');
+  const tc = useTranslations('common');
   const { scope } = useInstanceScope();
   const { envs } = useEnvs();
   const [catalog, setCatalog] = useState<ProviderCatalogEntry[]>([]);
@@ -160,12 +163,12 @@ export function ResourceDiscoveryBrowser({
           `/resource-discovery/leftovers/${encodeURIComponent(leftover.externalId)}?instanceId=${encodeURIComponent(instanceId ?? '')}`,
         );
         setLeftovers((rows) => rows.filter((row) => row.externalId !== leftover.externalId));
-        message.success('Workflow temporaire supprimé');
+        message.success(t('leftoverDeleted'));
       } catch (err) {
         message.error((err as Error).message);
       }
     },
-    [instanceId],
+    [instanceId, t],
   );
 
   const run = useCallback(
@@ -215,19 +218,19 @@ export function ResourceDiscoveryBrowser({
     ));
 
   return (
-    <Drawer title="Parcourir depuis n8n" width={640} open={open} onClose={onClose}>
+    <Drawer title={t('title')} width={640} open={open} onClose={onClose}>
       {!entry && !isCredentialMode ? (
         <Alert
           type="warning"
           showIcon
-          message="Provider non découvrable"
-          description={`La découverte couvre : ${catalog.map((p) => p.provider).join(', ') || '…'}. Sélectionne d'abord un provider supporté dans le formulaire.`}
+          message={t('unsupported')}
+          description={t('unsupportedHint', { providers: catalog.map((p) => p.provider).join(', ') || '…' })}
         />
       ) : (
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Space wrap>
             <Select
-              placeholder="Instance n8n"
+              placeholder={t('instance')}
               style={{ minWidth: 200 }}
               value={instanceId}
               onChange={setInstanceId}
@@ -235,13 +238,13 @@ export function ResourceDiscoveryBrowser({
             />
             {!isCredentialMode && (
               <Select
-                placeholder="Credential"
+                placeholder={t('credential')}
                 style={{ minWidth: 260 }}
                 value={credentialKey}
                 onChange={setCredentialKey}
                 options={credentials.map((c) => ({
                   value: `${c.type}:${c.id}`,
-                  label: `${c.name ?? c.id} (${c.type}, ${c.usedBy} nœud${c.usedBy > 1 ? 's' : ''})`,
+                  label: t('credentialOption', { name: c.name ?? c.id, type: c.type, count: c.usedBy }),
                 }))}
               />
             )}
@@ -249,8 +252,7 @@ export function ResourceDiscoveryBrowser({
 
           {credentials.length === 0 && (
             <Typography.Text type="secondary">
-              Aucun credential {isCredentialMode ? '' : `${provider} `}trouvé dans les workflows snapshotés de
-              cette instance — synchronise d&apos;abord les workflows, ou vérifie le provider.
+              {isCredentialMode ? t('noCredentials') : t('noCredentialsFor', { provider: provider ?? '' })}
             </Typography.Text>
           )}
 
@@ -262,12 +264,12 @@ export function ResourceDiscoveryBrowser({
                 loading={loading}
                 onClick={() => run(rootStep.id, null)}
               >
-                Lister les {rootStep.label.toLowerCase()}
+                {t('listStep', { label: rootStep.label.toLowerCase() })}
               </Button>
             )}
             {parent && rootStep && (
               <Button icon={<ArrowLeftOutlined />} onClick={() => run(rootStep.id, null)}>
-                Retour aux {rootStep.label.toLowerCase()}
+                {t('backToStep', { label: rootStep.label.toLowerCase() })}
               </Button>
             )}
           </Space>
@@ -276,14 +278,11 @@ export function ResourceDiscoveryBrowser({
             <Alert
               type="error"
               showIcon
-              message="La découverte a échoué"
+              message={t('failed')}
               description={
                 <Space direction="vertical" size={4}>
                   <Typography.Text>{error}</Typography.Text>
-                  <Typography.Text type="secondary">
-                    Le workflow temporaire a été conservé dans n8n, dans l&apos;état où il a planté : son
-                    exécution est ci-dessous, supprime-le une fois le problème compris.
-                  </Typography.Text>
+                  <Typography.Text type="secondary">{t('failedHint')}</Typography.Text>
                 </Space>
               }
             />
@@ -292,33 +291,29 @@ export function ResourceDiscoveryBrowser({
           {leftovers.length > 0 && (
             <List
               size="small"
-              header={
-                <Typography.Text strong>
-                  Workflows de découverte conservés ({leftovers.length})
-                </Typography.Text>
-              }
+              header={<Typography.Text strong>{t('leftovers', { count: leftovers.length })}</Typography.Text>}
               bordered
               dataSource={leftovers}
               renderItem={(leftover) => (
                 <List.Item
                   actions={[
                     <a key="open" href={leftover.url} target="_blank" rel="noopener noreferrer">
-                      Ouvrir dans n8n
+                      {tc('openInN8n')}
                     </a>,
                     // La suppression a lieu DANS n8n, pas dans la plateforme : c'est
                     // le seul geste de cet écran dont l'effet sort d'ici, et il ne
                     // se défait pas. Il se confirme, et la confirmation le dit.
                     <Popconfirm
                       key="drop"
-                      title="Supprimer ce workflow dans n8n ?"
-                      description={`« ${leftover.name} » sera supprimé de l'instance n8n. Irréversible.`}
-                      okText="Supprimer dans n8n"
+                      title={t('dropConfirm')}
+                      description={t('dropConfirmHint', { name: leftover.name })}
+                      okText={t('dropOk')}
                       okButtonProps={{ danger: true }}
-                      cancelText="Annuler"
+                      cancelText={tc('cancel')}
                       onConfirm={() => drop(leftover)}
                     >
                       <Button size="small" danger>
-                        Supprimer
+                        {tc('delete')}
                       </Button>
                     </Popconfirm>,
                   ]}
@@ -327,7 +322,7 @@ export function ResourceDiscoveryBrowser({
                     title={
                       <Space size={4}>
                         <Typography.Text>{leftover.name}</Typography.Text>
-                        {leftover.active && <Tag color="red">actif</Tag>}
+                        {leftover.active && <Tag color="red">{t('active')}</Tag>}
                       </Space>
                     }
                     description={
@@ -339,11 +334,11 @@ export function ResourceDiscoveryBrowser({
                             </Tag>
                             {leftover.lastExecution.failedNode && (
                               <Typography.Text type="secondary">
-                                nœud {leftover.lastExecution.failedNode}
+                                {t('failedNode', { node: leftover.lastExecution.failedNode })}
                               </Typography.Text>
                             )}
                             <a href={leftover.lastExecution.url} target="_blank" rel="noopener noreferrer">
-                              Voir l&apos;exécution
+                              {t('seeExecution')}
                             </a>
                           </Space>
                           {leftover.lastExecution.message && (
@@ -351,9 +346,7 @@ export function ResourceDiscoveryBrowser({
                           )}
                         </Space>
                       ) : (
-                        <Typography.Text type="secondary">
-                          Aucune exécution — l&apos;échec est en amont (activation ou webhook injoignable).
-                        </Typography.Text>
+                        <Typography.Text type="secondary">{t('noExecution')}</Typography.Text>
                       )
                     }
                   />
@@ -364,17 +357,18 @@ export function ResourceDiscoveryBrowser({
 
           {parent && (
             <Typography.Text>
-              {childStep?.label} de <strong>{parent.name}</strong> <Tag>{parent.id}</Tag>
+              {t.rich('childOf', {
+                step: childStep?.label ?? '',
+                name: parent.name,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}{' '}
+              <Tag>{parent.id}</Tag>
             </Typography.Text>
           )}
 
           {isCredentialMode ? (
             <>
-              <Typography.Paragraph type="secondary">
-                Les credentials relevées dans les workflows snapshotés — l&apos;API n8n ne les liste pas.
-                Choisis celle de chaque env : le nom retenu ici remet à jour le libellé affiché par le nœud
-                après la bascule.
-              </Typography.Paragraph>
+              <Typography.Paragraph type="secondary">{t('credentialsHint')}</Typography.Paragraph>
               {credentials.length > 0 && (
                 <List
                   size="small"
@@ -396,7 +390,7 @@ export function ResourceDiscoveryBrowser({
                               {credential.id}
                             </Typography.Text>
                             <Typography.Text type="secondary">
-                              {credential.usedBy} nœud{credential.usedBy > 1 ? 's' : ''}
+                              {t('nodes', { count: credential.usedBy })}
                             </Typography.Text>
                           </Space>
                         }
@@ -409,13 +403,9 @@ export function ResourceDiscoveryBrowser({
           ) : (
             <Spin spinning={loading}>
               {items === null ? (
-                <Typography.Paragraph type="secondary">
-                  Un workflow temporaire « [NWM discovery] » est créé sur l&apos;instance, appelé, puis
-                  supprimé — sauf en cas d&apos;erreur, où il est gardé pour que tu puisses l&apos;ouvrir dans
-                  n8n et comprendre.
-                </Typography.Paragraph>
+                <Typography.Paragraph type="secondary">{t('howItWorks')}</Typography.Paragraph>
               ) : items.length === 0 ? (
-                <Empty description="Aucun résultat" />
+                <Empty description={t('noResults')} />
               ) : (
                 <List
                   size="small"

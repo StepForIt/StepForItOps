@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ChatService } from './chat.service';
 
@@ -32,15 +33,15 @@ export class ErrorFixService {
       where: { id: groupId },
       include: { errors: { orderBy: { startedAt: 'desc' }, take: SAMPLE_OCCURRENCES } },
     });
-    if (!group) throw new NotFoundException(`Groupe d'erreurs ${groupId} introuvable`);
+    if (!group) throw new NotFoundException(msg('chat.errorFixGroupNotFound', { id: groupId }));
     if (!group.workflowId) {
-      throw new BadRequestException('Workflow non synchronisé dans la plateforme : rien à éditer ici.');
+      throw new BadRequestException(msg('chat.errorFixNoWorkflow'));
     }
 
     const session = await this.chat.createSession(group.workflowId);
     await this.prisma.workflowChatSession.update({
       where: { id: session.id },
-      data: { title: `Correctif : ${group.pattern}`.slice(0, TITLE_MAX) },
+      data: { title: msg('chat.fixTitle', { subject: group.pattern }).slice(0, TITLE_MAX) },
     });
 
     const result = await this.chat.sendMessage(session.id, buildFixRequest(group), {
@@ -51,7 +52,7 @@ export class ErrorFixService {
       sessionId: session.id,
       proposalId: result.proposalId,
       // Le tour peut avoir été arrêté depuis le tiroir : il n'a alors rien écrit.
-      reply: result.assistantMessage?.content ?? 'Le tour a été arrêté avant toute réponse.',
+      reply: result.assistantMessage?.content ?? msg('chat.turnStoppedNoReply'),
     };
   }
 }
@@ -71,30 +72,24 @@ interface GroupWithErrors {
 
 function buildFixRequest(group: GroupWithErrors): string {
   const samples = group.errors
-    .map((row) => {
-      const stack = row.stack ? `\n  stack (début) : ${row.stack.slice(0, 400)}` : '';
-      return `- ${row.startedAt.toISOString()} : ${row.message ?? '(sans message)'}${stack}`;
-    })
+    .map((row) =>
+      msg('chat.errorFixSample', {
+        at: row.startedAt.toISOString(),
+        message: row.message ?? msg('chat.errorFixNoMessage'),
+        stack: row.stack ? msg('chat.errorFixSampleStack', { stack: row.stack.slice(0, 400) }) : '',
+      }),
+    )
     .join('\n');
 
-  return [
-    `Ce workflow échoue en production, et je veux un correctif.`,
-    ``,
-    `Problème (regroupé par la plateforme) :`,
-    `- nœud fautif : ${group.failedNode ?? 'inconnu'}${group.failedNodeType ? ` (${group.failedNodeType})` : ''}`,
-    `- forme du message : ${group.pattern}`,
-    `- catégorie : ${group.category}`,
-    `- ${group.occurrences} occurrence(s) entre ${group.firstSeenAt.toISOString()} et ${group.lastSeenAt.toISOString()}`,
-    ...(group.regressions > 0
-      ? [`- déjà marqué corrigé ${group.regressions} fois : le problème revient, cherche la cause de fond`]
-      : []),
-    ``,
-    `Dernières occurrences réelles :`,
-    samples || '- (détail purgé par n8n)',
-    ``,
-    `Propose la modification MINIMALE qui corrige la cause, ou à défaut qui rend le workflow`,
-    `robuste à cet échec (retry, garde sur les données, sortie d'erreur branchée) sans le masquer.`,
-    `Si le vrai correctif est hors du workflow (credential expiré, quota du provider, données`,
-    `côté système tiers), dis-le clairement et ne propose PAS de modification.`,
-  ].join('\n');
+  return msg('chat.errorFixRequest', {
+    node: group.failedNode ?? msg('chat.errorFixUnknownNode'),
+    nodeType: group.failedNodeType ? ` (${group.failedNodeType})` : '',
+    pattern: group.pattern,
+    category: group.category,
+    count: group.occurrences,
+    first: group.firstSeenAt.toISOString(),
+    last: group.lastSeenAt.toISOString(),
+    regressions: group.regressions,
+    samples: samples || msg('chat.errorFixPurged'),
+  });
 }

@@ -130,7 +130,7 @@ export class LlmUsageSamplerService {
         );
       } catch (error) {
         // Instance en panne : le curseur n'a pas bougé, tout sera repris au retour.
-        this.logger.warn(`Poll coûts IA KO pour ${instance.name} : ${(error as Error).message}`);
+        this.logger.warn(`AI cost poll failed for ${instance.name}: ${(error as Error).message}`);
       }
     }
     if (result.instances > 0) await this.budget.checkToday();
@@ -274,6 +274,6 @@ export class LlmUsageSamplerService {
     const { count } = await this.prisma.llmUsage.deleteMany({
       where: { startedAt: { lt: limit } },
     });
-    if (count > 0) this.logger.log(`Purge coûts IA : ${count} appel(s) de plus de ${RETENTION_DAYS} j`);
+    if (count > 0) this.logger.log(`AI cost purge: ${count} call(s) older than ${RETENTION_DAYS} d`);
   }
 }

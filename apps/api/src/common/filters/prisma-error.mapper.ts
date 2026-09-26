@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, HttpException, NotFoundException } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -13,21 +14,19 @@ export function httpExceptionFromPrisma(error: unknown): HttpException | undefin
   if (error instanceof Prisma.PrismaClientValidationError) {
     // Le message Prisma embarque toute la requête : on garde un texte court côté
     // client, le détail complet part dans les logs (cf. AllExceptionsFilter).
-    return new BadRequestException(
-      'Requête invalide : champ de tri ou de filtre inconnu (vérifier _sort / _order).',
-    );
+    return new BadRequestException(msg('common.invalidQuery'));
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     const target = (error.meta as { target?: string[] } | undefined)?.target;
     switch (error.code) {
       case 'P2025':
-        return new NotFoundException('Ressource introuvable');
+        return new NotFoundException(msg('common.notFound'));
       case 'P2002':
         return new ConflictException(
-          `Doublon${target?.length ? ` sur ${target.join(', ')}` : ''} : cette valeur existe déjà`,
+          msg('common.duplicate', { hasTarget: Boolean(target?.length), target: target?.join(', ') }),
         );
       case 'P2003':
-        return new BadRequestException('Référence inexistante (contrainte de clé étrangère)');
+        return new BadRequestException(msg('common.missingReference'));
       default:
         return undefined;
     }

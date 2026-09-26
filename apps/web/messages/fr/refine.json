@@ -1,0 +1,42 @@
+{
+  "pages": {
+    "error": {
+      "404": "Désolé, cette page n'existe pas.",
+      "resource404": "La ressource « {resource} » est-elle bien déclarée ?",
+      "backHome": "Retour à l'accueil"
+    }
+  },
+  "actions": { "list": "Liste", "create": "Créer", "edit": "Modifier", "show": "Afficher" },
+  "buttons": {
+    "create": "Créer",
+    "save": "Enregistrer",
+    "logout": "Se déconnecter",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "confirm": "Confirmer ?",
+    "filter": "Filtrer",
+    "clear": "Effacer",
+    "refresh": "Rafraîchir",
+    "show": "Afficher",
+    "undo": "Annuler",
+    "import": "Importer",
+    "clone": "Dupliquer",
+    "notAccessTitle": "Vous n'avez pas accès à cette action"
+  },
+  "warnWhenUnsavedChanges": "Quitter la page ? Des modifications ne sont pas enregistrées.",
+  "notifications": {
+    "success": "Succès",
+    "error": "Erreur (code : {statusCode})",
+    "undoable": "{seconds} secondes pour annuler",
+    "createSuccess": "{resource} créé",
+    "createError": "Échec de la création de {resource} (code : {statusCode})",
+    "deleteSuccess": "{resource} supprimé",
+    "deleteError": "Échec de la suppression de {resource} (code : {statusCode})",
+    "editSuccess": "{resource} modifié",
+    "editError": "Échec de la modification de {resource} (code : {statusCode})",
+    "importProgress": "Import : {processed}/{total}"
+  },
+  "loading": "Chargement",
+  "table": { "actions": "Actions" }
+}

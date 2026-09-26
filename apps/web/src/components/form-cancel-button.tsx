@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from 'antd';
 import { useBack } from '@refinedev/core';
 
@@ -12,7 +13,8 @@ import { useBack } from '@refinedev/core';
  */
 export function FormCancelButton() {
   const back = useBack();
-  return <Button onClick={() => back()}>Annuler</Button>;
+  const t = useTranslations('common');
+  return <Button onClick={() => back()}>{t('cancel')}</Button>;
 }
 
 /**

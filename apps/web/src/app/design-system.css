@@ -1,0 +1,158 @@
+/*
+ * Le design dédié de la console : là où antd habille par défaut (tags en aplats
+ * pastel, bandeaux jaune pâle), la charte StepForIt Ops habille à sa façon. Les
+ * couleurs viennent des variables posées par `layout.tsx` depuis `lib/brand/`, jamais
+ * d'un hexadécimal écrit ici.
+ *
+ * Les sélecteurs doublent la classe (`.ant-tag.ant-tag-green`) : le style d'antd est
+ * injecté en `:where(.css-…)`, à une seule classe, et doit perdre.
+ */
+
+/* ---- Tags : chaque sens a sa teinte ----
+   Aplat teinté de sa couleur, texte dans la même couleur foncée, et le point qui
+   rappelle la comète. Une pastille neutre partout rendait l'écran monochrome : on ne
+   reconnaissait plus un env, un statut ou une catégorie d'un coup d'œil. */
+.ant-tag.ant-tag {
+  --tag-dot: var(--dot-default);
+  background: color-mix(in srgb, var(--tag-dot) 16%, white);
+  border: 1px solid color-mix(in srgb, var(--tag-dot) 40%, white);
+  color: color-mix(in srgb, var(--tag-dot) 52%, var(--brand-nuit));
+  border-radius: 999px;
+  padding-inline: 9px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ant-tag.ant-tag[class*='ant-tag-']:not(.ant-tag-has-color)::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tag-dot);
+  flex-shrink: 0;
+}
+.ant-tag.ant-tag-green {
+  --tag-dot: var(--dot-green);
+}
+.ant-tag.ant-tag-lime {
+  --tag-dot: var(--dot-lime);
+}
+.ant-tag.ant-tag-cyan {
+  --tag-dot: var(--dot-cyan);
+}
+.ant-tag.ant-tag-blue {
+  --tag-dot: var(--dot-blue);
+}
+.ant-tag.ant-tag-geekblue {
+  --tag-dot: var(--dot-geekblue);
+}
+.ant-tag.ant-tag-purple {
+  --tag-dot: var(--dot-purple);
+}
+.ant-tag.ant-tag-magenta {
+  --tag-dot: var(--dot-magenta);
+}
+.ant-tag.ant-tag-pink {
+  --tag-dot: var(--dot-pink);
+}
+.ant-tag.ant-tag-gold {
+  --tag-dot: var(--dot-gold);
+}
+.ant-tag.ant-tag-yellow {
+  --tag-dot: var(--dot-yellow);
+}
+.ant-tag.ant-tag-orange {
+  --tag-dot: var(--dot-orange);
+}
+.ant-tag.ant-tag-volcano {
+  --tag-dot: var(--dot-volcano);
+}
+.ant-tag.ant-tag-red {
+  --tag-dot: var(--dot-red);
+}
+.ant-tag.ant-tag-success {
+  --tag-dot: var(--dot-success);
+}
+.ant-tag.ant-tag-processing {
+  --tag-dot: var(--dot-processing);
+}
+.ant-tag.ant-tag-warning {
+  --tag-dot: var(--dot-warning);
+}
+.ant-tag.ant-tag-error {
+  --tag-dot: var(--dot-error);
+}
+.ant-tag.ant-tag-default {
+  --tag-dot: var(--dot-default);
+}
+/* L'ambre, trop clair pour un texte : la teinte monte, le texte vire au brun. */
+.ant-tag.ant-tag-gold,
+.ant-tag.ant-tag-yellow,
+.ant-tag.ant-tag-orange,
+.ant-tag.ant-tag-warning {
+  background: color-mix(in srgb, var(--tag-dot) 24%, white);
+  border-color: color-mix(in srgb, var(--tag-dot) 55%, white);
+  color: #6b4500;
+}
+/* La prod : l'env qui compte, en aplat nuit plein. `geekblue` lui est réservé (défaut de
+   l'env prod) ; les tags d'instance sont passés en `blue`. */
+.ant-tag.ant-tag-geekblue {
+  background: var(--brand-nuit);
+  border-color: var(--brand-nuit);
+  color: white;
+}
+.ant-tag.ant-tag-geekblue::before {
+  background: var(--brand-ambre) !important;
+}
+/* Un tag sans couleur (ni preset, ni statut) reste une pastille neutre, sans point. */
+.ant-tag.ant-tag:not([class*='ant-tag-'])::before {
+  display: none;
+}
+
+/* ---- Menu latéral ----
+   Ses couleurs viennent du thème sombre posé sur le sider (`SIDER_THEME`) ; ne
+   s'ajoute ici que la signature de la marque sur l'élément actif. */
+.app-sider .ant-menu-item-selected {
+  box-shadow: inset 3px 0 0 var(--brand-lagon);
+}
+/* Le point ambre sur l'élément actif : la comète du signe. */
+.app-sider .ant-menu-item-selected::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--brand-ambre);
+  border: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* ---- Bandeaux : encart papier, filet de couleur à gauche, texte nuit ---- */
+.ant-alert.ant-alert {
+  background: var(--brand-papier);
+  border: 1px solid var(--brand-hairline);
+  border-left: 3px solid var(--alert-accent, var(--brand-primary));
+  border-radius: 10px;
+  color: var(--brand-nuit);
+}
+.ant-alert.ant-alert-warning {
+  --alert-accent: var(--brand-ambre);
+}
+.ant-alert.ant-alert-error {
+  --alert-accent: var(--brand-danger);
+}
+.ant-alert.ant-alert-success {
+  --alert-accent: var(--brand-success);
+}
+.ant-alert.ant-alert-info {
+  --alert-accent: var(--brand-primary);
+}
+.ant-alert.ant-alert .ant-alert-message,
+.ant-alert.ant-alert .ant-alert-description {
+  color: var(--brand-nuit);
+}

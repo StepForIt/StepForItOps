@@ -13,12 +13,14 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { useSortable } from '@dnd-kit/sortable';
+import { useTranslations } from 'next-intl';
 import { CSS } from '@dnd-kit/utilities';
 import { GestureModal } from './gesture-modal';
 import { moveStep } from './procedure-edit';
 import { useReleaseRecorder } from './release-recorder';
 import { stepText } from './replay';
 import type { ProcedureStep, StepRun } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 const NOTE_MAX = 2000;
 
@@ -42,6 +44,9 @@ export function StepLine({
   insertMark: boolean;
   onInsert: (position: number) => void;
 }) {
+  const t = useTranslations('reviewTools.recorder.step');
+  const tCommon = useTranslations('common');
+  const tReplay = useTranslations('reviewTools.recorder.replay');
   const recorder = useReleaseRecorder();
   const { modal, message } = App.useApp();
   const [editing, setEditing] = useState<'label' | 'note' | null>(null);
@@ -50,7 +55,7 @@ export function StepLine({
     useSortable({ id: step.id, disabled: locked });
   const auto = step.kind === 'auto';
   const done = run.state === 'done' || run.state === 'skipped';
-  const text = stepText(step, recorder.shift);
+  const text = stepText(step, recorder.shift, tReplay);
   const ids = recorder.procedure?.steps.map((row) => row.id) ?? [];
   const up = moveStep(ids, step.id, -1, recorder.frozen);
   const down = moveStep(ids, step.id, 1, recorder.frozen);
@@ -62,11 +67,11 @@ export function StepLine({
 
   const confirmRemove = () =>
     modal.confirm({
-      title: 'Supprimer cette étape ?',
+      title: t('removeTitle'),
       content: `${index + 1}. ${text}`,
-      okText: 'Supprimer',
+      okText: tCommon('delete'),
       okButtonProps: { danger: true },
-      cancelText: 'Annuler',
+      cancelText: tCommon('cancel'),
       onOk: () => guard(recorder.removeStep(step.id)),
     });
 
@@ -74,32 +79,32 @@ export function StepLine({
     ...(locked
       ? []
       : [
-          { key: 'up', label: 'Monter', disabled: !up, onClick: () => up && guard(recorder.reorder(up)) },
+          { key: 'up', label: t('moveUp'), disabled: !up, onClick: () => up && guard(recorder.reorder(up)) },
           {
             key: 'down',
-            label: 'Descendre',
+            label: t('moveDown'),
             disabled: !down,
             onClick: () => down && guard(recorder.reorder(down)),
           },
-          { key: 'before', label: 'Insérer avant', onClick: () => onInsert(index) },
+          { key: 'before', label: t('insertBefore'), onClick: () => onInsert(index) },
         ]),
     ...(!locked || index === recorder.frozen - 1
-      ? [{ key: 'after', label: 'Insérer après', onClick: () => onInsert(index + 1) }]
+      ? [{ key: 'after', label: t('insertAfter'), onClick: () => onInsert(index + 1) }]
       : []),
     {
       key: 'note',
-      label: step.note ? 'Modifier la note' : 'Ajouter une note',
+      label: step.note ? t('editNote') : t('addNote'),
       onClick: () => setEditing('note'),
     },
-    ...(!auto && !locked ? [{ key: 'label', label: 'Renommer', onClick: () => setEditing('label') }] : []),
+    ...(!auto && !locked ? [{ key: 'label', label: t('rename'), onClick: () => setEditing('label') }] : []),
     ...(auto && !locked && step.action
-      ? [{ key: 'gesture', label: 'Modifier le geste', onClick: () => setGestureOpen(true) }]
+      ? [{ key: 'gesture', label: t('editGesture'), onClick: () => setGestureOpen(true) }]
       : []),
     ...(locked
       ? []
       : [
           { type: 'divider' as const },
-          { key: 'remove', label: 'Supprimer', danger: true, onClick: confirmRemove },
+          { key: 'remove', label: tCommon('delete'), danger: true, onClick: confirmRemove },
         ]),
   ];
 
@@ -139,11 +144,11 @@ export function StepLine({
           <span
             ref={setActivatorNodeRef}
             {...(locked ? {} : { ...attributes, ...listeners })}
-            aria-label={locked ? undefined : "Déplacer l'étape"}
+            aria-label={locked ? undefined : t('drag')}
             style={{
               width: 14,
               paddingTop: 2,
-              color: '#bfbfbf',
+              color: BRAND.slateLight,
               cursor: locked ? 'default' : 'grab',
               touchAction: 'none',
               visibility: locked ? 'hidden' : undefined,
@@ -151,8 +156,8 @@ export function StepLine({
           >
             <HolderOutlined />
           </span>
-          <Tooltip title={auto ? 'Automatique' : 'Manuelle'}>
-            <span style={{ color: auto ? '#1677ff' : '#d48806', paddingTop: 2 }}>
+          <Tooltip title={auto ? t('automatic') : t('manual')}>
+            <span style={{ color: auto ? BRAND.primary : BRAND.warning, paddingTop: 2 }}>
               {auto ? <ThunderboltOutlined /> : <UserOutlined />}
             </span>
           </Tooltip>
@@ -208,7 +213,7 @@ export function StepLine({
           </div>
           <StepStatus run={run} />
           <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
-            <Button type="text" size="small" icon={<MoreOutlined />} aria-label="Modifier l'étape" />
+            <Button type="text" size="small" icon={<MoreOutlined />} aria-label={t('edit')} />
           </Dropdown>
         </div>
 
@@ -224,7 +229,7 @@ export function StepLine({
                 style={{ padding: 0, height: 'auto', fontSize: 12 }}
                 onClick={() => recorder.redo(step.id)}
               >
-                Refaire quand même
+                {t('redo')}
               </Button>
             )}
           </div>
@@ -232,7 +237,7 @@ export function StepLine({
         {run.state === 'waiting' && (
           <div style={{ marginLeft: 44, marginTop: 6 }}>
             {run.decisions?.map((decision) => (
-              <div key={decision} style={{ fontSize: 12, color: '#d48806' }}>
+              <div key={decision} style={{ fontSize: 12, color: BRAND.warning }}>
                 {decision}
               </div>
             ))}
@@ -242,7 +247,7 @@ export function StepLine({
               style={{ marginTop: 6 }}
               onClick={() => recorder.validate(step.id)}
             >
-              {run.resume ? 'Appliquer quand même' : 'Fait'}
+              {run.resume ? t('applyAnyway') : t('done')}
             </Button>
           </div>
         )}
@@ -253,10 +258,10 @@ export function StepLine({
             </Typography.Text>
             <Space size={6} style={{ display: 'flex', marginTop: 6 }}>
               <Button size="small" onClick={() => recorder.retry(step.id)}>
-                Réessayer
+                {t('retry')}
               </Button>
               <Button size="small" type="text" onClick={() => recorder.skip(step.id)}>
-                Passer
+                {t('skip')}
               </Button>
             </Space>
           </div>
@@ -278,19 +283,22 @@ export function StepLine({
 
 /** Le repère d'insertion : là où partira la prochaine étape ajoutée. */
 export function InsertMark() {
-  return <div aria-hidden style={{ height: 2, margin: '0 16px', background: '#1677ff', borderRadius: 1 }} />;
+  return (
+    <div aria-hidden style={{ height: 2, margin: '0 16px', background: BRAND.primary, borderRadius: 1 }} />
+  );
 }
 
 function StepStatus({ run }: { run: StepRun }) {
+  const t = useTranslations('reviewTools.recorder.step');
   switch (run.state) {
     case 'running':
       return <LoadingOutlined />;
     case 'done':
-      return <CheckCircleFilled style={{ color: '#52c41a' }} aria-label="Fait" />;
+      return <CheckCircleFilled style={{ color: BRAND.success }} aria-label={t('done')} />;
     case 'failed':
-      return <CloseCircleFilled style={{ color: '#ff4d4f' }} aria-label="Échec" />;
+      return <CloseCircleFilled style={{ color: BRAND.danger }} aria-label={t('failed')} />;
     case 'skipped':
-      return <MinusCircleOutlined style={{ color: '#bfbfbf' }} aria-label="Passée" />;
+      return <MinusCircleOutlined style={{ color: BRAND.slateLight }} aria-label={t('skipped')} />;
     default:
       return null;
   }

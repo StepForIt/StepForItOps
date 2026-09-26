@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Form, Input, Modal, Popconfirm, Space, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost, apiPut } from '../../lib/api';
 
 interface KumaSettings {
@@ -19,12 +20,12 @@ interface KumaSettingsFormValues {
 
 const SETTINGS_PATH = '/monitoring/settings/kuma';
 
-const SOURCE_LABELS: Record<KumaSettings['source'], { type: 'success' | 'info' | 'warning'; text: string }> =
-  {
-    db: { type: 'success', text: 'Credentials actifs : réglages enregistrés en base.' },
-    env: { type: 'info', text: "Credentials actifs : variables d'env KUMA_* du .env de l'API." },
-    none: { type: 'warning', text: 'Aucun credential Kuma : renseigne le formulaire ci-dessous.' },
-  };
+/** Type d'alerte par source (texte : `health.monitors.settings.source.<source>`). */
+const SOURCE_TYPES: Record<KumaSettings['source'], 'success' | 'info' | 'warning'> = {
+  db: 'success',
+  env: 'info',
+  none: 'warning',
+};
 
 /** Formulaire des credentials admin Uptime Kuma (stockés en base, prioritaires sur le .env). */
 export function KumaSettingsModal({
@@ -37,6 +38,8 @@ export function KumaSettingsModal({
   onChanged: () => void;
 }) {
   const [form] = Form.useForm<KumaSettingsFormValues>();
+  const t = useTranslations('health.monitors.settings');
+  const tc = useTranslations('common');
   const [settings, setSettings] = useState<KumaSettings | null>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -56,7 +59,7 @@ export function KumaSettingsModal({
     setTesting(true);
     try {
       await apiPost(`${SETTINGS_PATH}/test`, values);
-      message.success('Connexion Uptime Kuma OK');
+      message.success(t('testOk'));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -69,7 +72,7 @@ export function KumaSettingsModal({
     setSaving(true);
     try {
       await apiPut(SETTINGS_PATH, values);
-      message.success('Réglages Kuma enregistrés');
+      message.success(t('saved'));
       onChanged();
       onClose();
     } catch (error) {
@@ -84,7 +87,7 @@ export function KumaSettingsModal({
       const next = await apiDelete<KumaSettings>(SETTINGS_PATH);
       setSettings(next);
       form.setFieldsValue({ url: next.url ?? '', username: next.username ?? '', password: '' });
-      message.success("Réglages supprimés : retour aux variables d'env");
+      message.success(t('cleared'));
       onChanged();
     } catch (error) {
       message.error((error as Error).message);
@@ -95,50 +98,50 @@ export function KumaSettingsModal({
 
   return (
     <Modal
-      title="Réglages Uptime Kuma"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       footer={
         <Space>
           {settings?.source === 'db' && (
-            <Popconfirm title="Supprimer les réglages en base et revenir au .env ?" onConfirm={clear}>
-              <Button danger>Revenir au .env</Button>
+            <Popconfirm title={t('clearConfirm')} onConfirm={clear}>
+              <Button danger>{t('clear')}</Button>
             </Popconfirm>
           )}
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{tc('cancel')}</Button>
           <Button onClick={test} loading={testing}>
-            Tester la connexion
+            {t('test')}
           </Button>
           <Button type="primary" onClick={save} loading={saving}>
-            Enregistrer
+            {tc('save')}
           </Button>
         </Space>
       }
     >
       {settings && (
         <Alert
-          type={SOURCE_LABELS[settings.source].type}
+          type={SOURCE_TYPES[settings.source]}
           showIcon
           style={{ marginBottom: 16 }}
-          message={SOURCE_LABELS[settings.source].text}
+          message={t(`source.${settings.source}`)}
         />
       )}
       <Form form={form} layout="vertical">
-        <Form.Item name="url" label="URL Uptime Kuma" rules={[{ required: true, message: 'URL requise' }]}>
-          <Input placeholder="https://kuma.exemple.fr" />
+        <Form.Item name="url" label={t('url')} rules={[{ required: true, message: t('urlRequired') }]}>
+          <Input placeholder={t('urlPlaceholder')} />
         </Form.Item>
         <Form.Item
           name="username"
-          label="Utilisateur"
-          rules={[{ required: true, message: 'Utilisateur requis' }]}
+          label={t('username')}
+          rules={[{ required: true, message: t('usernameRequired') }]}
         >
           <Input autoComplete="off" />
         </Form.Item>
         <Form.Item
           name="password"
-          label="Mot de passe"
-          rules={[{ required: !passwordStored, message: 'Mot de passe requis' }]}
-          extra={passwordStored ? 'Laisser vide pour conserver le mot de passe enregistré.' : undefined}
+          label={t('password')}
+          rules={[{ required: !passwordStored, message: t('passwordRequired') }]}
+          extra={passwordStored ? t('passwordKeep') : undefined}
         >
           <Input.Password autoComplete="new-password" placeholder={passwordStored ? '••••••••' : undefined} />
         </Form.Item>

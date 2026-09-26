@@ -14,6 +14,7 @@ import {
   Upload,
   message,
 } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { DownloadOutlined, ImportOutlined, InboxOutlined } from '@ant-design/icons';
 import { API_URL, apiGet, apiPost } from '../../lib/api';
@@ -42,21 +43,26 @@ interface ConfigBundle {
   [key: string]: unknown;
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  instances: 'Instances',
-  exportTargets: 'Cibles export (GitHub / Drive)',
-  resourceMappings: "Mappings d'environnement",
-  monitors: 'Monitors',
-  monitoringSettings: 'Réglages monitoring (Uptime Kuma)',
-  aiSettings: 'Réglages IA',
-  moduleStates: 'Modules (activation + réglages)',
-  platformSettings: 'Réglages généraux',
-  findingIgnores: 'Exclusions de findings',
-  workflowGroups: 'Groupes de workflows',
-  workflowLinks: 'Liens manuels (carte)',
-};
+// Libellé : `misc.configTransfer.sections.<clé>` ; une section inconnue s'affiche sous sa clé.
+const SECTION_KEYS = [
+  'instances',
+  'exportTargets',
+  'resourceMappings',
+  'monitors',
+  'monitoringSettings',
+  'aiSettings',
+  'moduleStates',
+  'platformSettings',
+  'findingIgnores',
+  'workflowGroups',
+  'workflowLinks',
+] as const;
+type SectionKey = (typeof SECTION_KEYS)[number];
+const isSectionKey = (key: string): key is SectionKey => (SECTION_KEYS as readonly string[]).includes(key);
 
 export default function ConfigTransferPage() {
+  const t = useTranslations('misc.configTransfer');
+  const locale = useLocale();
   const [includeSecrets, setIncludeSecrets] = useState(true);
   const [exporting, setExporting] = useState(false);
   // null tant que l'API n'a pas répondu : on n'affiche ni le bouton ni le refus
@@ -89,9 +95,9 @@ export default function ConfigTransferPage() {
       link.download = `nwm-config-${new Date().toISOString().slice(0, 10)}${includeSecrets ? '' : '-sans-secrets'}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      message.success('Configuration exportée');
+      message.success(t('toast.exported'));
     } catch (error) {
-      message.error(`Échec de l'export : ${(error as Error).message}`);
+      message.error(t('toast.exportFailed', { error: (error as Error).message }));
     } finally {
       setExporting(false);
     }
@@ -108,7 +114,7 @@ export default function ConfigTransferPage() {
     } catch (error) {
       setBundle(null);
       setPreview(null);
-      message.error(`Fichier refusé : ${(error as Error).message}`);
+      message.error(t('toast.fileRefused', { error: (error as Error).message }));
     }
   };
 
@@ -122,7 +128,7 @@ export default function ConfigTransferPage() {
         setFileName(file.name);
         void runPreview(parsed, strategy);
       } catch {
-        message.error("Ce fichier n'est pas un JSON valide");
+        message.error(t('toast.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -146,9 +152,9 @@ export default function ConfigTransferPage() {
       setResult(report);
       setPreview(null);
       setBundle(null);
-      message.success('Configuration importée');
+      message.success(t('toast.imported'));
     } catch (error) {
-      message.error(`Échec de l'import : ${(error as Error).message}`);
+      message.error(t('toast.importFailed', { error: (error as Error).message }));
     } finally {
       setImporting(false);
     }
@@ -157,7 +163,7 @@ export default function ConfigTransferPage() {
   const reportRows = (report: ImportReport) =>
     Object.entries(report.sections).map(([key, counts]) => ({
       key,
-      section: SECTION_LABELS[key] ?? key,
+      section: isSectionKey(key) ? t(`sections.${key}`) : key,
       ...counts,
     }));
 
@@ -167,20 +173,20 @@ export default function ConfigTransferPage() {
       pagination={false}
       size="small"
       columns={[
-        { dataIndex: 'section', title: 'Section' },
+        { dataIndex: 'section', title: t('report.section') },
         {
           dataIndex: 'created',
-          title: report.dryRun ? 'À créer' : 'Créés',
+          title: report.dryRun ? t('report.toCreate') : t('report.created'),
           render: (n: number) => (n > 0 ? <Tag color="green">{n}</Tag> : <span>0</span>),
         },
         {
           dataIndex: 'updated',
-          title: report.dryRun ? 'À mettre à jour' : 'Mis à jour',
+          title: report.dryRun ? t('report.toUpdate') : t('report.updated'),
           render: (n: number) => (n > 0 ? <Tag color="blue">{n}</Tag> : <span>0</span>),
         },
         {
           dataIndex: 'skipped',
-          title: report.dryRun ? 'Ignorés (existants)' : 'Ignorés',
+          title: report.dryRun ? t('report.toSkip') : t('report.skipped'),
           render: (n: number) => (n > 0 ? <Tag>{n}</Tag> : <span>0</span>),
         },
       ]}
@@ -189,47 +195,35 @@ export default function ConfigTransferPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Card title="Exporter la configuration">
+      <Card title={t('export.title')}>
         <Space direction="vertical">
-          <Typography.Text type="secondary">
-            Génère un fichier JSON contenant les instances n8n, les cibles d'export, les mappings
-            d'environnement, les monitors, les réglages (IA, monitoring, généraux), l'état des modules, les
-            exclusions de findings, les groupes de workflows et les liens manuels de la carte — à importer sur
-            une autre instance de la plateforme. Les workflows et leurs versions ne font pas partie de
-            l'export (ils se resynchronisent depuis n8n).
-          </Typography.Text>
+          <Typography.Text type="secondary">{t('export.intro')}</Typography.Text>
           {exportEnabled === false && (
             <Alert
               type="warning"
               showIcon
-              message="Export désactivé sur cette installation"
-              description="Le fichier sortirait en clair les clés API n8n, les tokens GitHub / Drive, le mot de passe Uptime Kuma, les clés des fournisseurs IA et les jetons de heartbeat. L'export ne s'ouvre qu'en local (CONFIG_EXPORT_ENABLED=1, posé par docker-compose.override.yml), là où le fichier ne quitte pas la machine. L'import ci-dessous reste disponible."
+              message={t('export.disabled.title')}
+              description={t('export.disabled.body')}
             />
           )}
           {exportEnabled === true && (
             <>
               <Checkbox checked={includeSecrets} onChange={(e) => setIncludeSecrets(e.target.checked)}>
-                Inclure les secrets (clés API n8n, tokens GitHub / Drive)
+                {t('export.includeSecrets')}
               </Checkbox>
-              {includeSecrets && (
-                <Alert
-                  type="warning"
-                  showIcon
-                  message="Le fichier contiendra des secrets en clair : ne le partagez pas et supprimez-le après import."
-                />
-              )}
+              {includeSecrets && <Alert type="warning" showIcon message={t('export.secretsWarning')} />}
               <Button type="primary" icon={<DownloadOutlined />} loading={exporting} onClick={download}>
-                Télécharger la configuration
+                {t('export.download')}
               </Button>
             </>
           )}
         </Space>
       </Card>
 
-      <Card title="Importer une configuration">
+      <Card title={t('import.title')}>
         <Space direction="vertical" style={{ width: '100%' }}>
           <FieldLabel htmlFor="config-import-file" required>
-            Fichier de configuration
+            {t('import.file')}
           </FieldLabel>
           <Upload.Dragger
             id="config-import-file"
@@ -240,20 +234,20 @@ export default function ConfigTransferPage() {
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">Déposez le fichier de configuration ici (ou cliquez)</p>
-            <p className="ant-upload-hint">Fichier JSON généré par l'export d'une autre instance</p>
+            <p className="ant-upload-text">{t('import.drop')}</p>
+            <p className="ant-upload-hint">{t('import.dropHint')}</p>
           </Upload.Dragger>
 
           <Alert
             type="info"
             showIcon
-            message="Sur une base vierge, importez en deux passes"
-            description="Les monitors, exclusions, groupes et liens manuels pointent vers des workflows : ils ne se rétablissent qu'une fois ceux-ci synchronisés. 1) importez (les instances sont créées), 2) synchronisez les workflows depuis la page Instances, 3) ré-importez le même fichier en « Fusionner » — les références manquantes signalées ci-dessous se recolleront."
+            message={t('import.twoPasses.title')}
+            description={t('import.twoPasses.body')}
           />
 
           <Radio.Group value={strategy} onChange={(e) => changeStrategy(e.target.value as ImportStrategy)}>
-            <Radio.Button value="merge">Fusionner (met à jour l'existant)</Radio.Button>
-            <Radio.Button value="skip-existing">Ne pas toucher l'existant</Radio.Button>
+            <Radio.Button value="merge">{t('import.merge')}</Radio.Button>
+            <Radio.Button value="skip-existing">{t('import.skipExisting')}</Radio.Button>
           </Radio.Group>
 
           {bundle && preview && (
@@ -261,15 +255,19 @@ export default function ConfigTransferPage() {
               <Alert
                 type="info"
                 showIcon
-                message={`Prévisualisation de « ${fileName} » (export du ${new Date(bundle.exportedAt).toLocaleString()}${bundle.includesSecrets ? ', avec secrets' : ', sans secrets'})`}
-                description="Rien n'a encore été écrit : vérifiez puis confirmez l'import."
+                message={t('import.preview', {
+                  file: fileName,
+                  date: new Date(bundle.exportedAt).toLocaleString(locale),
+                  secrets: bundle.includesSecrets ? 'with' : 'without',
+                })}
+                description={t('import.previewHint')}
               />
               {reportTable(preview)}
               {preview.warnings.length > 0 && (
                 <Alert
                   type="warning"
                   showIcon
-                  message="Avertissements"
+                  message={t('warnings')}
                   description={
                     <ul style={{ margin: 0, paddingLeft: 20 }}>
                       {preview.warnings.map((w, i) => (
@@ -279,9 +277,9 @@ export default function ConfigTransferPage() {
                   }
                 />
               )}
-              <Popconfirm title="Appliquer cet import ?" okText="Importer" onConfirm={doImport}>
+              <Popconfirm title={t('import.confirm')} okText={t('import.run')} onConfirm={doImport}>
                 <Button type="primary" icon={<ImportOutlined />} loading={importing}>
-                  Importer
+                  {t('import.run')}
                 </Button>
               </Popconfirm>
             </>
@@ -289,13 +287,13 @@ export default function ConfigTransferPage() {
 
           {result && (
             <>
-              <Alert type="success" showIcon message="Import terminé" />
+              <Alert type="success" showIcon message={t('import.done')} />
               {reportTable(result)}
               {result.warnings.length > 0 && (
                 <Alert
                   type="warning"
                   showIcon
-                  message="Avertissements"
+                  message={t('warnings')}
                   description={
                     <ul style={{ margin: 0, paddingLeft: 20 }}>
                       {result.warnings.map((w, i) => (

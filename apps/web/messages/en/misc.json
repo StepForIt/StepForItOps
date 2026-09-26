@@ -1,0 +1,644 @@
+{
+  "aide": {
+    "page": {
+      "title": "Help",
+      "moduleOff": "Module disabled",
+      "searchPlaceholder": "Search: promote, column, error…",
+      "all": "All · {count}",
+      "groupCount": "{label} · {count}",
+      "empty": "No tip for “{query}”",
+      "previous": "Previous tip",
+      "next": "Next tip",
+      "position": "{index} / {total}",
+      "enableModule": "Enable the module",
+      "tryIt": "Try it"
+    },
+    "groups": {
+      "workflows": "Workflows",
+      "quality": "Quality",
+      "assistant": "AI assistant",
+      "environments": "Environments",
+      "health": "Health",
+      "history": "Versions and resources"
+    },
+    "tips": {
+      "families": {
+        "title": "One business workflow, one row",
+        "text": "“X - DEV” and “X - PROD” are grouped into one row that expands by env.",
+        "where": "Workflows → By business",
+        "keywords": "group family merge environment dev prod view"
+      },
+      "divergence": {
+        "title": "See what differs from prod",
+        "text": "Click the “to deploy” tag: the diff with prod opens.",
+        "where": "Workflows → Prod drift column",
+        "keywords": "drift difference compare deploy diff prod"
+      },
+      "palette": {
+        "title": "⌘K to find anything",
+        "text": "A workflow, a page, an instance: type a few letters.",
+        "where": "Everywhere · ⌘K or Ctrl+K",
+        "keywords": "search shortcut keyboard command find ctrl k"
+      },
+      "bulk": {
+        "title": "Act on several workflows",
+        "text": "Tick rows: analyze, archive or promote in one go.",
+        "where": "Workflows → checkboxes",
+        "keywords": "bulk batch group selection multiple tick archive analyze"
+      },
+      "list-memory": {
+        "title": "Lists remember",
+        "text": "Filters, sorting, page and columns are kept. ⚙ to hide or reorder.",
+        "where": "List header → ⚙",
+        "keywords": "columns hide order sort filter memory width reset view preferences"
+      },
+      "checks": {
+        "title": "Pick your checks",
+        "text": "Untick a family of checks; the choice is kept for this workflow.",
+        "where": "Workflow page → Checks",
+        "keywords": "profile verification analysis rules untick ai review"
+      },
+      "findings-fix": {
+        "title": "Fix in one click with AI",
+        "text": "On a node with issues, the AI proposes a fix you review as a diff.",
+        "where": "Findings → Fix (AI)",
+        "keywords": "fix correct finding ai automatic proposal"
+      },
+      "ignore": {
+        "title": "Mark a finding as expected",
+        "text": "Ignored once, for every env of the workflow.",
+        "where": "Findings → Ignore",
+        "keywords": "ignore exclude hide false positive expected intended"
+      },
+      "stub": {
+        "title": "Test without sending anything",
+        "text": "Emails, messages and outbound calls are stubbed by default.",
+        "where": "Workflow page → Test without sending anything",
+        "keywords": "test trial stub pin pindata simulate send email"
+      },
+      "remote": {
+        "title": "Does the remote have your columns?",
+        "text": "Airtable, Notion, Sheets, NocoDB, Postgres: every expected column is checked.",
+        "where": "Workflow page → Check remote",
+        "keywords": "column table schema airtable notion sheets nocodb postgres missing"
+      },
+      "assistant": {
+        "title": "Ask for a change",
+        "text": "Describe the change; the assistant proposes, you review, you apply.",
+        "where": "Workflow page → AI assistant",
+        "keywords": "chat ai assistant change add node claude"
+      },
+      "error-fix": {
+        "title": "From an error to its fix",
+        "text": "The AI reads the problem and proposes a fix, or says it is solved outside the workflow.",
+        "where": "Errors → Propose a fix (AI)",
+        "keywords": "error fix diagnosis credential ai"
+      },
+      "promote": {
+        "title": "Promote to prod",
+        "text": "Tests, findings and remote columns are checked before writing; the version follows.",
+        "where": "Workflow page → Environments",
+        "keywords": "promotion deploy prod preprod version semver release"
+      },
+      "mapping": {
+        "title": "Rewire resources",
+        "text": "Bases, tables and credentials move from dev to prod, display names included.",
+        "where": "Env mappings",
+        "keywords": "mapping switch resource base table credential dev prod"
+      },
+      "errors": {
+        "title": "Errors grouped into problems",
+        "text": "Same node, same message: a single problem. Once resolved, it reopens if it comes back.",
+        "where": "Errors → Problems",
+        "keywords": "error problem group relapse resolved execution"
+      },
+      "drift": {
+        "title": "Alert when a workflow slows down",
+        "text": "A duration drifting from last week triggers an alert.",
+        "where": "Performance",
+        "keywords": "slow slowness duration drift performance alert slack"
+      },
+      "costs": {
+        "title": "AI costs per workflow",
+        "text": "Tokens are read from executions, with a daily budget.",
+        "where": "AI costs",
+        "keywords": "cost price token llm budget openai anthropic spend"
+      },
+      "restore": {
+        "title": "Go back to a version",
+        "text": "Every sync keeps a version; you restore after viewing the diff.",
+        "where": "Versions → Restore",
+        "keywords": "version history restore rollback snapshot backup"
+      },
+      "resources": {
+        "title": "Who uses this table?",
+        "text": "Start from a table or an API: the workflows that touch it, and what they do with it.",
+        "where": "External resources",
+        "keywords": "table base resource impact column dependency api"
+      }
+    },
+    "scenes": {
+      "sample": {
+        "billing": "Billing",
+        "reminders": "Reminders",
+        "quotes": "Quotes"
+      },
+      "shared": {
+        "workflows": "Workflows",
+        "equalProd": "= prod",
+        "toDeploy": "to deploy",
+        "apply": "Apply",
+        "assistant": "✦ AI assistant",
+        "slackAccounting": "{sign} Slack · #accounting",
+        "slackFinance": "{sign} Slack · #finance"
+      },
+      "families": {
+        "byWorkflow": "By workflow",
+        "byFamily": "By business",
+        "counts": "4 workflows · 2 business workflows"
+      },
+      "divergence": {
+        "title": "{name}: DEV → PROD",
+        "wait": "+ Wait · 5 min"
+      },
+      "palette": {
+        "typed": "remin",
+        "group": "WORKFLOWS",
+        "open": "↵ open"
+      },
+      "bulk": {
+        "selected": "2 selected",
+        "analyze": "Analyze",
+        "archive": "Archive"
+      },
+      "checks": {
+        "title": "Checks to run",
+        "launched": "4 run",
+        "structure": "Structure",
+        "reliability": "Reliability",
+        "aiReview": "AI review",
+        "jsCode": "JS code",
+        "naming": "Naming",
+        "launch": "Run"
+      },
+      "findingsFix": {
+        "title": "Findings · {name} - DEV",
+        "fix": "✦ Fix (AI)",
+        "noTimeout": "No timeout",
+        "noRetry": "No retry",
+        "swallowed": "Swallowed error",
+        "proposal": "Proposal",
+        "timeout": "+ timeout: 10 s",
+        "retry": "+ retry: 3 times",
+        "seeDiff": "View diff"
+      },
+      "ignore": {
+        "ignore": "Ignore",
+        "placeholder": "Placeholder value · example.com",
+        "unnamed": "Unnamed node",
+        "missingRef": "Reference to a missing node",
+        "ignoreFor": "Ignore for…",
+        "thisWorkflow": "○ this workflow",
+        "allEnvs": "all its envs",
+        "everywhere": "○ everywhere",
+        "done": "Ignored in all envs"
+      },
+      "stub": {
+        "title": "Test without sending anything",
+        "input": "input",
+        "out": "outbound",
+        "gmail": "Gmail · send",
+        "slack": "Slack · post",
+        "summary": "0 real sends · 3 stubs",
+        "run": "Run the test"
+      },
+      "remote": {
+        "title": "Airtable · Customers",
+        "check": "Check remote",
+        "name": "Name",
+        "absent": "missing",
+        "phone": "Phone",
+        "status": "Status",
+        "missing": "1 missing column ({column})"
+      },
+      "assistant": {
+        "ask": "Add a retry to the HTTP call",
+        "ready": "Ready: 1 node changed",
+        "detail": "HTTP · 3 tries, 5 s",
+        "applied": "Applied",
+        "typing": "Add a retry to the call…"
+      },
+      "errorFix": {
+        "title": "Errors · Problems",
+        "fix": "✦ AI fix",
+        "expired": "Stripe credential expired.",
+        "renew": "Renew it in n8n: nothing to change in the workflow."
+      },
+      "promote": {
+        "title": "Promote · {name}",
+        "inProd": "1.3.0 in prod",
+        "testsGreen": "Tests green",
+        "noBlocking": "No blocking finding",
+        "columnsPresent": "Remote columns present",
+        "version": "Version",
+        "promote": "Promote"
+      },
+      "mapping": {
+        "title": "Airtable node",
+        "base": "Base",
+        "table": "Table",
+        "prospects": "Leads ({env})",
+        "summary": "3 switches · ids and names",
+        "switch": "Switch to PROD"
+      },
+      "errors": {
+        "title": "Errors",
+        "grouped": "1 problem, 3 executions",
+        "resolve": "Resolved",
+        "resolved": "resolved",
+        "reopened": "reopened · 1 relapse"
+      },
+      "drift": {
+        "title": "Performance · {name} - PROD",
+        "ratio": "duration ×1.8",
+        "channel": "# alerts",
+        "message": "{name} is slowing down: ×1.8 vs last week"
+      },
+      "costs": {
+        "title": "AI costs · today",
+        "total": "$5.40",
+        "mailSorting": "Email triage",
+        "ticketSummary": "Ticket summaries",
+        "aiQuotes": "AI quotes",
+        "overBudget": "Daily budget exceeded ($5)"
+      },
+      "restore": {
+        "title": "Versions · {name}",
+        "current": "current",
+        "today": "today",
+        "yesterday": "yesterday",
+        "monday": "Monday",
+        "restore": "Restore",
+        "confirm": "Revert to v12?",
+        "done": "v15 · restored from v12"
+      },
+      "resources": {
+        "title": "External resources",
+        "writes": "writes Name, Email",
+        "readsAll": "reads everything",
+        "reopen": "to revisit"
+      },
+      "listMemory": {
+        "name": "Name",
+        "tags": "Tags",
+        "kept": "Found just as you left it"
+      }
+    }
+  },
+  "appLogs": {
+    "title": "Platform logs",
+    "follow": "Follow",
+    "clear": "Clear",
+    "downloaded": "{count, plural, one {# line downloaded} other {# lines downloaded}}",
+    "cleared": "Buffer cleared",
+    "clearModal": {
+      "title": "Clear the buffer?",
+      "body": "The lines shown here will be gone. The container output keeps everything."
+    },
+    "info": {
+      "title": "The latest API lines, kept in the process memory",
+      "body": "An api restart wipes them, and each process only sees its own. For the full history, the container output remains the source: <code>docker compose logs -f api</code>. Recognizable secrets (API keys, tokens) are masked before display."
+    },
+    "levels": {
+      "fatal": "Fatal",
+      "error": "Error",
+      "warn": "Warn",
+      "log": "Info",
+      "debug": "Debug",
+      "verbose": "Verbose"
+    },
+    "allContexts": "All contexts",
+    "searchPlaceholder": "Search (message, context, stack)",
+    "shown": "{count, plural, one {# line shown} other {# lines shown}}",
+    "buffer": " · buffer: {held}/{capacity}",
+    "dropped": " · {count, plural, one {# line} other {# lines}} already out of the buffer",
+    "console": {
+      "empty": "No lines for these filters",
+      "stack": "stack trace"
+    }
+  },
+  "assistantLessons": {
+    "origins": {
+      "humanAnswer": {
+        "label": "Human answer",
+        "help": "Someone explained a correction they made by hand. The most reliable signal."
+      },
+      "humanCorrection": {
+        "label": "Manual correction",
+        "help": "Inferred from a difference in SHAPE between what the assistant wrote and what was kept."
+      },
+      "gateRefusal": {
+        "label": "Gate refusal",
+        "help": "A deterministic check refused a draft, which the assistant then fixed."
+      }
+    },
+    "statuses": {
+      "active": "Served",
+      "candidate": "Pending",
+      "retired": "Retired"
+    },
+    "toast": {
+      "activated": "Lesson activated — it will be served",
+      "retired": "Lesson retired",
+      "reworded": "Wording updated",
+      "deleted": "Lesson deleted",
+      "learned": "Rule learned: {rule}",
+      "nothingToLearn": "Answer saved — nothing to generalize"
+    },
+    "pending": {
+      "title": "Unexplained corrections ({count})",
+      "intro": "A change was redone by hand after an assistant proposal, and nothing says whether it was wrong or the intent changed. Both look exactly the same in the JSON — only an answer tells them apart.",
+      "placeholder": "What was wrong, in one sentence — or “nothing, I changed my mind”",
+      "answer": "Answer",
+      "skip": "Skip"
+    },
+    "learned": {
+      "title": "What the assistant has learned"
+    },
+    "failed": {
+      "title": "Lessons unreadable",
+      "body": "{error} — the “Self-learning assistant” module may be disabled (Modules page). This is not an empty corpus: nothing can be shown while this call fails."
+    },
+    "budget": {
+      "title": "At most six rules reach the prompt on each turn",
+      "body": "{active} served, {candidate} pending. A “pending” rule comes from a single incident and is never served: it activates on the second occurrence, or with a click here. The number of rules can grow at no cost — it is the number SERVED that is capped, chosen by the workflow's node types and then by the words of the question."
+    },
+    "filter": {
+      "all": "All",
+      "active": "Served",
+      "candidate": "Pending",
+      "retired": "Retired"
+    },
+    "empty": {
+      "failed": "Nothing can be shown: see the warning above.",
+      "none": "Nothing learned yet — rules appear when an assistant proposal is corrected by hand, or refused then fixed."
+    },
+    "columns": {
+      "rule": "Rule",
+      "scope": "Scope",
+      "source": "Source",
+      "status": "Status"
+    },
+    "general": "general",
+    "generalHelp": "General rule: only surfaces through the words of the question.",
+    "seen": "Seen {occurrences} times, served {recalls} times",
+    "activate": "Activate",
+    "retire": "Retire",
+    "deleteConfirm": {
+      "title": "Delete this rule?",
+      "body": "It can be learned again if the case happens again."
+    }
+  },
+  "configTransfer": {
+    "sections": {
+      "instances": "Instances",
+      "exportTargets": "Export targets (GitHub / Drive)",
+      "resourceMappings": "Environment mappings",
+      "monitors": "Monitors",
+      "monitoringSettings": "Monitoring settings (Uptime Kuma)",
+      "aiSettings": "AI settings",
+      "moduleStates": "Modules (enabled + settings)",
+      "platformSettings": "General settings",
+      "findingIgnores": "Finding exclusions",
+      "workflowGroups": "Workflow groups",
+      "workflowLinks": "Manual links (map)"
+    },
+    "toast": {
+      "exported": "Configuration exported",
+      "exportFailed": "Export failed: {error}",
+      "fileRefused": "File rejected: {error}",
+      "invalidJson": "This file is not valid JSON",
+      "imported": "Configuration imported",
+      "importFailed": "Import failed: {error}"
+    },
+    "report": {
+      "section": "Section",
+      "toCreate": "To create",
+      "created": "Created",
+      "toUpdate": "To update",
+      "updated": "Updated",
+      "toSkip": "Skipped (existing)",
+      "skipped": "Skipped"
+    },
+    "export": {
+      "title": "Export the configuration",
+      "intro": "Generates a JSON file with the n8n instances, export targets, environment mappings, monitors, settings (AI, monitoring, general), module state, finding exclusions, workflow groups and manual map links — to import on another instance of the platform. Workflows and their versions are not part of the export (they resync from n8n).",
+      "disabled": {
+        "title": "Export disabled on this installation",
+        "body": "The file would contain, in plain text, the n8n API keys, GitHub / Drive tokens, Uptime Kuma password, AI provider keys and heartbeat tokens. Export is only available locally (CONFIG_EXPORT_ENABLED=1, set by docker-compose.override.yml), where the file never leaves the machine. Import below remains available."
+      },
+      "includeSecrets": "Include secrets (n8n API keys, GitHub / Drive tokens)",
+      "secretsWarning": "The file will contain secrets in plain text: do not share it and delete it after import.",
+      "download": "Download the configuration"
+    },
+    "import": {
+      "title": "Import a configuration",
+      "file": "Configuration file",
+      "drop": "Drop the configuration file here (or click)",
+      "dropHint": "JSON file generated by another instance's export",
+      "twoPasses": {
+        "title": "On a blank database, import in two passes",
+        "body": "Monitors, exclusions, groups and manual links point to workflows: they are only restored once those are synced. 1) import (instances are created), 2) sync the workflows from the Instances page, 3) re-import the same file with “Merge” — the missing references reported below will reattach."
+      },
+      "merge": "Merge (updates existing)",
+      "skipExisting": "Leave existing untouched",
+      "preview": "Preview of “{file}” (exported {date}{secrets, select, with {, with secrets} other {, without secrets}})",
+      "previewHint": "Nothing has been written yet: check, then confirm the import.",
+      "confirm": "Apply this import?",
+      "run": "Import",
+      "done": "Import complete"
+    },
+    "warnings": "Warnings"
+  },
+  "globalError": {
+    "title": "The console ran into an error",
+    "retry": "Try again"
+  },
+  "home": {
+    "minutes": "{value} min",
+    "hours": "{value} h",
+    "percent": "{value}%",
+    "since": {
+      "expired": "last 24 h (last visit: {date})",
+      "lastVisit": "since your last visit — {date}",
+      "firstVisit": "last 24 h (first visit)"
+    },
+    "title": "Dashboard",
+    "opened": "{count, plural, one {# new problem} other {# new problems}}",
+    "regressed": "{count, plural, one {# relapse} other {# relapses}}",
+    "drifts": "{count, plural, one {# duration drift} other {# duration drifts}}",
+    "stats": {
+      "executions": "Executions",
+      "success": "Success",
+      "openProblems": "Open problems",
+      "timeSaved": "Time saved",
+      "llmCost": "LLM cost",
+      "neverAnalyzed": "Never analyzed"
+    },
+    "activeDrifts": "Ongoing duration drifts",
+    "byClient": "By client",
+    "columns": {
+      "client": "Client",
+      "instances": "Instances",
+      "failures": "Failures"
+    },
+    "footnote": "Time saved is set workflow by workflow (workflow page, “min saved / execution”); clients are managed in Settings → Clients.",
+    "figures": {
+      "timeSaved": "given back to the team",
+      "timeSavedEstimated": "given back to the team (estimated)",
+      "aiCost": "of AI, tracked to the cent"
+    },
+    "estimatedHint": "including {value} estimated",
+    "hero": {
+      "allGood": "All good",
+      "toLook": "Worth a look"
+    }
+  },
+  "homeLinks": {
+    "instances": {
+      "title": "Instances",
+      "text": "Connect your n8n instances and Make accounts"
+    },
+    "workflows": {
+      "title": "Workflows",
+      "text": "Sync, check, document, optimize"
+    },
+    "versions": {
+      "title": "Versions",
+      "text": "History + GitHub / Google Drive export"
+    },
+    "errors": {
+      "title": "Errors",
+      "text": "Grouped problems, relapses, categories"
+    },
+    "performance": {
+      "title": "Performance",
+      "text": "Durations, success rates, drifts"
+    },
+    "modules": {
+      "title": "Modules",
+      "text": "Enable / disable features"
+    }
+  },
+  "login": {
+    "subtitle": "Sign-in restricted to the team",
+    "errors": {
+      "oauth": "Google sign-in failed. Try again.",
+      "domain": "This Google account does not belong to the allowed domain.",
+      "google_off": "Google sign-in is not configured on this instance.",
+      "credentials": "Incorrect username or password.",
+      "unknown": "Unable to sign in."
+    },
+    "google": "Sign in with Google",
+    "domains": "{domains} accounts only",
+    "or": "or",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "notificationChannels": {
+    "title": "Alert channels",
+    "add": "Add a channel",
+    "intro": "When a problem appears (new error group) or comes back after being resolved, every active channel gets an alert. History imports never alert.",
+    "types": {
+      "slack": "Slack (incoming webhook)",
+      "webhook": "Webhook (POST JSON)"
+    },
+    "toast": {
+      "saved": "Channel saved",
+      "tested": "Test message sent to “{name}”",
+      "deleted": "Channel deleted"
+    },
+    "fields": {
+      "name": "Name",
+      "type": "Type",
+      "alerts": "Alerts",
+      "enabled": "Active"
+    },
+    "urlHidden": "The full URL is never returned (secret)",
+    "tags": {
+      "newGroup": "new problem",
+      "regression": "relapse",
+      "perfDrift": "duration drift",
+      "budget": "AI budget",
+      "relayBroken": "silent monitoring",
+      "modelLifecycle": "deprecated model",
+      "on": "active",
+      "off": "off"
+    },
+    "sendTest": "Send a test message",
+    "deleteConfirm": "Delete this channel?",
+    "modal": {
+      "new": "New channel",
+      "edit": "Edit channel",
+      "nameRequired": "A name",
+      "urlRequired": "The webhook URL",
+      "urlKeep": "Leave empty to keep the current URL (it is never shown again).",
+      "urlHelp": "Slack: Incoming Webhook (https://hooks.slack.com/…). Webhook: any URL that accepts a JSON POST.",
+      "onNewGroup": "New problem",
+      "onRegression": "Relapse",
+      "onPerfDrift": "Duration drift",
+      "onBudget": "AI budget exceeded",
+      "onRelayBroken": "Silent monitoring",
+      "onRelayBrokenHelp": "The push to the Uptime Kuma probe fails: nothing would report this monitor stopping anymore.",
+      "onModelLifecycle": "Model deprecated or retired",
+      "onModelLifecycleHelp": "A model called by a workflow in the fleet is no longer served by its provider."
+    }
+  },
+  "procedures": {
+    "title": "Procedures",
+    "recordingInProgress": "Recording in progress",
+    "record": "● Record",
+    "name": "Name",
+    "steps": "Steps",
+    "stepsWithManual": "{count} · {manual} manual",
+    "recorded": "Recorded",
+    "inProgress": "in progress",
+    "replay": "Replay",
+    "duplicateTo": "Duplicate to…",
+    "from": "From",
+    "to": "To",
+    "start": {
+      "title": "Record a procedure",
+      "ok": "Start",
+      "nameRequired": "Give it a name",
+      "placeholder": "September release"
+    },
+    "replayModal": {
+      "title": "Replay “{name}”",
+      "ok": "Open",
+      "noHop": "No promotion recorded: envs will not be shifted."
+    },
+    "duplicateModal": {
+      "title": "Duplicate “{name}”",
+      "ok": "Duplicate",
+      "created": "“{name}” created",
+      "same": "Same hop as the original"
+    }
+  },
+  "setup": {
+    "errors": {
+      "already": "The platform is already configured — sign in.",
+      "mismatch": "The two passwords do not match.",
+      "http": "Error {status}"
+    },
+    "title": "Welcome — let's secure the platform",
+    "intro": "First launch: create the administrator account. Until it exists, nothing else is accessible.",
+    "username": "Username",
+    "password": "Password",
+    "passwordPlaceholder": "Password (10 characters minimum)",
+    "confirm": "Confirm password",
+    "submit": "Create the account and enter",
+    "googleLater": "Google sign-in (by Workspace domain) can be added later through environment variables — see docs/authentification.md."
+  }
+}

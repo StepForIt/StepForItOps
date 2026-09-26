@@ -1,0 +1,54 @@
+{
+  "title": "StepForIt Ops",
+  "description": "Versioning, verification and monitoring of n8n and Make workflows",
+  "menu": {
+    "workflows": "Workflows",
+    "versions": "Versions",
+    "workflowMap": "Workflow map",
+    "findings": "Findings",
+    "testRuns": "Tests",
+    "monitors": "Monitoring",
+    "monitorsCreate": "New monitor",
+    "errors": "Errors",
+    "performance": "Performance",
+    "aiCost": "AI costs",
+    "modelAudit": "AI models",
+    "resourceMappings": "Env mappings",
+    "resourceMappingsCreate": "New env mapping",
+    "procedures": "Procedures",
+    "resources": "External resources",
+    "instances": "Instances",
+    "instancesCreate": "New n8n instance",
+    "clients": "Clients",
+    "workflowGroups": "Groups",
+    "workflowGroupsCreate": "New workflow group",
+    "findingIgnores": "Ignored findings",
+    "assistantLessons": "AI lessons",
+    "notificationChannels": "Alerts",
+    "exportTargets": "Export targets",
+    "exportTargetsCreate": "New export target",
+    "modules": "Modules",
+    "appLogs": "Logs",
+    "configTransfer": "Export / Import",
+    "help": "Help"
+  },
+  "menuGroups": {
+    "quality": "Quality",
+    "health": "Health",
+    "environments": "Environments",
+    "settings": "Settings"
+  },
+  "user": {
+    "logoutTooltip": "{email} — log out",
+    "logout": "Log out"
+  },
+  "language": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "middleware": {
+    "notConfigured": "Platform not configured — go to /setup.",
+    "sessionExpired": "Session expired — please log in again."
+  }
+}

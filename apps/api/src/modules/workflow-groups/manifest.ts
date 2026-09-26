@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const WORKFLOW_GROUPS_MANIFEST: ModuleManifest = {
   id: 'workflow-groups',
-  name: 'Groupes de workflows',
-  description: 'Regroupe les workflows par domaine, opérations par lot',
+  get name() {
+    return msg('platform.moduleWorkflowGroupsName');
+  },
+  get description() {
+    return msg('platform.moduleWorkflowGroupsDescription');
+  },
 };

@@ -18,6 +18,7 @@
  * propres exécutions, donc sa propre estimation, et les additionner compterait
  * deux fois le même travail dans le total du dashboard.
  */
+import { MessageId, msg } from '../../i18n';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { classifySideEffect } from './side-effect-nodes';
 import { isStickyNote, isTriggerNode } from './workflow-graph';
@@ -150,13 +151,13 @@ function gestureOf(node: N8nNode): SavedGesture | null {
 }
 
 /** Singulier et pluriel : « 1 écriture, 3 lectures » se relit, « 3 lectures » écrit à la main non. */
-const LABELS: Record<SavedGesture, [string, string]> = {
-  write: ['écriture', 'écritures'],
-  send: ['envoi', 'envois'],
-  read: ['lecture', 'lectures'],
-  think: ['passage IA', 'passages IA'],
-  decide: ['décision', 'décisions'],
-  transform: ['mise en forme', 'mises en forme'],
+const LABELS: Record<SavedGesture, MessageId> = {
+  write: 'platform.timeSavedWrite',
+  send: 'platform.timeSavedSend',
+  read: 'platform.timeSavedRead',
+  think: 'platform.timeSavedThink',
+  decide: 'platform.timeSavedDecide',
+  transform: 'platform.timeSavedTransform',
 };
 
 /**
@@ -184,21 +185,16 @@ export function estimateTimeSaved(workflow: N8nWorkflow): TimeSavedEstimate {
   if (minutes === 0) {
     return {
       minutes: 0,
-      reason:
-        "Aucun geste humain remplacé n'a été reconnu : le workflow n'est que du câblage, ou ses nœuds sont désactivés.",
+      reason: msg('platform.timeSavedNone'),
       breakdown,
       capped: false,
     };
   }
 
-  const detail = breakdown
-    .map((line) => `${line.nodes.length} ${LABELS[line.gesture][line.nodes.length > 1 ? 1 : 0]}`)
-    .join(', ');
+  const detail = breakdown.map((line) => msg(LABELS[line.gesture], { count: line.nodes.length })).join(', ');
   return {
     minutes,
-    reason: capped
-      ? `${detail} — plafonné à ${MAX_MINUTES} min : au-delà, l'estimation ne dirait plus que la taille du workflow.`
-      : `${detail}.`,
+    reason: capped ? msg('platform.timeSavedCapped', { detail, max: MAX_MINUTES }) : `${detail}.`,
     breakdown,
     capped,
   };

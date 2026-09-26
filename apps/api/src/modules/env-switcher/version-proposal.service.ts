@@ -7,13 +7,13 @@ import {
   WorkflowDiff,
   aiBumpCeiling,
   capAiBump,
+  msg,
   suggestBumpLevel,
+  writeInLanguage,
 } from '@nwm/core';
 
 /** Ce que l'IA a le droit de répondre : rien d'autre ne sera lu. */
 const LEVELS: BumpLevel[] = ['major', 'minor', 'patch'];
-
-const LABEL: Record<BumpLevel, string> = { major: 'majeure', minor: 'mineure', patch: 'corrective' };
 
 /** Assez pour le raisonnement ET la réponse : un budget trop juste renvoie du tronqué. */
 const MAX_TOKENS = 1024;
@@ -59,7 +59,7 @@ export class VersionProposalService {
     if (!diff) {
       return {
         level: 'minor',
-        reason: `« ${context.name} » n'existe pas encore sur la cible : il y arrive entier.`,
+        reason: msg('env.versionNewOnTarget', { name: context.name }),
         source: 'rules',
       };
     }
@@ -70,16 +70,17 @@ export class VersionProposalService {
     try {
       const answer = await this.ai.generateJson<{ level?: string; reason?: string }>({
         system:
-          'Tu qualifies un changement de workflow n8n en versionnage sémantique, du point de vue de ' +
-          "CEUX QUI L'APPELLENT et de ce que le workflow fait en production.\n" +
-          '- major : le contrat change ou quelque chose disparaît (déclencheur, URL de webhook, ' +
-          'planning, étape retirée, sortie qui change de forme).\n' +
-          '- minor : le workflow fait quelque chose de PLUS, sans rien retirer.\n' +
-          '- patch : réglage, correction, valeur ajustée — rien de nouveau, rien de perdu.\n' +
-          `Une règle déterministe propose « ${rules.level} » (${rules.reason}) : ne la contredis que si le ` +
-          `détail du changement le justifie vraiment, et ne dépasse pas « ${aiBumpCeiling(rules.level)} ». ` +
-          'Un nom ou une url affichés (cachedResultName, cachedResultUrl) ne changent rien à ce que fait le workflow.\n' +
-          'Réponds en JSON : {"level":"major|minor|patch","reason":"une phrase en français, ce que ça change concrètement"}',
+          'You classify a change to an n8n workflow in semantic versioning, from the point of view of ' +
+          'THOSE WHO CALL IT and of what the workflow does in production.\n' +
+          '- major: the contract changes or something disappears (trigger, webhook URL, ' +
+          'schedule, removed step, output that changes shape).\n' +
+          '- minor: the workflow does something MORE, without removing anything.\n' +
+          '- patch: setting, fix, adjusted value — nothing new, nothing lost.\n' +
+          `A deterministic rule suggests "${rules.level}" (${rules.reason}): only contradict it if the ` +
+          `detail of the change truly justifies it, and do not go beyond "${aiBumpCeiling(rules.level)}". ` +
+          'A displayed name or url (cachedResultName, cachedResultUrl) changes nothing in what the workflow does.\n' +
+          'Answer in JSON: {"level":"major|minor|patch","reason":"one sentence, what it concretely changes"}\n' +
+          writeInLanguage(),
         prompt: JSON.stringify({ workflow: context.name, targetEnv: context.targetEnv, ...summarize(diff) }),
         maxTokens: MAX_TOKENS,
         effort: 'low',
@@ -91,12 +92,12 @@ export class VersionProposalService {
       return {
         level: capped.level,
         reason: capped.capped
-          ? `${reason} (L'IA proposait une ${LABEL[level]}, ramenée à ${LABEL[capped.level]} : la règle n'y voit qu'une ${LABEL[rules.level]}.)`
+          ? msg('env.versionAiCapped', { reason, proposed: level, capped: capped.level, rule: rules.level })
           : reason,
         source: 'ai',
       };
     } catch (error) {
-      this.logger.warn(`Niveau de version laissé à la règle : ${(error as Error).message}`);
+      this.logger.warn(`Version level left to the rule: ${(error as Error).message}`);
       return { ...rules, source: 'rules' };
     }
   }

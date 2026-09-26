@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { WorkflowChatMemory } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -41,11 +42,11 @@ export class ChatMemoryService {
     sessionId: string | null,
   ): Promise<{ stored: boolean; reason?: string }> {
     const fact = content?.trim();
-    if (!fact) throw new BadRequestException('Fait vide');
+    if (!fact) throw new BadRequestException(msg('chat.memoryEmpty'));
     if (fact.length > MAX_LENGTH) {
       return {
         stored: false,
-        reason: `Fait trop long (${fact.length} caractères, maximum ${MAX_LENGTH}) : garde la contrainte, pas son contexte.`,
+        reason: msg('chat.memoryTooLong', { length: fact.length, max: MAX_LENGTH }),
       };
     }
 
@@ -53,7 +54,7 @@ export class ChatMemoryService {
     if (existing >= MAX_FACTS) {
       return {
         stored: false,
-        reason: `Mémoire pleine (${MAX_FACTS} faits) : demande à l'utilisateur d'en retirer depuis le tiroir avant d'en ajouter.`,
+        reason: msg('chat.memoryFull', { max: MAX_FACTS }),
       };
     }
 
@@ -62,8 +63,8 @@ export class ChatMemoryService {
       return { stored: true };
     } catch (error) {
       // Contrainte unique : le fait est déjà là, ce qui est le résultat voulu.
-      this.logger.debug(`Fait déjà mémorisé (${workflowId}) : ${(error as Error).message}`);
-      return { stored: false, reason: 'Ce fait était déjà mémorisé.' };
+      this.logger.debug(`Fact already stored (${workflowId}): ${(error as Error).message}`);
+      return { stored: false, reason: msg('chat.memoryDuplicate') };
     }
   }
 

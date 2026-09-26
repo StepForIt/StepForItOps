@@ -18,12 +18,14 @@ import {
   envIds,
   isCheckDue,
   isMonitoredEnv,
+  msg,
 } from '@nwm/core';
 import { Monitor } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { ModuleRegistryService } from '../../infra/modules-registry/module-registry.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { MONITORING_MANIFEST } from './manifest';
 import { DEFAULT_ERROR_WATCH_INTERVAL_SECONDS } from './probe-interval';
 
@@ -73,6 +75,7 @@ export class ErrorWatchService {
     @Inject(N8N_API_PORT) private readonly n8nApi: N8nApiPort,
     @Inject(WORKFLOW_PLATFORM_PORTS) private readonly platforms: WorkflowPlatformPorts,
     private readonly settings: PlatformSettingsService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -94,11 +97,11 @@ export class ErrorWatchService {
     const state = (monitor.state ?? {}) as ErrorWatchState;
 
     if (!config.instanceId) {
-      return this.disableMisconfigured(monitor, 'config.instanceId manquant');
+      return this.disableMisconfigured(monitor, 'config.instanceId missing');
     }
     const instance = await this.prisma.instance.findUnique({ where: { id: config.instanceId } });
     if (!instance) {
-      return this.disableMisconfigured(monitor, `instance ${config.instanceId} introuvable`);
+      return this.disableMisconfigured(monitor, `instance ${config.instanceId} not found`);
     }
 
     const isN8n = instance.platform === 'n8n';
@@ -124,12 +127,22 @@ export class ErrorWatchService {
       }
     } catch (error) {
       // state inchangé : les erreurs survenues pendant la panne seront signalées au retour
-      return this.conclude(monitor, 'down', `API injoignable : ${(error as Error).message}`, state);
+      return this.conclude(
+        monitor,
+        'down',
+        this.text(() => msg('ops.watchApiUnreachable', { detail: (error as Error).message })),
+        state,
+      );
     }
 
     // Premier passage : baseline silencieuse, on ne re-signale pas l'historique d'erreurs
     if (baseline) {
-      return this.conclude(monitor, 'up', 'OK (baseline)', newState);
+      return this.conclude(
+        monitor,
+        'up',
+        this.text(() => msg('ops.watchBaseline')),
+        newState,
+      );
     }
     if (fresh.length === 0) {
       return this.conclude(monitor, 'up', 'OK', newState);
@@ -144,14 +157,21 @@ export class ErrorWatchService {
     const count = byWorkflow.reduce((total, w) => total + w.executions.length, 0);
     const ignored = fresh.length - count;
     if (count === 0) {
-      return this.conclude(monitor, 'up', `OK (${ignored} erreur(s) hors env surveillé)`, newState);
+      return this.conclude(
+        monitor,
+        'up',
+        this.text(() => msg('ops.watchOnlyIgnored', { ignored })),
+        newState,
+      );
     }
 
     const summary = byWorkflow
       .map((w) => (w.executions.length > 1 ? `${w.name} (×${w.executions.length})` : w.name))
       .join(', ');
-    const suffix = ignored > 0 ? ` (+${ignored} hors prod)` : '';
-    const message = truncate(`${count} nouvelle(s) erreur(s) : ${summary}${suffix}`, MAX_MESSAGE_LENGTH);
+    const message = truncate(
+      this.text(() => msg('ops.watchNewErrors', { count, summary, ignored })),
+      MAX_MESSAGE_LENGTH,
+    );
 
     const event: MonitorErrorsDetectedEvent = {
       monitorId: monitor.id,
@@ -302,10 +322,13 @@ export class ErrorWatchService {
       where: { id: monitor.id },
       data: { enabled: false, lastStatus: 'down', lastCheckAt: new Date() },
     });
-    this.logger.warn(
-      `error-watch ${monitor.name} désactivé : ${reason} — choisissez son instance puis réactivez-le`,
-    );
+    this.logger.warn(`error-watch ${monitor.name} disabled: ${reason} — pick its instance then re-enable it`);
     return 'down';
+  }
+
+  /** Ce qui part vers la sonde Kuma est lu par toute l'équipe : langue de la plateforme. */
+  private text(render: () => string): string {
+    return this.platformLocale.run(render);
   }
 
   private async conclude(
@@ -346,7 +369,7 @@ export class ErrorWatchService {
     } catch (error) {
       const reason = (error as Error).message;
       const failures = previous + 1;
-      this.logger.warn(`Push Kuma KO pour ${monitor.name} : ${reason}`);
+      this.logger.warn(`Kuma push failed for ${monitor.name}: ${reason}`);
       if (failures === PUSH_FAILURE_THRESHOLD) {
         this.emitRelay(EVENTS.monitorRelayBroken, monitor, failures, reason);
       }

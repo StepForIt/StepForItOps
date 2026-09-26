@@ -8,6 +8,7 @@ import {
   SaveDecision,
   decideSaveScope,
   isModuleFullyDisabled,
+  msg,
   normalizeDisabled,
   resolveCheckProfile,
   sameSelection,
@@ -131,7 +132,7 @@ export class CheckProfilesService {
 
   async remove(id: string): Promise<CheckProfile> {
     const profile = await this.prisma.checkProfile.findUnique({ where: { id } });
-    if (!profile) throw new NotFoundException(`Profil ${id} introuvable`);
+    if (!profile) throw new NotFoundException(msg('analysis.profileNotFound', { id }));
     return this.prisma.checkProfile.delete({ where: { id } });
   }
 
@@ -253,7 +254,7 @@ export class CheckProfilesService {
         return context.instanceId;
       case 'group':
         if (context.groupIds.length === 0) {
-          throw new BadRequestException('Ce workflow n’appartient à aucun groupe');
+          throw new BadRequestException(msg('analysis.profileNoGroup'));
         }
         return context.groupIds[0];
       case 'family':
@@ -266,7 +267,7 @@ export class CheckProfilesService {
       where: { id: workflowId },
       select: { id: true, name: true, instanceId: true, groups: { select: { id: true } } },
     });
-    if (!workflow) throw new NotFoundException(`Workflow ${workflowId} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('analysis.profileWorkflowNotFound', { id: workflowId }));
     const envs = await this.settings.declaredEnvIds();
     const familyKey = workflowFamilyKey(workflow.name, envs);
     // La famille se calcule sur les noms COURANTS : un profil ancré sur l'un de
@@ -311,20 +312,30 @@ export class CheckProfilesService {
 
   /** Nomme un périmètre pour l'UI : « ce workflow », « instance Prod », « groupe Facturation ». */
   private async describe(scope: CheckScope, targetId: string): Promise<ProfileSource> {
-    if (scope === 'global') return { scope, targetId: '', label: 'toute l’application' };
+    if (scope === 'global') return { scope, targetId: '', label: msg('analysis.scopeGlobal') };
     if (scope === 'instance') {
       const instance = await this.prisma.instance.findUnique({
         where: { id: targetId },
         select: { name: true },
       });
-      return { scope, targetId, label: `instance ${instance?.name ?? '(supprimée)'}` };
+      return {
+        scope,
+        targetId,
+        label: instance
+          ? msg('analysis.scopeInstance', { name: instance.name })
+          : msg('analysis.scopeInstanceDeleted'),
+      };
     }
     if (scope === 'group') {
       const group = await this.prisma.workflowGroup.findUnique({
         where: { id: targetId },
         select: { name: true },
       });
-      return { scope, targetId, label: `groupe ${group?.name ?? '(supprimé)'}` };
+      return {
+        scope,
+        targetId,
+        label: group ? msg('analysis.scopeGroup', { name: group.name }) : msg('analysis.scopeGroupDeleted'),
+      };
     }
     const workflow = await this.prisma.workflow.findUnique({
       where: { id: targetId },
@@ -333,7 +344,9 @@ export class CheckProfilesService {
     return {
       scope,
       targetId,
-      label: workflow ? `workflow ${workflow.name} (tous ses envs)` : 'workflow (supprimé)',
+      label: workflow
+        ? msg('analysis.scopeFamily', { name: workflow.name })
+        : msg('analysis.scopeFamilyDeleted'),
     };
   }
 }

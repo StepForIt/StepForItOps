@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { EVENTS, STORAGE_PORT, StoragePort, VCS_PORT, VcsPort, VersionCreatedEvent } from '@nwm/core';
+import { EVENTS, STORAGE_PORT, StoragePort, VCS_PORT, VcsPort, VersionCreatedEvent, msg } from '@nwm/core';
 import { ExportTarget, WorkflowExportRef } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ModuleRegistryService } from '../../infra/modules-registry/module-registry.service';
@@ -84,13 +84,13 @@ export class VersionExportService {
         } else if (target.kind === 'gdrive') {
           written = await this.writeToDrive(target, ref, payload);
         } else {
-          this.logger.warn(`Cible "${target.name}" : type "${target.kind}" inconnu`);
+          this.logger.warn(`Target "${target.name}": unknown type "${target.kind}"`);
           continue;
         }
         await this.rememberLocation(workflow.id, target.id, written);
         exported.push(target.name);
       } catch (error) {
-        this.logger.warn(`Export "${target.name}" KO : ${(error as Error).message}`);
+        this.logger.warn(`Export "${target.name}" failed: ${(error as Error).message}`);
       }
     }
     if (exported.length > 0) {
@@ -132,12 +132,12 @@ export class VersionExportService {
       try {
         const { deleted } = await this.vcs.deleteFile(vcsConfig, {
           path: previous,
-          message: `chore(${payload.platform}): déplace ${previous} → ${path}`,
+          message: `chore(${payload.platform}): move ${previous} → ${path}`,
         });
-        if (deleted) this.logger.log(`GitHub : ${previous} supprimé (déplacé vers ${path})`);
+        if (deleted) this.logger.log(`GitHub: ${previous} deleted (moved to ${path})`);
       } catch (error) {
         // Le contenu est écrit : on ne fait pas échouer l'export pour un ménage raté.
-        this.logger.warn(`GitHub : suppression de ${previous} KO : ${(error as Error).message}`);
+        this.logger.warn(`GitHub: deleting ${previous} failed: ${(error as Error).message}`);
       }
     }
     return { path };
@@ -167,7 +167,7 @@ export class VersionExportService {
         mimeType: 'application/json',
       });
       if (!updated.missing) return { path: name, remoteId: ref.remoteId };
-      this.logger.warn(`Drive : fichier ${ref.remoteId} introuvable → nouvel upload`);
+      this.logger.warn(`Drive: file ${ref.remoteId} not found → new upload`);
     }
 
     const created = await this.storage.uploadFile(storageConfig, {
@@ -191,7 +191,7 @@ export class VersionExportService {
     // Deux exports simultanés commitent sur la même branche : ils se volent la
     // tête de branche et se répondent 409 l'un l'autre.
     if (this.exportAllRunning) {
-      throw new ConflictException("Un export global est déjà en cours — attends qu'il se termine");
+      throw new ConflictException(msg('platform.exportAllRunning'));
     }
     this.exportAllRunning = true;
     try {
@@ -204,9 +204,7 @@ export class VersionExportService {
   private async runExportAll(force: boolean): Promise<{ exported: number; skipped: number; failed: number }> {
     const targets = await this.prisma.exportTarget.count({ where: { enabled: true } });
     if (targets === 0) {
-      throw new BadRequestException(
-        "Aucune cible d'export active — configure GitHub ou Drive dans « Cibles export »",
-      );
+      throw new BadRequestException(msg('platform.exportNoTarget'));
     }
     const latest = await this.prisma.workflowVersion.findMany({
       distinct: ['workflowId'],
@@ -225,11 +223,11 @@ export class VersionExportService {
         if (result.exported.length > 0) exported += 1;
         else failed += 1;
       } catch (error) {
-        this.logger.warn(`Export version ${version.id} KO : ${(error as Error).message}`);
+        this.logger.warn(`Export of version ${version.id} failed: ${(error as Error).message}`);
         failed += 1;
       }
     }
-    this.logger.log(`Export global : ${exported} exportées, ${skipped} déjà à jour, ${failed} échecs`);
+    this.logger.log(`Global export: ${exported} exported, ${skipped} already up to date, ${failed} failures`);
     return { exported, skipped, failed };
   }
 }

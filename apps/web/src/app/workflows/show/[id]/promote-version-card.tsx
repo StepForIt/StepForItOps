@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Descriptions, Radio, Space, Tag, Tooltip, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useEnvColor, useEnvLabel } from '../../../../lib/envs';
 
 export type BumpLevel = 'major' | 'minor' | 'patch';
@@ -26,16 +27,7 @@ export interface PromoteVersionGate {
   source: 'ai' | 'rules' | 'human';
 }
 
-const LEVELS: Array<{ value: ReleaseLevel; label: string; hint: string }> = [
-  { value: 'major', label: 'Majeure', hint: 'Le contrat change, ou quelque chose disparaît' },
-  { value: 'minor', label: 'Mineure', hint: 'Le workflow fait quelque chose de plus' },
-  { value: 'patch', label: 'Corrective', hint: 'Réglage, correction — rien de nouveau, rien de perdu' },
-  {
-    value: 'none',
-    label: 'Reprise',
-    hint: 'Rien de neuf à publier : le numéro de la source est reporté tel quel',
-  },
-];
+const LEVELS: ReleaseLevel[] = ['major', 'minor', 'patch', 'none'];
 
 /**
  * Le calcul est le même côté API (`nextVersion`), refait ici pour que changer de
@@ -102,6 +94,7 @@ export function PromoteVersionCard({
   /** Exemplaires qui recevront le numéro (par nom), et l'env de la cible si elle est créée. */
   touched?: { names: string[]; createdEnv?: string };
 }) {
+  const t = useTranslations('workflowShow.promoteVersion');
   const envColor = useEnvColor();
   const envLabel = useEnvLabel();
   const base = highestVersion(gate);
@@ -109,10 +102,10 @@ export function PromoteVersionCard({
   const nextName = nameForVersion(gate, next);
 
   return (
-    <Descriptions size="small" column={1} bordered title="Version">
-      <Descriptions.Item label="Aujourd’hui">
+    <Descriptions size="small" column={1} bordered title={t('title')}>
+      <Descriptions.Item label={t('today')}>
         {gate.current.length === 0 ? (
-          <Typography.Text type="secondary">aucun exemplaire versionné</Typography.Text>
+          <Typography.Text type="secondary">{t('noneVersioned')}</Typography.Text>
         ) : (
           <Space size={4} wrap>
             {gate.current.map((row) => (
@@ -125,7 +118,7 @@ export function PromoteVersionCard({
           </Space>
         )}
       </Descriptions.Item>
-      <Descriptions.Item label="Après promotion">
+      <Descriptions.Item label={t('after')}>
         {!touched ? (
           <Tag color="green">{next}</Tag>
         ) : (
@@ -147,19 +140,19 @@ export function PromoteVersionCard({
                 {envLabel(touched.createdEnv)} {next}
               </Tag>
             )}
-            {level === 'none' && <Typography.Text type="secondary">numéro repris tel quel</Typography.Text>}
+            {level === 'none' && <Typography.Text type="secondary">{t('keptAsIs')}</Typography.Text>}
           </Space>
         )}
       </Descriptions.Item>
       {nextName && (
         // Le numéro vit AUSSI dans le nom, côté n8n : promouvoir renomme, et c'est
         // la seule moitié de l'opération que l'équipe verra sans ouvrir la plateforme.
-        <Descriptions.Item label="Nom dans n8n">
-          <Typography.Text>« {nextName} »</Typography.Text>{' '}
-          <Typography.Text type="secondary">— source et cible</Typography.Text>
+        <Descriptions.Item label={t('nameInN8n')}>
+          <Typography.Text>{t('quotedName', { name: nextName })}</Typography.Text>{' '}
+          <Typography.Text type="secondary">{t('sourceAndTarget')}</Typography.Text>
         </Descriptions.Item>
       )}
-      <Descriptions.Item label="Niveau">
+      <Descriptions.Item label={t('level')}>
         <Space direction="vertical" size={4} style={{ width: '100%' }}>
           <Radio.Group
             size="small"
@@ -172,18 +165,18 @@ export function PromoteVersionCard({
             // Rien à reprendre tant que la source ne porte aucun numéro : la
             // reprise reporterait alors un numéro qui n'existe pas.
             options={LEVELS.map((entry) => ({
-              value: entry.value,
-              label: entry.label,
-              disabled: entry.value === 'none' && !gate.sourceVersion,
+              value: entry,
+              label: t(`levels.${entry}.label`),
+              disabled: entry === 'none' && !gate.sourceVersion,
             }))}
           />
           <Typography.Text type="secondary">
             {gate.source === 'human' ? (
-              LEVELS.find((entry) => entry.value === level)?.hint
+              t(`levels.${level}.hint`)
             ) : (
               <>
                 <Tag color={gate.source === 'ai' ? 'purple' : 'default'}>
-                  {gate.source === 'ai' ? 'proposé par l’IA' : 'proposé par la règle'}
+                  {gate.source === 'ai' ? t('byAi') : t('byRule')}
                 </Tag>
                 {gate.reason}
               </>

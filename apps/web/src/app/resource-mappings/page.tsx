@@ -7,6 +7,7 @@ import { Button, Space, Tag } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { ScanOutlined } from '@ant-design/icons';
 import { WorkflowScanDrawer } from '../../components/workflow-scan-drawer';
+import { useTranslations } from 'next-intl';
 
 interface Mapping {
   id: string;
@@ -16,6 +17,8 @@ interface Mapping {
 }
 
 export default function MappingsList() {
+  const t = useTranslations('settings.resourceMappings');
+  const tc = useTranslations('common');
   const { tableProps, sorters } = useTable<Mapping>({
     resource: 'resource-mappings',
     sorters: { initial: [{ field: 'logicalName', order: 'asc' }] },
@@ -27,7 +30,7 @@ export default function MappingsList() {
       headerButtons={
         <>
           <Button icon={<ScanOutlined />} onClick={() => setScanOpen(true)}>
-            Découvrir depuis un workflow
+            {t('discover')}
           </Button>
           <CreateButton />
           <WorkflowScanDrawer open={scanOpen} onClose={() => setScanOpen(false)} />
@@ -37,20 +40,20 @@ export default function MappingsList() {
       <Table {...tableProps} rowKey="id">
         <Table.Column
           dataIndex="provider"
-          title="Provider"
+          title={t('provider')}
           sorter
           defaultSortOrder={getDefaultSortOrder('provider', sorters)}
           render={(p: string) => <Tag>{p}</Tag>}
         />
         <Table.Column
           dataIndex="logicalName"
-          title="Nom logique"
+          title={t('logicalName')}
           sorter
           defaultSortOrder={getDefaultSortOrder('logicalName', sorters)}
         />
         <Table.Column
           dataIndex="values"
-          title="Environnements"
+          title={t('envs')}
           render={(values: Record<string, unknown>) =>
             Object.keys(values ?? {}).map((env) => (
               <Tag key={env} color="blue">
@@ -60,7 +63,7 @@ export default function MappingsList() {
           }
         />
         <Table.Column<Mapping>
-          title="Actions"
+          title={tc('columns.actions')}
           className="row-actions"
           render={(_, record) => (
             <Space>

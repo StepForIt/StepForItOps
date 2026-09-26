@@ -1,5 +1,12 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
-import { N8N_API_PORT, N8nApiPort, N8nInstanceConfig, n8nWorkflowUrl, parseExecutionError } from '@nwm/core';
+import {
+  N8N_API_PORT,
+  N8nApiPort,
+  N8nInstanceConfig,
+  n8nWorkflowUrl,
+  parseExecutionError,
+  msg,
+} from '@nwm/core';
 import { InstancesService } from '../instances/instances.service';
 import { N8nProbeService } from '../../infra/n8n-probe/n8n-probe.service';
 import {
@@ -67,21 +74,26 @@ export class ResourceDiscoveryService {
   async discover(input: DiscoverInput): Promise<{ items: DiscoveredItem[] }> {
     const match = findDiscoveryStep(input.provider, input.stepId);
     if (!match) {
-      throw new BadRequestException(`Étape inconnue : ${input.provider}/${input.stepId}`);
+      throw new BadRequestException(
+        msg('platform.discoveryUnknownStep', { provider: input.provider, stepId: input.stepId }),
+      );
     }
     const { provider, step } = match;
     if (!provider.credentialTypes.includes(input.credentialType)) {
       throw new BadRequestException(
-        `Credential ${input.credentialType} incompatible avec ${provider.provider}`,
+        msg('platform.discoveryCredentialMismatch', {
+          credentialType: input.credentialType,
+          provider: provider.provider,
+        }),
       );
     }
     if (step.parentStepId && !input.parentId) {
-      throw new BadRequestException(`L'étape ${step.id} requiert un parentId (item de ${step.parentStepId})`);
+      throw new BadRequestException(
+        msg('platform.discoveryParentRequired', { stepId: step.id, parentStepId: step.parentStepId }),
+      );
     }
     if (provider.needsHost && !input.host) {
-      throw new BadRequestException(
-        `${provider.provider} range l'URL de son API dans le credential : renseigne son host`,
-      );
+      throw new BadRequestException(msg('platform.discoveryHostRequired', { provider: provider.provider }));
     }
 
     const config = await this.instances.getConfig(input.instanceId);
@@ -149,7 +161,7 @@ export class ResourceDiscoveryService {
       };
     } catch (error) {
       // Une exécution illisible ne doit pas masquer le workflow conservé.
-      this.logger.warn(`Exécutions de ${externalId} illisibles : ${(error as Error).message}`);
+      this.logger.warn(`Unreadable executions of ${externalId}: ${(error as Error).message}`);
       return undefined;
     }
   }
@@ -163,7 +175,7 @@ export class ResourceDiscoveryService {
     const config = await this.instances.getConfig(instanceId);
     const workflow = await this.n8n.getWorkflow(config, externalId);
     if (!workflow?.name?.startsWith(PROBE_WORKFLOW_PREFIX)) {
-      throw new BadRequestException(`${externalId} n'est pas un workflow de découverte`);
+      throw new BadRequestException(msg('platform.discoveryNotProbe', { externalId }));
     }
     await this.deactivate(config, externalId);
     await this.n8n.deleteWorkflow(config, externalId);

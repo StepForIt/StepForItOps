@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EnvName, detectWorkflowEnv } from '@nwm/core';
+import { EnvName, detectWorkflowEnv, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 import { ModelCatalogService } from '../../infra/model-catalog/model-catalog.service';
@@ -209,7 +209,7 @@ export class AiCostService {
       if (!wf.lastAt || row.startedAt > wf.lastAt) wf.lastAt = row.startedAt;
       byWorkflow.set(wfKey, wf);
 
-      const modelKey = row.model ?? '(modèle inconnu)';
+      const modelKey = row.model ?? msg('ops.unknownModel');
       const model = byModel.get(modelKey) ?? {
         calls: 0,
         promptTokens: 0,

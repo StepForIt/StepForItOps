@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { N8nWorkflow, ResourceRef, extractResourceRefs } from '@nwm/core';
+import { N8nWorkflow, ResourceRef, extractResourceRefs, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { slug } from './provider-catalog';
 
@@ -67,7 +67,7 @@ export class WorkflowScannerService {
 
   async scan(workflowId: string): Promise<WorkflowScanResult> {
     const workflow = await this.prisma.workflow.findUnique({ where: { id: workflowId } });
-    if (!workflow) throw new NotFoundException(`Workflow ${workflowId} inconnu`);
+    if (!workflow) throw new NotFoundException(msg('platform.workflowUnknown', { id: workflowId }));
 
     const index = await this.buildMappingIndex();
     const resourceMap = new Map<string, ScannedResource>();
@@ -91,7 +91,7 @@ export class WorkflowScannerService {
       where: { id: groupId },
       include: { workflows: { select: { id: true, name: true, raw: true }, orderBy: { name: 'asc' } } },
     });
-    if (!group) throw new NotFoundException(`Groupe ${groupId} inconnu`);
+    if (!group) throw new NotFoundException(msg('platform.groupUnknown', { id: groupId }));
 
     const index = await this.buildMappingIndex();
     const resourceMap = new Map<string, ScannedResource>();

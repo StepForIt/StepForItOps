@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Input, Modal, Space, Tag, Tooltip, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Table } from './resizable-table';
 import { apiGet, apiPost } from '../lib/api';
 import { AiSettings, AiSettingsModal } from './ai-settings-modal';
@@ -30,6 +31,9 @@ interface Props {
 
 /** Modal « Documenter les zones » : stickies proposées par l'IA, éditables, puis PUT via l'optimizer. */
 export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }: Props) {
+  const t = useTranslations('reviewTools.stickySuggestions');
+  const tAi = useTranslations('reviewTools.renameSuggestions');
+  const tCommon = useTranslations('common');
   const [rows, setRows] = useState<Row[]>([]);
   const [selected, setSelected] = useState<React.Key[]>([]);
   const [aiSource, setAiSource] = useState<AiSettings['source'] | null>(null);
@@ -68,7 +72,7 @@ export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }:
         nodeNames,
       }));
     if (stickies.length === 0) {
-      message.info('Aucune sticky sélectionnée');
+      message.info(t('noneSelected'));
       return;
     }
     setApplying(true);
@@ -76,7 +80,7 @@ export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }:
       const result = await apiPost<{ applied: number }>(`/optimizer/apply-stickies/${workflowId}`, {
         stickies,
       });
-      message.success(`${result.applied} sticky(ies) créée(s) ou complétée(s)`);
+      message.success(t('applied', { count: result.applied }));
       onClose();
       onApplied();
     } catch (error) {
@@ -88,11 +92,11 @@ export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }:
 
   return (
     <Modal
-      title="Documenter les zones (sticky notes)"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={800}
-      okText={`Appliquer (${selected.length})`}
+      okText={t('ok', { count: selected.length })}
       okButtonProps={{ disabled: rows.length === 0, loading: applying }}
       onOk={apply}
     >
@@ -100,20 +104,16 @@ export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }:
         <Alert
           type="warning"
           showIcon
-          message="IA non configurée"
+          message={tAi('aiNotConfigured')}
           action={
             <Button type="primary" onClick={() => setAiModalOpen(true)}>
-              Configurer l'IA
+              {tAi('configureAi')}
             </Button>
           }
         />
       )}
       {aiSource !== null && aiSource !== 'none' && !loading && rows.length === 0 && (
-        <Alert
-          type="info"
-          message="Aucune suggestion"
-          description="Toutes les zones sont documentées et tous les nœuds sont couverts."
-        />
+        <Alert type="info" message={tAi('noSuggestion')} description={t('allDocumented')} />
       )}
       {(loading || rows.length > 0) && (
         <Table
@@ -126,13 +126,17 @@ export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }:
         >
           <Table.Column<Row>
             dataIndex="action"
-            title="Action"
+            title={t('action')}
             render={(action: Row['action']) =>
-              action === 'create' ? <Tag color="green">Créer</Tag> : <Tag color="blue">Compléter</Tag>
+              action === 'create' ? (
+                <Tag color="green">{tCommon('create')}</Tag>
+              ) : (
+                <Tag color="blue">{t('complete')}</Tag>
+              )
             }
           />
           <Table.Column<Row>
-            title="Zone"
+            title={t('zone')}
             render={(_, record) =>
               record.action === 'update' ? (
                 <Tag>{record.stickyName}</Tag>
@@ -147,7 +151,7 @@ export function StickySuggestionsModal({ workflowId, open, onClose, onApplied }:
           />
           <Table.Column<Row>
             dataIndex="content"
-            title="Contenu"
+            title={t('content')}
             width="50%"
             render={(content: string, record) => (
               <Tooltip title={record.reason}>

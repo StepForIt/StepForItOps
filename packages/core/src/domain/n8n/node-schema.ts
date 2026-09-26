@@ -19,6 +19,7 @@
 import { activeParameters } from './inert-params';
 import { CheckFinding } from './structural-checks';
 import { N8nNode, N8nWorkflow } from './workflow.types';
+import { msg } from '../../i18n/translate';
 
 /**
  * Condition n8n autre que l'égalité. n8n les sérialise sous `{_cnd: {gte: 2}}` ;
@@ -373,28 +374,36 @@ function typeMismatch(property: NodeProperty, value: unknown): string | undefine
     // refuser accusait des nœuds QuickBooks parfaitement corrects.
     if ((declared === 'fixedCollection' || declared === 'collection') && Array.isArray(value))
       return undefined;
-    return isObject ? undefined : `un objet est attendu, ce nœud porte ${jsonKind(value)}`;
+    return isObject ? undefined : msg('checks.typeExpected', { expected: 'object', found: jsonKind(value) });
   }
   // Hors types objet, une expression est légitime partout : elle sera résolue à
   // l'exécution, et son résultat nous est inconnu.
   if (isExpression(value)) return undefined;
   if (declared === 'boolean' && typeof value !== 'boolean') {
-    return `un booléen est attendu, ce nœud porte ${jsonKind(value)}`;
+    return msg('checks.typeExpected', { expected: 'boolean', found: jsonKind(value) });
   }
   if (declared === 'number' && typeof value !== 'number') {
-    return `un nombre est attendu, ce nœud porte ${jsonKind(value)}`;
+    return msg('checks.typeExpected', { expected: 'number', found: jsonKind(value) });
   }
   return undefined;
 }
 
+/** Un nom cité, avec les guillemets de la langue. */
+function quoted(value: string): string {
+  return msg('checks.quoted', { value });
+}
+
 function jsonKind(value: unknown): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'un tableau';
   const type = typeof value;
-  if (type === 'string') return 'une chaîne';
-  if (type === 'number') return 'un nombre';
-  if (type === 'boolean') return 'un booléen';
-  return 'un objet';
+  const kind =
+    value === null
+      ? 'null'
+      : Array.isArray(value)
+        ? 'array'
+        : type === 'string' || type === 'number' || type === 'boolean'
+          ? type
+          : 'object';
+  return msg('checks.jsonKind', { kind });
 }
 
 /**
@@ -492,7 +501,7 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
   for (const property of applicableProperties(schema, parameters, node.typeVersion)) {
     applicableByName.set(property.name, [...(applicableByName.get(property.name) ?? []), property]);
   }
-  const origin = schema.source === 'instance' ? "le schéma de l'instance" : 'le catalogue des nœuds';
+  const origin = msg('checks.schemaOrigin', { source: schema.source });
   const findings: CheckFinding[] = [];
 
   for (const [name, value] of Object.entries(parameters)) {
@@ -504,7 +513,7 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
         severity: SEVERITY,
         code: 'node-unknown-param',
         nodeName: node.name,
-        message: `Paramètre « ${name} » inconnu du nœud ${schema.displayName ?? node.type} d'après ${origin}.`,
+        message: msg('checks.nodeUnknownParam', { name, nodeType: schema.displayName ?? node.type, origin }),
         data: { param: name, nodeType: node.type, source: schema.source },
       });
       continue;
@@ -523,7 +532,12 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
         severity: SEVERITY,
         code: 'node-param-type',
         nodeName: node.name,
-        message: `Paramètre « ${name} » : ${mismatches[0]} (type ${applicable[0].type} d'après ${origin}).`,
+        message: msg('checks.nodeParamType', {
+          name,
+          mismatch: mismatches[0],
+          type: applicable[0].type,
+          origin,
+        }),
         data: { param: name, expected: applicable[0].type, nodeType: node.type, source: schema.source },
       });
       continue;
@@ -549,7 +563,7 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
       .map((e) => e.issue);
     if (agreed.length > 0) {
       for (const issue of agreed) {
-        const expected = issue.expected.map((key) => `« ${key} »`).join(', ');
+        const expected = issue.expected.map(quoted).join(', ');
         findings.push(
           issue.kind === 'unknown-key'
             ? {
@@ -560,11 +574,13 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
                 severity: 'error',
                 code: 'node-unknown-collection-key',
                 nodeName: node.name,
-                message:
-                  `${issue.path} : ${issue.keys.map((key) => `« ${key} »`).join(', ')} ` +
-                  `${issue.keys.length > 1 ? 'ne sont pas des sous-clés déclarées' : "n'est pas une sous-clé déclarée"} ` +
-                  `par ${schema.displayName ?? node.type} (attendu : ${expected}). n8n refuse alors d'importer le ` +
-                  `workflow (« Could not find property option ») ou jette la valeur en silence.`,
+                message: msg('checks.nodeUnknownCollectionKey', {
+                  path: issue.path,
+                  keys: issue.keys.map(quoted).join(', '),
+                  count: issue.keys.length,
+                  nodeType: schema.displayName ?? node.type,
+                  expected,
+                }),
                 data: {
                   param: name,
                   path: issue.path,
@@ -572,28 +588,30 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
                   expectedKeys: issue.expected,
                   nodeType: node.type,
                   source: schema.source,
-                  suggestion:
-                    `Dans le nœud « ${node.name} », renomme ${issue.keys.map((key) => `\`${key}\``).join(', ')} ` +
-                    `sous \`${issue.path}\` en ${issue.expected.map((key) => `\`${key}\``).join(' ou ')}.`,
+                  suggestion: msg('checks.nodeUnknownCollectionKeyFix', {
+                    node: node.name,
+                    keys: issue.keys.map((key) => `\`${key}\``).join(', '),
+                    path: issue.path,
+                    expected: issue.expected.map((key) => `\`${key}\``).join(msg('checks.orSeparator')),
+                  }),
                 },
               }
             : {
                 severity: SEVERITY,
                 code: 'node-expression-collection',
                 nodeName: node.name,
-                message:
-                  `${issue.path} porte une expression là où ${schema.displayName ?? node.type} attend une ` +
-                  `collection (sous-clé ${expected}). n8n ne lève rien mais saute la valeur : une collection a un ` +
-                  `nombre d'entrées FIXE, aucune expression ne peut en produire un nombre variable.`,
+                message: msg('checks.nodeExpressionCollection', {
+                  path: issue.path,
+                  nodeType: schema.displayName ?? node.type,
+                  expected,
+                }),
                 data: {
                   param: name,
                   path: issue.path,
                   expectedKeys: issue.expected,
                   nodeType: node.type,
                   source: schema.source,
-                  suggestion:
-                    `Pose les entrées une à une sous \`${issue.path}\`, ou — s'il en faut un nombre variable — ` +
-                    `sors du nœud et fais l'appel en HTTP Request avec le tableau construit en amont.`,
+                  suggestion: msg('checks.nodeExpressionCollectionFix', { path: issue.path }),
                 },
               },
         );
@@ -611,9 +629,12 @@ function checkNode(node: N8nNode, schema: NodeSchema): CheckFinding[] {
         severity: SEVERITY,
         code: 'node-unknown-value',
         nodeName: node.name,
-        message:
-          `Paramètre « ${name} » : la valeur « ${String(value)} » n'est pas proposée par ` +
-          `${schema.displayName ?? node.type}. Valeurs admises : ${allowed.map(String).join(', ')}.`,
+        message: msg('checks.nodeUnknownValue', {
+          name,
+          value: String(value),
+          nodeType: schema.displayName ?? node.type,
+          allowed: allowed.map(String).join(', '),
+        }),
         data: { param: name, value, allowed, nodeType: node.type, source: schema.source },
       });
     }

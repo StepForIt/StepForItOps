@@ -31,6 +31,7 @@ import {
   ReloadOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { ErrorTimeline } from './error-timeline';
@@ -40,22 +41,19 @@ import { ErrorGroupsTable } from './error-groups-table';
 import { ErrorGroupDrawer } from './error-group-drawer';
 import { OTHERS_COLOR, buildColorMap } from './error-chart-colors';
 import type { BackfillResult, ErrorGroupRow, ErrorStats, ExecutionErrorRow, RegroupResult } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
-const PERIODS = [
-  { label: '7 jours', value: 7 },
-  { label: '30 jours', value: 30 },
-  { label: '90 jours', value: 90 },
-];
+const PERIODS = [7, 30, 90];
 
 /** Deux lectures du même historique : le problème (dédoublonné) ou le journal brut. */
-const VIEWS = [
-  { label: 'Problèmes', value: 'groups' },
-  { label: 'Occurrences', value: 'occurrences' },
-];
+const VIEWS = ['groups', 'occurrences'] as const;
 
 /** Page « Erreurs » : quand ça a cassé, sur quel workflow, et ce qui a fail. */
 export default function ErrorsPage() {
   const { scope, instances, instanceName } = useInstanceScope();
+  const t = useTranslations('health.errors');
+  const tc = useTranslations('common');
+  const locale = useLocale();
   const [days, setDays] = usePersistedState('days', 30);
   const [stats, setStats] = useState<ErrorStats>();
   const [loadingStats, setLoadingStats] = useState(true);
@@ -64,7 +62,7 @@ export default function ErrorsPage() {
   const [dayFilter, setDayFilter] = useState<string | null>(null);
   const [search, setSearch] = usePersistedState('search', '');
   const [view, setView] = usePersistedState('view', 'groups', {
-    validate: (value) => VIEWS.find((option) => option.value === value)?.value,
+    validate: (value) => VIEWS.find((option) => option === value),
   });
   const [selected, setSelected] = useState<ExecutionErrorRow | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<ErrorGroupRow | null>(null);
@@ -135,7 +133,7 @@ export default function ErrorsPage() {
       const result = await apiPost<BackfillResult>(
         `/execution-errors/backfill/${backfillInstance}?days=${days}`,
       );
-      message.success(`${result.imported} erreurs importées`);
+      message.success(t('page.imported', { count: result.imported }));
       setBackfillOpen(false);
       loadStats();
     } catch (error) {
@@ -153,8 +151,13 @@ export default function ErrorsPage() {
       if (scope) params.set('instanceId', scope);
       const result = await apiPost<RegroupResult>(`/error-groups/regroup?${params}`);
       message.success(
-        `${result.processed} erreur(s) rangée(s) dans ${result.groups} problème(s)` +
-          (result.remaining ? ` — ${result.remaining} restante(s), relance pour la suite.` : '.'),
+        result.remaining
+          ? t('page.regroupedMore', {
+              processed: result.processed,
+              groups: result.groups,
+              remaining: result.remaining,
+            })
+          : t('page.regroupedDone', { processed: result.processed, groups: result.groups }),
       );
       loadStats();
       setGroupsRefresh((key) => key + 1);
@@ -174,7 +177,7 @@ export default function ErrorsPage() {
       const result = await apiPost<{ processed: number; changed: number }>(
         `/error-groups/recategorize?${params}`,
       );
-      message.success(`${result.changed} problème(s) recatégorisé(s) sur ${result.processed}.`);
+      message.success(t('page.recategorized', { changed: result.changed, processed: result.processed }));
       setGroupsRefresh((key) => key + 1);
     } catch (error) {
       message.error((error as Error).message);
@@ -191,7 +194,7 @@ export default function ErrorsPage() {
   const filterLabel = [
     workflowFilter &&
       (stats?.workflows.find((w) => w.externalWorkflowId === workflowFilter)?.name ?? workflowFilter),
-    dayFilter && `le ${dayFilter}`,
+    dayFilter && t('page.filterDay', { day: dayFilter }),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -200,11 +203,11 @@ export default function ErrorsPage() {
 
   return (
     <List
-      title="Erreurs d'exécution"
+      title={t('page.title')}
       headerButtons={
         <Space>
           <Segmented
-            options={PERIODS}
+            options={PERIODS.map((value) => ({ value, label: t('page.periodDays', { days: value }) }))}
             value={days}
             onChange={(value) => {
               setDays(value as number);
@@ -212,7 +215,7 @@ export default function ErrorsPage() {
             }}
           />
           <Button icon={<ReloadOutlined />} onClick={loadStats} loading={loadingStats}>
-            Rafraîchir
+            {tc('refresh')}
           </Button>
           <Dropdown
             trigger={['click']}
@@ -222,7 +225,7 @@ export default function ErrorsPage() {
                 {
                   key: 'backfill',
                   icon: <CloudDownloadOutlined />,
-                  label: "Importer l'historique n8n",
+                  label: t('page.backfillMenu'),
                   onClick: () => setBackfillOpen(true),
                 },
                 ...(stats && stats.ungrouped > 0
@@ -231,8 +234,8 @@ export default function ErrorsPage() {
                         key: 'regroup',
                         icon: <GroupOutlined />,
                         label: (
-                          <Tooltip title="Erreurs importées sans problème rattaché" placement="left">
-                            Regrouper {stats.ungrouped} erreur(s)
+                          <Tooltip title={t('page.regroupTooltip')} placement="left">
+                            {t('page.regroup', { count: stats.ungrouped })}
                           </Tooltip>
                         ),
                         onClick: runRegroup,
@@ -243,8 +246,8 @@ export default function ErrorsPage() {
                   key: 'recategorize',
                   icon: <TagsOutlined />,
                   label: (
-                    <Tooltip title="Catégorise les anciens problèmes" placement="left">
-                      Catégoriser
+                    <Tooltip title={t('page.recategorizeTooltip')} placement="left">
+                      {t('page.recategorize')}
                     </Tooltip>
                   ),
                   onClick: runRecategorize,
@@ -252,7 +255,7 @@ export default function ErrorsPage() {
               ],
             }}
           >
-            <Button icon={<MoreOutlined />} loading={busy} aria-label="Plus d'actions" />
+            <Button icon={<MoreOutlined />} loading={busy} aria-label={t('page.moreActions')} />
           </Dropdown>
         </Space>
       }
@@ -262,15 +265,15 @@ export default function ErrorsPage() {
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
-          message="Statistiques indisponibles"
+          message={t('page.statsUnavailable')}
           description={statsError}
         />
       )}
 
       {empty && (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Aucune erreur sur la période">
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('emptyPeriod')}>
           <Button icon={<CloudDownloadOutlined />} onClick={() => setBackfillOpen(true)}>
-            Importer l&apos;historique n8n
+            {t('page.backfillMenu')}
           </Button>
         </Empty>
       )}
@@ -279,7 +282,7 @@ export default function ErrorsPage() {
         <>
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col xs={24} lg={16}>
-              <Card size="small" title="Quand ça a cassé" loading={loadingStats}>
+              <Card size="small" title={t('page.whenBroke')} loading={loadingStats}>
                 {stats && (
                   <>
                     <ErrorTimeline
@@ -309,7 +312,7 @@ export default function ErrorsPage() {
                             )
                           }
                         >
-                          {workflow.name} · {workflow.total} err.
+                          {t('page.workflowTag', { name: workflow.name, count: workflow.total })}
                         </Tag>
                       ))}
                     </Space>
@@ -318,28 +321,31 @@ export default function ErrorsPage() {
               </Card>
             </Col>
             <Col xs={24} lg={8}>
-              <Card size="small" title="Sur la période" loading={loadingStats}>
+              <Card size="small" title={t('page.onPeriod')} loading={loadingStats}>
                 {stats && (
                   <Row gutter={16}>
                     <Col span={8}>
-                      <Statistic title="Erreurs" value={stats.total} />
+                      <Statistic title={t('page.statErrors')} value={stats.total} />
                     </Col>
                     <Col span={8}>
-                      <Tooltip title="Problèmes distincts ouverts">
+                      <Tooltip title={t('page.statOpenTooltip')}>
                         <Statistic
-                          title="À traiter"
+                          title={t('page.statOpen')}
                           value={stats.openGroups}
-                          valueStyle={stats.openGroups > 0 ? { color: '#cf1322' } : undefined}
+                          valueStyle={stats.openGroups > 0 ? { color: BRAND.danger } : undefined}
                         />
                       </Tooltip>
                     </Col>
                     <Col span={8}>
-                      <Statistic title="Workflows touchés" value={stats.workflows.length} />
+                      <Statistic title={t('page.statWorkflows')} value={stats.workflows.length} />
                     </Col>
                     {stats.workflows[0] && (
                       <Col span={24} style={{ marginTop: 12 }}>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          Le plus fragile : {stats.workflows[0].name} ({stats.workflows[0].total} erreurs)
+                          {t('page.mostFragile', {
+                            name: stats.workflows[0].name,
+                            count: stats.workflows[0].total,
+                          })}
                         </Typography.Text>
                       </Col>
                     )}
@@ -349,7 +355,7 @@ export default function ErrorsPage() {
             </Col>
           </Row>
 
-          <Card size="small" title="Qui casse, et quand" style={{ marginBottom: 16 }} loading={loadingStats}>
+          <Card size="small" title={t('page.whoBreaks')} style={{ marginBottom: 16 }} loading={loadingStats}>
             {stats && (
               <ErrorHeatmap
                 stats={stats}
@@ -363,9 +369,13 @@ export default function ErrorsPage() {
           </Card>
 
           <Space style={{ marginBottom: 12 }} wrap>
-            <Segmented options={VIEWS} value={view} onChange={(value) => setView(value as string)} />
+            <Segmented
+              options={VIEWS.map((value) => ({ value, label: t(`page.views.${value}`) }))}
+              value={view}
+              onChange={(value) => setView(value as (typeof VIEWS)[number])}
+            />
             <Input.Search
-              placeholder="Workflow, message, nœud…"
+              placeholder={t('page.searchPlaceholder')}
               allowClear
               style={{ width: 320 }}
               defaultValue={search}
@@ -373,7 +383,7 @@ export default function ErrorsPage() {
             />
             {filterLabel && (
               <Tag closable onClose={clearFilters} color="blue">
-                Filtré : {filterLabel}
+                {t('page.filtered', { label: filterLabel })}
               </Tag>
             )}
           </Space>
@@ -406,27 +416,33 @@ export default function ErrorsPage() {
               tableLayout="fixed"
               onRow={(record) => ({ onClick: () => setSelected(record), style: { cursor: 'pointer' } })}
               locale={{
-                emptyText: <Empty description="Aucune erreur" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+                emptyText: <Empty description={t('page.noError')} image={Empty.PRESENTED_IMAGE_SIMPLE} />,
               }}
             >
               <Table.Column
                 dataIndex="startedAt"
-                title="Quand"
+                title={t('page.when')}
                 sorter
                 width={170}
-                render={(value: string) => new Date(value).toLocaleString('fr-FR')}
+                render={(value: string) => new Date(value).toLocaleString(locale)}
               />
-              <Table.Column dataIndex="workflowName" title="Workflow" sorter width={220} ellipsis />
+              <Table.Column
+                dataIndex="workflowName"
+                title={tc('columns.workflow')}
+                sorter
+                width={220}
+                ellipsis
+              />
               {!scope && (
                 <Table.Column<ExecutionErrorRow>
-                  title="Instance"
+                  title={tc('columns.instance')}
                   width={140}
-                  render={(_, record) => <Tag color="geekblue">{instanceName(record.instanceId)}</Tag>}
+                  render={(_, record) => <Tag color="blue">{instanceName(record.instanceId)}</Tag>}
                 />
               )}
               <Table.Column<ExecutionErrorRow>
                 dataIndex="failedNode"
-                title="Nœud fautif"
+                title={t('page.failedNode')}
                 width={180}
                 render={(node: string | null, record) =>
                   node ? (
@@ -434,7 +450,7 @@ export default function ErrorsPage() {
                       <Tag color="red">{node}</Tag>
                     </Tooltip>
                   ) : record.detailState === 'pending' ? (
-                    <Typography.Text type="secondary">à récupérer</Typography.Text>
+                    <Typography.Text type="secondary">{t('page.toFetch')}</Typography.Text>
                   ) : (
                     <Typography.Text type="secondary">—</Typography.Text>
                   )
@@ -442,7 +458,7 @@ export default function ErrorsPage() {
               />
               <Table.Column
                 dataIndex="message"
-                title="Message"
+                title={tc('columns.message')}
                 ellipsis
                 render={(value: string | null) =>
                   value ? (
@@ -459,7 +475,7 @@ export default function ErrorsPage() {
                 width={48}
                 render={(_, record) =>
                   record.n8nUrl && (
-                    <Tooltip title="Ouvrir l'exécution dans n8n">
+                    <Tooltip title={t('page.openExecution')}>
                       <Button
                         size="small"
                         type="text"
@@ -490,15 +506,15 @@ export default function ErrorsPage() {
       />
 
       <Modal
-        title="Importer l'historique d'erreurs depuis n8n"
+        title={t('page.backfillTitle')}
         open={backfillOpen}
         onCancel={() => setBackfillOpen(false)}
         onOk={runBackfill}
-        okText={`Importer les ${days} derniers jours`}
+        okText={t('page.backfillOk', { days })}
         confirmLoading={busy}
       >
         <Select
-          placeholder="Choisir l'instance n8n"
+          placeholder={t('page.backfillInstance')}
           style={{ width: '100%' }}
           options={instances.map((instance) => ({ label: instance.name, value: instance.id }))}
           value={backfillInstance}

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Finding } from '@prisma/client';
+import { msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ChatService } from './chat.service';
 
@@ -31,18 +32,18 @@ export class FindingFixService {
   ) {}
 
   async proposeFix(findingIds: string[]): Promise<FindingFixResult> {
-    if (findingIds.length === 0) throw new BadRequestException('Aucun finding à corriger');
+    if (findingIds.length === 0) throw new BadRequestException(msg('chat.findingFixNone'));
     const findings = await this.prisma.finding.findMany({
       where: { id: { in: findingIds } },
       include: { workflow: { select: { name: true } } },
     });
-    if (findings.length === 0) throw new NotFoundException('Findings introuvables');
+    if (findings.length === 0) throw new NotFoundException(msg('chat.findingFixNotFound'));
 
     const workflowId = findings[0]!.workflowId;
     if (findings.some((finding) => finding.workflowId !== workflowId)) {
       // Une session de chat porte sur UN workflow : mélanger les cibles produirait
       // une proposition appliquée au mauvais workflow.
-      throw new BadRequestException('Les findings doivent appartenir au même workflow');
+      throw new BadRequestException(msg('chat.findingFixSameWorkflow'));
     }
 
     const session = await this.chat.createSession(workflowId);
@@ -59,7 +60,7 @@ export class FindingFixService {
       sessionId: session.id,
       proposalId: result.proposalId,
       // Le tour peut avoir été arrêté depuis le tiroir : il n'a alors rien écrit.
-      reply: result.assistantMessage?.content ?? 'Le tour a été arrêté avant toute réponse.',
+      reply: result.assistantMessage?.content ?? msg('chat.turnStoppedNoReply'),
     };
   }
 }
@@ -67,8 +68,8 @@ export class FindingFixService {
 /** Titre de la conversation : le nœud visé s'il est unique, sinon le nombre de remarques. */
 function fixTitle(findings: Finding[]): string {
   const nodes = new Set(findings.map((finding) => finding.nodeName).filter(Boolean));
-  if (nodes.size === 1) return `Correctif : ${[...nodes][0]}`;
-  return `Correctif : ${findings.length} finding(s)`;
+  if (nodes.size === 1) return msg('chat.fixTitle', { subject: String([...nodes][0]) });
+  return msg('chat.fixTitleCount', { count: findings.length });
 }
 
 interface FindingData {
@@ -81,30 +82,27 @@ function buildFixRequest(findings: Finding[]): string {
   const lines = findings.map((finding) => {
     const data = (finding.data ?? {}) as FindingData;
     const where = [
-      finding.nodeName ? `nœud « ${finding.nodeName} »` : null,
-      data.line ? `ligne ${data.line}` : null,
+      finding.nodeName ? msg('chat.findingFixNode', { name: finding.nodeName }) : null,
+      data.line ? msg('chat.findingFixLine', { line: data.line }) : null,
     ]
       .filter(Boolean)
       .join(', ');
     return [
       `- [${finding.severity}] ${finding.message}`,
-      where ? `  où : ${where}` : null,
-      data.snippet ? `  code :\n${indent(data.snippet, 4)}` : null,
-      data.suggestion ? `  piste déjà identifiée : ${data.suggestion}` : null,
+      where ? `  ${msg('chat.findingFixWhere', { where })}` : null,
+      data.snippet ? `  ${msg('chat.findingFixCode')}\n${indent(data.snippet, 4)}` : null,
+      data.suggestion ? `  ${msg('chat.findingFixSuggestion', { suggestion: data.suggestion })}` : null,
     ]
       .filter(Boolean)
       .join('\n');
   });
 
   return [
-    `L'analyse de ce workflow a remonté ${findings.length === 1 ? 'ce problème' : 'ces problèmes'}, et je veux ${findings.length === 1 ? 'le' : 'les'} corriger.`,
+    msg('chat.findingFixIntro', { count: findings.length }),
     ``,
     ...lines,
     ``,
-    `Propose la modification MINIMALE qui corrige la cause. Ne réécris pas ce qui n'est pas visé,`,
-    `et ne « nettoie » rien au passage : le diff doit se relire en quelques secondes.`,
-    `Si une remarque est en fait un faux positif (valeur volontairement laissée en gabarit,`,
-    `convention maison, comportement voulu), dis-le et ne la corrige PAS — je la déclarerai normale.`,
+    msg('chat.findingFixInstructions'),
   ].join('\n');
 }
 

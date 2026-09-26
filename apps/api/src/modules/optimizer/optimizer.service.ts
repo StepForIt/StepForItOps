@@ -9,6 +9,8 @@ import {
   N8nWorkflow,
   findMakeNamingIssues,
   isStickyNote,
+  languageName,
+  msg,
   redactSecrets,
   safeRenameNodes,
 } from '@nwm/core';
@@ -25,6 +27,7 @@ import { findNamingIssues } from './naming-rules';
 import { findStickyIssues } from './sticky-rules';
 import { MakeNamingService } from './make-naming.service';
 import { WorkflowLockService } from '../../infra/workflow-lock/workflow-lock.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 
 /** Renommage à appliquer, avec note optionnelle posée sur le nœud (notesInFlow: false). */
 export interface RenameWithNote extends RenameSpec {
@@ -38,7 +41,7 @@ export interface RenameSuggestion extends RenameWithNote {
 }
 
 export interface SuggestNamesOptions {
-  /** Langue des noms proposés (la note reste en français). */
+  /** Langue des noms proposés (la note suit la langue d'affichage). */
   language?: 'en' | 'fr';
   /** 'default-names' : seuls les noms par défaut ; 'all' : tout le workflow (uniformisation). */
   scope?: 'default-names' | 'all';
@@ -61,13 +64,19 @@ export class OptimizerService {
     @Inject(AI_PORT) private readonly ai: AiPort,
     @Inject(N8N_API_PORT) private readonly n8n: N8nApiPort,
     private readonly locks: WorkflowLockService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /**
    * Analyse : findings de naming/doublons + zones sticky, persistés.
    * `disabledChecks` : sélection de l'écran de lancement, prioritaire sur le profil.
    */
-  async analyze(workflowId: string, disabledChecks?: string[]): Promise<Finding[]> {
+  analyze(workflowId: string, disabledChecks?: string[]): Promise<Finding[]> {
+    // Les findings sont stockés pour tous : dans la langue de la plateforme, pas celle du lanceur.
+    return this.platformLocale.run(() => this.runAnalysis(workflowId, disabledChecks));
+  }
+
+  private async runAnalysis(workflowId: string, disabledChecks?: string[]): Promise<Finding[]> {
     const { workflow, raw } = await this.workflows.getRawAny(workflowId);
     const off = new Set(await this.profiles.effective(workflowId, disabledChecks));
     // Les zones sticky n'existent pas chez Make : seul le naming s'y juge.
@@ -124,28 +133,29 @@ export class OptimizerService {
     }));
     const mission =
       scope === 'all'
-        ? "Tu uniformises le naming de TOUS les nœuds d'un workflow n8n : même langue et même style " +
-          '(verbe + objet) pour tous. Ne renvoie QUE les nœuds dont le nom doit changer.'
-        : 'Tu renommes des nœuds n8n mal nommés.';
+        ? 'You harmonise the naming of ALL the nodes of an n8n workflow: same language and same style ' +
+          '(verb + object) for all. Return ONLY the nodes whose name must change.'
+        : 'You rename badly named n8n nodes.';
     const naming =
       language === 'en'
-        ? 'Propose un nom court EN ANGLAIS décrivant l\'action (ex: "Fetch Airtable orders", "Filter active clients") ' +
-          "— l'anglais est plus compact sur le canvas."
-        : 'Propose un nom court EN FRANÇAIS décrivant l\'action (ex: "Récupérer commandes Airtable", "Filtrer clients actifs").';
+        ? 'Propose a short name IN ENGLISH describing the action (e.g. "Fetch Airtable orders", "Filter active clients") ' +
+          '— English is more compact on the canvas.'
+        : 'Propose a short name IN FRENCH describing the action (e.g. "Récupérer commandes Airtable", "Filtrer clients actifs").';
 
     try {
       const suggestions = await this.ai.generateJson<RenameSuggestion[]>({
         system:
           `${mission} ${naming} ` +
-          'Les nouveaux noms doivent être uniques dans le workflow. ' +
-          'Ajoute dans "note" une description EN FRANÇAIS, plus verbeuse (1-2 phrases), de ce que fait le nœud. ' +
-          'Réponds en JSON: [{"oldName": "...", "newName": "...", "note": "...", "reason": "..."}]',
+          'New names must be unique in the workflow. ' +
+          `Add in "note" a more verbose description (1-2 sentences) of what the node does, IN ${languageName().toUpperCase()}; ` +
+          `write "reason" in ${languageName()} too. ` +
+          'Answer in JSON: [{"oldName": "...", "newName": "...", "note": "...", "reason": "..."}]',
         prompt: JSON.stringify(nodes),
         maxTokens: 8192,
       });
       return suggestions.filter((s) => s.newName?.trim() && s.newName.trim() !== s.oldName);
     } catch (error) {
-      this.logger.warn(`Suggestions IA KO : ${(error as Error).message}`);
+      this.logger.warn(`AI suggestions failed: ${(error as Error).message}`);
       return [];
     }
   }
@@ -170,7 +180,7 @@ export class OptimizerService {
     const duplicates = finalNames.filter((name, i) => finalNames.indexOf(name) !== i);
     if (duplicates.length > 0) {
       throw new BadRequestException(
-        `Noms en double après renommage : ${[...new Set(duplicates)].join(', ')}`,
+        msg('analysis.renameDuplicates', { names: [...new Set(duplicates)].join(', ') }),
       );
     }
 

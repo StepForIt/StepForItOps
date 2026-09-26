@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { theme } from 'antd';
 
@@ -20,6 +21,7 @@ type Status = 'idle' | 'loading' | 'done';
 export function MenuNavProgress({ children }: { children: React.ReactNode }) {
   const { token } = theme.useToken();
   const pathname = usePathname();
+  const t = useTranslations('shell.menuNavProgress');
   const [status, setStatus] = React.useState<Status>('idle');
 
   React.useEffect(() => {
@@ -54,7 +56,7 @@ export function MenuNavProgress({ children }: { children: React.ReactNode }) {
       {status !== 'idle' && (
         <div
           role="progressbar"
-          aria-label="Chargement de la page"
+          aria-label={t('loading')}
           style={{
             position: 'fixed',
             top: 0,

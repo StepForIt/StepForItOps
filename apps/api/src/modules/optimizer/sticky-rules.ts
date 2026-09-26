@@ -8,6 +8,7 @@ import {
   rectArea,
   rectsPartiallyOverlap,
   CheckFinding,
+  msg,
 } from '@nwm/core';
 
 /** En dessous de cette aire, une sticky documentée sans nœud est une étiquette volontaire. */
@@ -44,7 +45,10 @@ export function findStickyIssues(workflow: N8nWorkflow): CheckFinding[] {
     findings.push({
       severity: 'info',
       code: 'sticky-uncovered-nodes',
-      message: `${zones.uncoveredNodes.length} nœud(s) hors de toute zone sticky : ${zones.uncoveredNodes.join(', ')}`,
+      message: msg('analysis.stickyUncovered', {
+        count: zones.uncoveredNodes.length,
+        names: zones.uncoveredNodes.join(', '),
+      }),
       data: { names: zones.uncoveredNodes },
     });
   }
@@ -61,7 +65,7 @@ export function findStickyIssues(workflow: N8nWorkflow): CheckFinding[] {
         findings.push({
           severity: 'info',
           code: 'sticky-empty-zone',
-          message: `La sticky "${sticky.name}" ne couvre aucun nœud`,
+          message: msg('analysis.stickyEmptyZone', { name: sticky.name }),
           nodeName: sticky.name,
           data: { stickyName: sticky.name },
         });
@@ -76,7 +80,7 @@ export function findStickyIssues(workflow: N8nWorkflow): CheckFinding[] {
         findings.push({
           severity: 'info',
           code: 'sticky-missing-content',
-          message: `La sticky "${sticky.name}" couvre ${nodes.length} nœud(s) sans les documenter`,
+          message: msg('analysis.stickyMissingContent', { name: sticky.name, count: nodes.length }),
           nodeName: sticky.name,
           data: { stickyName: sticky.name, kind: sticky.content.trim() ? 'default' : 'empty' },
         });
@@ -96,7 +100,7 @@ export function findStickyIssues(workflow: N8nWorkflow): CheckFinding[] {
           findings.push({
             severity: 'info',
             code: 'sticky-oversized',
-            message: `La sticky "${sticky.name}" est bien plus grande que la zone de ses ${nodes.length} nœud(s)`,
+            message: msg('analysis.stickyOversized', { name: sticky.name, count: nodes.length }),
             nodeName: sticky.name,
             data: { stickyName: sticky.name, area, usefulArea },
           });
@@ -111,7 +115,7 @@ export function findStickyIssues(workflow: N8nWorkflow): CheckFinding[] {
         findings.push({
           severity: 'info',
           code: 'sticky-color-clash',
-          message: `La sticky "${sticky.name}" a la même couleur que sa zone parente "${parentName}"`,
+          message: msg('analysis.stickyColorClash', { name: sticky.name, parent: parentName }),
           nodeName: sticky.name,
           data: { stickyName: sticky.name, parentName, color: sticky.color ?? 1 },
         });
@@ -128,7 +132,7 @@ export function findStickyIssues(workflow: N8nWorkflow): CheckFinding[] {
         findings.push({
           severity: 'info',
           code: 'sticky-overlap',
-          message: `Les stickies "${a.name}" et "${b.name}" se chevauchent sans s'imbriquer`,
+          message: msg('analysis.stickyOverlap', { a: a.name, b: b.name }),
           nodeName: a.name,
           data: { stickies: [a.name, b.name] },
         });

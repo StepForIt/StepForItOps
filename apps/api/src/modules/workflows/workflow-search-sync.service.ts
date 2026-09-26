@@ -70,7 +70,7 @@ export class WorkflowSearchSyncService {
       await task;
       return 'synced';
     } catch (error) {
-      this.logger.warn(`Synchro de recherche impossible sur ${instanceId} : ${(error as Error).message}`);
+      this.logger.warn(`Search sync failed on ${instanceId}: ${(error as Error).message}`);
       return 'failed';
     } finally {
       this.running.delete(instanceId);

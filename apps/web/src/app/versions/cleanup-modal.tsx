@@ -3,6 +3,7 @@
 import React from 'react';
 import { Alert, Button, Modal, Select, Space, Tag, Typography, message } from 'antd';
 import { Table } from '../../components/resizable-table';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 
 type CleanupStatus = 'duplicate' | 'pending' | 'unknown';
@@ -32,14 +33,15 @@ interface Target {
   kind: string;
 }
 
-const STATUS: Record<CleanupStatus, { color: string; label: string }> = {
-  duplicate: { color: 'red', label: 'doublon' },
-  pending: { color: 'orange', label: 'à ré-exporter' },
-  unknown: { color: 'default', label: 'workflow inconnu' },
+const STATUS_COLOR: Record<CleanupStatus, string> = {
+  duplicate: 'red',
+  pending: 'orange',
+  unknown: 'default',
 };
 
 /** Repère les fichiers laissés par les renommages dans une cible, puis les supprime. */
 export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations('inventory.versions.cleanup');
   const [targets, setTargets] = React.useState<Target[]>([]);
   const [targetId, setTargetId] = React.useState<string | null>(null);
   const [report, setReport] = React.useState<CleanupReport | null>(null);
@@ -79,7 +81,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
     setDeleting(true);
     try {
       const result = await apiPost<CleanupReport>(`/export-targets/${targetId}/cleanup`);
-      message.success(`${result.deleted?.length ?? 0} fichier(s) supprimé(s)`);
+      message.success(t('deleted', { count: result.deleted?.length ?? 0 }));
       setReport(result);
     } catch (e) {
       message.error((e as Error).message);
@@ -90,13 +92,13 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <Modal
-      title="Nettoyer les doublons d'une cible"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={860}
       footer={[
         <Button key="close" onClick={onClose}>
-          Fermer
+          {t('close')}
         </Button>,
         <Button
           key="delete"
@@ -106,7 +108,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
           disabled={duplicates.length === 0}
           onClick={remove}
         >
-          Supprimer {duplicates.length} doublon(s)
+          {t('delete', { count: duplicates.length })}
         </Button>,
       ]}
     >
@@ -114,7 +116,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         <Space>
           <Select
             style={{ width: 360 }}
-            placeholder="Choisir une cible d'export"
+            placeholder={t('selectTarget')}
             value={targetId}
             onChange={(value: string) => {
               setTargetId(value);
@@ -126,23 +128,23 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
             }))}
           />
           <Button type="primary" disabled={!targetId} loading={loading} onClick={() => analyse(targetId!)}>
-            Analyser
+            {t('analyse')}
           </Button>
         </Space>
 
-        {error && <Alert type="error" showIcon message="Analyse impossible" description={error} />}
+        {error && <Alert type="error" showIcon message={t('analyseFailed')} description={error} />}
 
         {report && (
           <>
             <Typography.Text>
-              <strong>{duplicates.length}</strong> doublon(s) supprimable(s)
+              {t.rich('deletable', { count: duplicates.length, b: (chunks) => <strong>{chunks}</strong> })}
             </Typography.Text>
             {report.entries.some((entry) => entry.status === 'pending') && (
               <Alert
                 type="warning"
                 showIcon
-                message="Lance d'abord « Tout ré-exporter »"
-                description="Ces fichiers sont à l'ancien format et leur version à jour n'existe pas encore dans la cible : les supprimer maintenant ferait perdre la sauvegarde."
+                message={t('pendingTitle')}
+                description={t('pendingDescription')}
               />
             )}
             <Table
@@ -152,25 +154,25 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
               pagination={{ pageSize: 10 }}
               columns={[
                 {
-                  title: 'État',
+                  title: t('columns.state'),
                   dataIndex: 'status',
                   width: 130,
                   render: (status: CleanupStatus) => (
-                    <Tag color={STATUS[status].color}>{STATUS[status].label}</Tag>
+                    <Tag color={STATUS_COLOR[status]}>{t(`status.${status}`)}</Tag>
                   ),
                 },
                 {
-                  title: 'Fichier',
+                  title: t('columns.file'),
                   dataIndex: 'path',
                   render: (path: string) => <code style={{ fontSize: 12 }}>{path}</code>,
                 },
                 {
-                  title: 'Workflow',
+                  title: t('columns.workflow'),
                   dataIndex: 'workflowName',
                   render: (name: string | null, entry: CleanupEntry) =>
                     name ?? <Typography.Text type="secondary">{entry.externalId ?? '—'}</Typography.Text>,
                 },
-                { title: 'Pourquoi', dataIndex: 'reason' },
+                { title: t('columns.why'), dataIndex: 'reason' },
               ]}
             />
           </>

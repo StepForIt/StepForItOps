@@ -1,0 +1,31 @@
+{
+  "cancel": "Annuler",
+  "save": "Enregistrer",
+  "close": "Fermer",
+  "delete": "Supprimer",
+  "edit": "Modifier",
+  "refresh": "Rafraîchir",
+  "add": "Ajouter",
+  "create": "Créer",
+  "apply": "Appliquer",
+  "back": "Retour",
+  "see": "Voir",
+  "download": "Télécharger",
+  "all": "Tous",
+  "none": "Aucun",
+  "yes": "Oui",
+  "no": "Non",
+  "search": "Rechercher…",
+  "openInN8n": "Ouvrir dans n8n",
+  "columns": {
+    "actions": "Actions",
+    "name": "Nom",
+    "instance": "Instance",
+    "workflow": "Workflow",
+    "type": "Type",
+    "node": "Nœud",
+    "env": "Env",
+    "status": "Statut",
+    "message": "Message"
+  }
+}

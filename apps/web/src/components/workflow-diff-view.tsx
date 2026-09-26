@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Collapse, Space, Tabs, Tag, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { ChangeExplanation, ChangeExplanations } from './change-explanations';
 import { DiffLine, DiffLines } from './diff-lines';
 
@@ -24,20 +25,21 @@ export interface WorkflowDiff {
   hasChanges: boolean;
 }
 
-const changeTag: Record<NodeDiff['change'], { color: string; label: string }> = {
-  added: { color: 'green', label: 'ajouté' },
-  removed: { color: 'red', label: 'supprimé' },
-  modified: { color: 'blue', label: 'modifié' },
-  renamed: { color: 'gold', label: 'renommé' },
+const changeColor: Record<NodeDiff['change'], string> = {
+  added: 'green',
+  removed: 'red',
+  modified: 'blue',
+  renamed: 'gold',
 };
 
 const shortType = (type: string) => type.split('.').pop() ?? type;
 
 /** En-tête commun aux deux lectures d'un nœud : même repère dans l'onglet clair et dans le JSON. */
 export function NodeHeader({ node }: { node: NodeDiff }) {
+  const t = useTranslations('chat.diff');
   return (
     <Space size={6} wrap>
-      <Tag color={changeTag[node.change].color}>{changeTag[node.change].label}</Tag>
+      <Tag color={changeColor[node.change]}>{t(`change.${node.change}`)}</Tag>
       {node.renamedFrom && (
         <Typography.Text delete type="secondary">
           {node.renamedFrom}
@@ -61,35 +63,42 @@ function Block({ title, children }: { title: React.ReactNode; children: React.Re
   );
 }
 
-const connectionsTitle = (
-  <Space size={6}>
-    <Tag color="purple">connexions</Tag>
-    <b>Câblage du workflow</b>
-  </Space>
-);
+function ConnectionsTitle() {
+  const t = useTranslations('chat.diff');
+  return (
+    <Space size={6}>
+      <Tag color="purple">{t('connections.tag')}</Tag>
+      <b>{t('connections.title')}</b>
+    </Space>
+  );
+}
 
-const settingsTitle = (
-  <Space size={6}>
-    <Tag>réglages</Tag>
-    <b>Settings</b>
-  </Space>
-);
+function SettingsTitle() {
+  const t = useTranslations('chat.diff');
+  return (
+    <Space size={6}>
+      <Tag>{t('settings.tag')}</Tag>
+      <b>{t('settings.title')}</b>
+    </Space>
+  );
+}
 
 /** Le compte des nœuds touchés, en une ligne ; rien quand aucun nœud ne bouge (câblage ou réglages seuls). */
 export function DiffCounts({ counts }: { counts: WorkflowDiff['counts'] }) {
+  const t = useTranslations('chat.diff.counts');
   const parts = (
     [
-      [counts.modified, 'modifié'],
-      [counts.added, 'ajouté'],
-      [counts.renamed, 'renommé'],
-      [counts.removed, 'supprimé'],
+      [counts.modified, 'modified'],
+      [counts.added, 'added'],
+      [counts.renamed, 'renamed'],
+      [counts.removed, 'removed'],
     ] as const
   )
     .filter(([n]) => n > 0)
-    .map(([n, verb], i) => {
-      const s = n > 1 ? 's' : '';
-      return i === 0 ? `${n} nœud${s} ${verb}${s}` : `${n} ${verb}${s}`;
-    });
+    // Le premier porte le mot « nœud », les suivants ne font que le compléter.
+    .map(([n, change], i) =>
+      i === 0 ? t(`first.${change}`, { count: n }) : t(`rest.${change}`, { count: n }),
+    );
   if (parts.length === 0) return null;
   return <Typography.Text>{parts.join(' · ')}</Typography.Text>;
 }
@@ -113,6 +122,9 @@ export function WorkflowDiffView({
   /** Panneaux ajoutés en fin d'onglet JSON (ex. les opérations demandées à l'IA). */
   extraJsonPanels?: Array<{ key: string; label: React.ReactNode; children: React.ReactNode }>;
 }) {
+  const t = useTranslations('chat.diff');
+  const connectionsTitle = <ConnectionsTitle />;
+  const settingsTitle = <SettingsTitle />;
   const jsonPanels = [
     ...diff.nodes.map((node) => ({
       key: `node:${node.name}`,
@@ -158,10 +170,10 @@ export function WorkflowDiffView({
     <Tabs
       size="small"
       items={[
-        { key: 'plain', label: 'Ce que ça change', children: plain },
+        { key: 'plain', label: t('tabs.plain'), children: plain },
         {
           key: 'json',
-          label: 'Diff JSON',
+          label: t('tabs.json'),
           children: (
             <Collapse
               size="small"

@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { useMenu, useResource } from '@refinedev/core';
+import { useTranslations } from 'next-intl';
 import { ApiOutlined, BulbOutlined, CompassOutlined, PlusOutlined } from '@ant-design/icons';
 import { useInstanceScope } from '../lib/instance-scope';
 import { matchesQuery } from '../lib/command-search';
-import { TIPS } from '../app/aide/tip-catalog';
+import { useTips } from '../app/aide/tip-catalog';
 
 /** Une entrée de la barre de recherche : ce qu'on affiche, ce qu'on cherche, ce qu'on fait. */
 export interface Command {
@@ -20,28 +21,6 @@ export interface Command {
 }
 
 /**
- * La création d'un workflow n'a pas d'écran à elle : c'est une fenêtre de la
- * page Workflows, ouverte par ce paramètre. Le reste des créations sort des
- * resources Refine, qui portent une vraie route.
- */
-const CREATE_WORKFLOW: Command = {
-  key: 'create:workflow',
-  label: 'Créer un workflow',
-  icon: <PlusOutlined />,
-  keywords: 'creer nouveau workflow vide assistant',
-  route: '/workflows?create=1',
-};
-
-const TIP_COMMANDS: Command[] = TIPS.map((tip) => ({
-  key: `tip:${tip.id}`,
-  label: tip.title,
-  detail: 'Astuce',
-  icon: <BulbOutlined />,
-  keywords: `aide astuce comment ${tip.text} ${tip.keywords ?? ''}`,
-  route: `/aide?tip=${tip.id}`,
-}));
-
-/**
  * Pages, créations et instances : les entrées qui ne demandent aucun appel réseau.
  *
  * Elles sont déduites des resources Refine plutôt que listées à la main : une
@@ -52,8 +31,30 @@ export function useStaticCommands(): Command[] {
   const { menuItems } = useMenu();
   const { resources } = useResource();
   const { instances } = useInstanceScope();
+  const t = useTranslations('shell.commandPalette.commands');
+  const { tips } = useTips();
 
   return React.useMemo(() => {
+    // La création d'un workflow n'a pas d'écran à elle : c'est une fenêtre de la
+    // page Workflows, ouverte par ce paramètre. Le reste des créations sort des
+    // resources Refine, qui portent une vraie route.
+    const createWorkflow: Command = {
+      key: 'create:workflow',
+      label: t('createWorkflow'),
+      icon: <PlusOutlined />,
+      keywords: t('createWorkflowKeywords'),
+      route: '/workflows?create=1',
+    };
+
+    const tipCommands: Command[] = tips.map((tip) => ({
+      key: `tip:${tip.id}`,
+      label: tip.title,
+      detail: t('tip'),
+      icon: <BulbOutlined />,
+      keywords: t('tipKeywords', { text: tip.text, keywords: tip.keywords ?? '' }),
+      route: `/aide?tip=${tip.id}`,
+    }));
+
     const pages: Command[] = [];
     const walk = (items: typeof menuItems, parent?: string) => {
       for (const item of items) {
@@ -63,7 +64,7 @@ export function useStaticCommands(): Command[] {
             label: item.label ?? item.name,
             detail: parent,
             icon: item.icon ?? <CompassOutlined />,
-            keywords: `aller ouvrir page ${parent ?? ''}`,
+            keywords: t('pageKeywords', { parent: parent ?? '' }),
             route: item.route,
           });
         }
@@ -78,9 +79,9 @@ export function useStaticCommands(): Command[] {
         const label = (resource.meta?.label as string) ?? resource.name;
         return {
           key: `create:${resource.name}`,
-          label: (resource.meta?.createLabel as string) ?? `Créer — ${label}`,
+          label: (resource.meta?.createLabel as string) ?? t('createResource', { label }),
           icon: <PlusOutlined />,
-          keywords: `creer nouveau nouvelle ajouter ${label}`,
+          keywords: t('createResourceKeywords', { label }),
           route: resource.create as string,
         };
       });
@@ -88,22 +89,24 @@ export function useStaticCommands(): Command[] {
     const instanceCommands: Command[] = instances.map((instance) => ({
       key: `instance:${instance.id}`,
       label: instance.name,
-      detail: 'Instance n8n',
+      detail: t('instance'),
       icon: <ApiOutlined />,
-      keywords: 'instance n8n',
+      keywords: t('instanceKeywords'),
       route: `/instances/show/${instance.id}`,
     }));
 
-    return [CREATE_WORKFLOW, ...creations, ...pages, ...instanceCommands, ...TIP_COMMANDS];
-  }, [menuItems, resources, instances]);
+    return [createWorkflow, ...creations, ...pages, ...instanceCommands, ...tipCommands];
+  }, [menuItems, resources, instances, tips, t]);
 }
 
 /** Groupe d'affichage d'une commande, déduit de sa clé (une seule source de vérité). */
-export function commandGroup(command: Command): 'Actions' | 'Instances' | 'Pages' | 'Astuces' {
-  if (command.key.startsWith('create:')) return 'Actions';
-  if (command.key.startsWith('instance:')) return 'Instances';
-  if (command.key.startsWith('tip:')) return 'Astuces';
-  return 'Pages';
+export type CommandGroup = 'actions' | 'instances' | 'pages' | 'tips';
+
+export function commandGroup(command: Command): CommandGroup {
+  if (command.key.startsWith('create:')) return 'actions';
+  if (command.key.startsWith('instance:')) return 'instances';
+  if (command.key.startsWith('tip:')) return 'tips';
+  return 'pages';
 }
 
 /**
@@ -113,7 +116,7 @@ export function commandGroup(command: Command): 'Actions' | 'Instances' | 'Pages
  */
 export function filterCommands(commands: Command[], query: string): Command[] {
   if (!query.trim()) {
-    return commands.filter((command) => !['Instances', 'Astuces'].includes(commandGroup(command)));
+    return commands.filter((command) => !['instances', 'tips'].includes(commandGroup(command)));
   }
   return commands.filter((command) => matchesQuery(query, command.label, command.detail, command.keywords));
 }

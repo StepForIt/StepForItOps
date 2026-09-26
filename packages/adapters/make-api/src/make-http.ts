@@ -4,6 +4,7 @@ import {
   PlatformInstanceConfig,
   RateBudget,
   makeErrorMessage,
+  msg,
 } from '@nwm/core';
 
 /**
@@ -86,7 +87,7 @@ export class MakeHttp {
  */
 export function zoneOf(instance: PlatformInstanceConfig): string {
   const zone = (instance.zone ?? instance.baseUrl ?? '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  if (!zone) throw new Error('Instance Make sans zone : renseigner « eu1.make.com », « eu2.make.com »…');
+  if (!zone) throw new Error(msg('platform.makeNoZone'));
   return zone;
 }
 

@@ -1,4 +1,6 @@
 import React from 'react';
+import { BRAND } from '../../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 /*
  * Une scène par astuce : l'écran de la console rejoué en miniature (cadre intérieur 298×158).
@@ -94,6 +96,12 @@ const Body = ({ children, style }: { children: React.ReactNode; style?: React.CS
   </div>
 );
 
+/** Noms de workflows d'exemple, partagés par les scènes. */
+function useSample() {
+  const t = useTranslations('misc.aide.scenes.sample');
+  return { billing: t('billing'), reminders: t('reminders'), quotes: t('quotes') };
+}
+
 const EnvTags = () => (
   <>
     <Tag color="blue">DEV</Tag>
@@ -102,26 +110,28 @@ const EnvTags = () => (
 );
 
 function Families() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
     <Frame
-      title="Workflows"
+      title={t('shared.workflows')}
       right={
         <span style={{ display: 'flex' }}>
           <span className="hp-btn" style={{ borderRadius: '5px 0 0 5px' }}>
-            Par workflow
+            {t('families.byWorkflow')}
           </span>
           <span className="hp-btn hp-on1 hp-p1" style={{ borderRadius: '0 5px 5px 0', marginLeft: -1 }}>
-            Par métier
+            {t('families.byFamily')}
           </span>
         </span>
       }
     >
       <div className="hp-gone1">
         <Body>
-          <Row right={<Tag color="blue">DEV</Tag>}>Facturation - DEV</Row>
-          <Row right={<Tag color="green">PROD</Tag>}>Facturation - PROD</Row>
-          <Row right={<Tag color="blue">DEV</Tag>}>Relances - DEV</Row>
-          <Row right={<Tag color="green">PROD</Tag>}>Relances - PROD</Row>
+          <Row right={<Tag color="blue">DEV</Tag>}>{w.billing} - DEV</Row>
+          <Row right={<Tag color="green">PROD</Tag>}>{w.billing} - PROD</Row>
+          <Row right={<Tag color="blue">DEV</Tag>}>{w.reminders} - DEV</Row>
+          <Row right={<Tag color="green">PROD</Tag>}>{w.reminders} - PROD</Row>
         </Body>
       </div>
       <div className="hp-abs hp-a2" style={{ top: 24, left: 0, right: 0 }}>
@@ -130,26 +140,26 @@ function Families() {
             right={
               <>
                 <EnvTags />
-                <Tag color="green">= prod</Tag>
+                <Tag color="green">{t('shared.equalProd')}</Tag>
               </>
             }
           >
-            <span className="hp-muted">▸</span> <b>Facturation</b>
+            <span className="hp-muted">▸</span> <b>{w.billing}</b>
           </Row>
           <Row
             right={
               <>
                 <EnvTags />
-                <Tag color="orange">à déployer</Tag>
+                <Tag color="orange">{t('shared.toDeploy')}</Tag>
               </>
             }
           >
-            <span className="hp-muted">▸</span> <b>Relances</b>
+            <span className="hp-muted">▸</span> <b>{w.reminders}</b>
           </Row>
         </Body>
       </div>
       <div className="hp-abs hp-a4" style={{ left: 14, bottom: 10 }}>
-        <span className="hp-muted">4 workflows · 2 métiers</span>
+        <span className="hp-muted">{t('families.counts')}</span>
       </div>
       <Cursor x1={262} y1={12} mode="one" />
     </Frame>
@@ -157,27 +167,29 @@ function Families() {
 }
 
 function Divergence() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
-    <Frame title="Workflows">
+    <Frame title={t('shared.workflows')}>
       <Body>
-        <Row right={<Tag color="green">= prod</Tag>}>Facturation - DEV</Row>
+        <Row right={<Tag color="green">{t('shared.equalProd')}</Tag>}>{w.billing} - DEV</Row>
         <Row
           right={
             <Tag color="orange" className="hp-p1">
-              à déployer
+              {t('shared.toDeploy')}
             </Tag>
           }
         >
-          Relances - DEV
+          {w.reminders} - DEV
         </Row>
-        <Row right={<Tag color="green">= prod</Tag>}>Devis - DEV</Row>
+        <Row right={<Tag color="green">{t('shared.equalProd')}</Tag>}>{w.quotes} - DEV</Row>
       </Body>
       <div className="hp-panel hp-a2" style={{ left: 8, right: 8, top: 102 }}>
-        <b>Relances : DEV → PROD</b>
+        <b>{t('divergence.title', { name: w.reminders })}</b>
         <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <span className="hp-diff del hp-a3">− Slack · #compta</span>
-          <span className="hp-diff add hp-a3">+ Slack · #finance</span>
-          <span className="hp-diff add hp-a4">+ Wait · 5 min</span>
+          <span className="hp-diff del hp-a3">{t('shared.slackAccounting', { sign: '−' })}</span>
+          <span className="hp-diff add hp-a3">{t('shared.slackFinance', { sign: '+' })}</span>
+          <span className="hp-diff add hp-a4">{t('divergence.wait')}</span>
         </span>
       </div>
       <Cursor x1={255} y1={65} mode="one" />
@@ -186,13 +198,15 @@ function Divergence() {
 }
 
 function Palette() {
+  const t = useTranslations('misc.aide.scenes.palette');
+  const w = useSample();
   return (
-    <div className="hp-mw" style={{ background: '#f5f5f5' }}>
+    <div className="hp-mw" style={{ background: BRAND.papier }}>
       <div className="hp-body" style={{ opacity: 0.5 }}>
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            style={{ height: 14, background: '#e8e8e8', borderRadius: 4, width: `${90 - i * 12}%` }}
+            style={{ height: 14, background: BRAND.craie, borderRadius: 4, width: `${90 - i * 12}%` }}
           />
         ))}
       </div>
@@ -202,21 +216,21 @@ function Palette() {
       <div className="hp-panel hp-a2" style={{ left: 30, right: 30, top: 16 }}>
         <span className="hp-input">
           <span className="hp-muted">⌕</span>
-          <span className="hp-type2">relan</span>
+          <span className="hp-type2">{t('typed')}</span>
         </span>
         <span className="hp-muted hp-a3" style={{ fontSize: 9 }}>
-          WORKFLOWS
+          {t('group')}
         </span>
         <Row className="hp-a3" right={<Tag color="green">PROD</Tag>}>
-          <span style={{ background: '#e6f4ff', margin: '0 -6px', padding: '0 6px', flex: 1 }}>
-            Relances - PROD
+          <span style={{ background: BRAND.primarySoft, margin: '0 -6px', padding: '0 6px', flex: 1 }}>
+            {w.reminders} - PROD
           </span>
         </Row>
         <Row className="hp-a3" right={<Tag color="blue">DEV</Tag>}>
-          Relances - DEV
+          {w.reminders} - DEV
         </Row>
         <span className="hp-muted hp-a5" style={{ fontSize: 9 }}>
-          ↵ ouvrir
+          {t('open')}
         </span>
       </div>
     </div>
@@ -224,20 +238,22 @@ function Palette() {
 }
 
 function Bulk() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
-    <Frame title="Workflows">
+    <Frame title={t('shared.workflows')}>
       <Body>
         <Row right={<Tag color="blue">DEV</Tag>}>
-          <Check className="hp-on1 hp-p1" /> Facturation - DEV
+          <Check className="hp-on1 hp-p1" /> {w.billing} - DEV
         </Row>
         <Row right={<Tag color="blue">DEV</Tag>}>
-          <Check className="hp-on2 hp-p2" /> Relances - DEV
+          <Check className="hp-on2 hp-p2" /> {w.reminders} - DEV
         </Row>
         <Row right={<Tag color="blue">DEV</Tag>}>
-          <Check /> Devis - DEV
+          <Check /> {w.quotes} - DEV
         </Row>
         <Row right={<Tag color="green">PROD</Tag>}>
-          <Check /> Devis - PROD
+          <Check /> {w.quotes} - PROD
         </Row>
       </Body>
       <div
@@ -248,13 +264,13 @@ function Bulk() {
           bottom: 6,
           flexDirection: 'row',
           alignItems: 'center',
-          background: '#e6f4ff',
+          background: BRAND.primarySoft,
         }}
       >
-        <b style={{ whiteSpace: 'nowrap' }}>2 sélectionnés</b>
+        <b style={{ whiteSpace: 'nowrap' }}>{t('bulk.selected')}</b>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-          <span className="hp-btn">Analyser</span>
-          <span className="hp-btn">Archiver</span>
+          <span className="hp-btn">{t('bulk.analyze')}</span>
+          <span className="hp-btn">{t('bulk.archive')}</span>
         </span>
       </div>
       <Cursor x1={20} y1={41} x2={20} y2={64} />
@@ -263,34 +279,35 @@ function Bulk() {
 }
 
 function Checks() {
+  const t = useTranslations('misc.aide.scenes.checks');
   return (
     <Frame
-      title="Contrôles à lancer"
+      title={t('title')}
       right={
         <Tag color="green" className="hp-a5">
-          4 lancés
+          {t('launched')}
         </Tag>
       }
     >
       <Body style={{ gap: 0 }}>
         <Row>
-          <Check on /> Structure
+          <Check on /> {t('structure')}
         </Row>
         <Row>
-          <Check on /> Fiabilité
+          <Check on /> {t('reliability')}
         </Row>
         <Row>
-          <Check on className="hp-off1 hp-p1" /> Revue IA
+          <Check on className="hp-off1 hp-p1" /> {t('aiReview')}
         </Row>
         <Row>
-          <Check on /> Code JS
+          <Check on /> {t('jsCode')}
         </Row>
         <Row>
-          <Check on /> Naming
+          <Check on /> {t('naming')}
         </Row>
       </Body>
       <span className="hp-btn primary hp-abs hp-p2" style={{ right: 8, bottom: 8 }}>
-        Lancer
+        {t('launch')}
       </span>
       <Cursor x1={20} y1={87} x2={268} y2={140} />
     </Frame>
@@ -298,31 +315,33 @@ function Checks() {
 }
 
 function FindingsFix() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
-    <Frame title="Findings · Relances - DEV">
+    <Frame title={t('findingsFix.title', { name: w.reminders })}>
       <Body style={{ gap: 0 }}>
-        <Row right={<span className="hp-btn hp-p1">✦ Corriger (IA)</span>}>
+        <Row right={<span className="hp-btn hp-p1">{t('findingsFix.fix')}</span>}>
           <b>HTTP Stripe</b> <Tag color="red">1</Tag>
           <Tag color="orange">2</Tag>
         </Row>
         <Row>
-          <span className="hp-ko">✕</span> Pas de timeout
+          <span className="hp-ko">✕</span> {t('findingsFix.noTimeout')}
         </Row>
         <Row>
-          <span style={{ color: '#d46b08' }}>!</span> Pas de retry
+          <span style={{ color: BRAND.warning }}>!</span> {t('findingsFix.noRetry')}
         </Row>
         <Row>
-          <span style={{ color: '#d46b08' }}>!</span> Erreur avalée
+          <span style={{ color: BRAND.warning }}>!</span> {t('findingsFix.swallowed')}
         </Row>
       </Body>
       <div className="hp-panel hp-a2" style={{ left: 110, right: 8, top: 50 }}>
-        <b>Proposition</b>
-        <span className="hp-diff add hp-a3">+ timeout: 10 s</span>
-        <span className="hp-diff add hp-a3">+ retry: 3 fois</span>
+        <b>{t('findingsFix.proposal')}</b>
+        <span className="hp-diff add hp-a3">{t('findingsFix.timeout')}</span>
+        <span className="hp-diff add hp-a3">{t('findingsFix.retry')}</span>
         <span className="hp-diff add hp-a4">+ onError: stop</span>
         <span className="hp-a5" style={{ display: 'flex', gap: 4 }}>
-          <span className="hp-btn primary">Appliquer</span>
-          <span className="hp-btn">Voir le diff</span>
+          <span className="hp-btn primary">{t('shared.apply')}</span>
+          <span className="hp-btn">{t('findingsFix.seeDiff')}</span>
         </span>
       </div>
       <Cursor x1={250} y1={41} mode="one" />
@@ -331,34 +350,35 @@ function FindingsFix() {
 }
 
 function Ignore() {
+  const t = useTranslations('misc.aide.scenes.ignore');
   return (
     <Frame title="Findings">
       <Body style={{ gap: 0 }}>
-        <Row className="hp-gone2" right={<span className="hp-btn hp-p1">Ignorer</span>}>
-          <span style={{ color: '#d46b08' }}>!</span> Valeur d&apos;exemple · example.com
+        <Row className="hp-gone2" right={<span className="hp-btn hp-p1">{t('ignore')}</span>}>
+          <span style={{ color: BRAND.warning }}>!</span> {t('placeholder')}
         </Row>
         <Row>
-          <span style={{ color: '#d46b08' }}>!</span> Nœud sans nom
+          <span style={{ color: BRAND.warning }}>!</span> {t('unnamed')}
         </Row>
         <Row>
-          <span className="hp-ko">✕</span> Référence vers un nœud absent
+          <span className="hp-ko">✕</span> {t('missingRef')}
         </Row>
       </Body>
       <div className="hp-abs hp-a2" style={{ left: 120, right: 8, top: 44 }}>
         <div className="hp-panel hp-gone2" style={{ position: 'relative' }}>
-          <b>Ignorer pour…</b>
-          <span>○ ce workflow</span>
+          <b>{t('ignoreFor')}</b>
+          <span>{t('thisWorkflow')}</span>
           <span>
-            <b style={{ color: '#1677ff' }}>●</b> tous ses envs
+            <b style={{ color: BRAND.primary }}>●</b> {t('allEnvs')}
           </span>
-          <span>○ partout</span>
+          <span>{t('everywhere')}</span>
           <span style={{ alignSelf: 'flex-end' }} className="hp-btn primary hp-p2">
-            Ignorer
+            {t('ignore')}
           </span>
         </div>
       </div>
       <Tag color="green" className="hp-note hp-a5">
-        Ignoré dans tous les envs
+        {t('done')}
       </Tag>
       <Cursor x1={262} y1={41} x2={263} y2={130} />
     </Frame>
@@ -366,27 +386,28 @@ function Ignore() {
 }
 
 function Stub() {
+  const t = useTranslations('misc.aide.scenes.stub');
   return (
-    <Frame title="Tester sans rien envoyer">
+    <Frame title={t('title')}>
       <Body style={{ gap: 0 }}>
-        <Row right={<span className="hp-muted">entrée</span>}>
+        <Row right={<span className="hp-muted">{t('input')}</span>}>
           <Check /> Webhook
         </Row>
-        <Row right={<Tag color="orange">sort</Tag>}>
-          <Check on className="hp-a1" /> Gmail · envoyer
+        <Row right={<Tag color="orange">{t('out')}</Tag>}>
+          <Check on className="hp-a1" /> {t('gmail')}
         </Row>
-        <Row right={<Tag color="orange">sort</Tag>}>
-          <Check on className="hp-a1" /> Slack · poster
+        <Row right={<Tag color="orange">{t('out')}</Tag>}>
+          <Check on className="hp-a1" /> {t('slack')}
         </Row>
-        <Row right={<Tag color="orange">sort</Tag>}>
+        <Row right={<Tag color="orange">{t('out')}</Tag>}>
           <Check on className="hp-a1" /> HTTP POST · Stripe
         </Row>
       </Body>
       <Tag color="green" className="hp-note hp-a3">
-        0 envoi réel · 3 bouchons
+        {t('summary')}
       </Tag>
       <span className="hp-btn primary hp-abs hp-p1" style={{ right: 8, bottom: 8 }}>
-        Lancer l&apos;essai
+        {t('run')}
       </span>
       <Cursor x1={255} y1={140} mode="one" />
     </Frame>
@@ -394,24 +415,25 @@ function Stub() {
 }
 
 function Remote() {
+  const t = useTranslations('misc.aide.scenes.remote');
   return (
-    <Frame title="Airtable · Clients" right={<span className="hp-btn hp-p1">Vérifier le distant</span>}>
+    <Frame title={t('title')} right={<span className="hp-btn hp-p1">{t('check')}</span>}>
       <Body style={{ gap: 0 }}>
-        <Row right={<span className="hp-ok hp-a2">✓</span>}>Nom</Row>
+        <Row right={<span className="hp-ok hp-a2">✓</span>}>{t('name')}</Row>
         <Row right={<span className="hp-ok hp-a2">✓</span>}>Email</Row>
         <Row
           right={
             <Tag color="red" className="hp-a3">
-              absente
+              {t('absent')}
             </Tag>
           }
         >
-          Téléphone
+          {t('phone')}
         </Row>
-        <Row right={<span className="hp-ok hp-a3">✓</span>}>Statut</Row>
+        <Row right={<span className="hp-ok hp-a3">✓</span>}>{t('status')}</Row>
       </Body>
       <Tag color="red" className="hp-note hp-a5">
-        1 colonne manquante (Téléphone)
+        {t('missing', { column: t('phone') })}
       </Tag>
       <Cursor x1={245} y1={12} mode="one" />
     </Frame>
@@ -448,29 +470,31 @@ function MiniGraph({ glow }: { glow?: boolean }) {
 }
 
 function Assistant() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
     <div className="hp-mw">
-      <div className="hp-head">Relances - DEV</div>
+      <div className="hp-head">{w.reminders} - DEV</div>
       <MiniGraph glow />
       <div style={DRAWER}>
-        <div className="hp-head">✦ Assistant IA</div>
+        <div className="hp-head">{t('shared.assistant')}</div>
         <div className="hp-bubble me hp-abs hp-a2" style={{ right: 8, top: 32, maxWidth: 150 }}>
-          Ajoute un retry sur l&apos;appel HTTP
+          {t('assistant.ask')}
         </div>
         <div className="hp-bubble ai hp-abs hp-a3" style={{ left: 8, top: 70, width: 140 }}>
-          Prêt : 1 nœud modifié
+          {t('assistant.ready')}
           <br />
-          <span className="hp-muted">HTTP · 3 essais, 5 s</span>
+          <span className="hp-muted">{t('assistant.detail')}</span>
         </div>
         <span className="hp-btn primary hp-abs hp-a3" style={{ left: 16, top: 112 }}>
-          Appliquer
+          {t('shared.apply')}
         </span>
         <Tag color="green" className="hp-abs hp-a4" style={{ left: 90, top: 116 }}>
-          Appliqué
+          {t('assistant.applied')}
         </Tag>
         <div className="hp-input hp-abs" style={{ left: 6, right: 32, bottom: 6 }}>
           <span className="hp-gone1">
-            <span className="hp-type1">Ajoute un retry sur l&apos;appel…</span>
+            <span className="hp-type1">{t('assistant.typing')}</span>
           </span>
         </div>
         <span className="hp-btn primary hp-abs hp-p1" style={{ right: 6, bottom: 6, padding: '0 5px' }}>
@@ -483,9 +507,10 @@ function Assistant() {
 }
 
 function ErrorFix() {
+  const t = useTranslations('misc.aide.scenes');
   return (
     <div className="hp-mw">
-      <div className="hp-head">Erreurs · Problèmes</div>
+      <div className="hp-head">{t('errorFix.title')}</div>
       <div className="hp-body">
         <div className="hp-panel" style={{ position: 'relative', boxShadow: 'none', width: 104 }}>
           <span>
@@ -493,7 +518,7 @@ function ErrorFix() {
           </span>
           <span className="hp-muted">HTTP · Stripe</span>
           <span className="hp-btn hp-p1" style={{ fontSize: 8.5, padding: '0 5px' }}>
-            ✦ Correctif IA
+            {t('errorFix.fix')}
           </span>
         </div>
         <div className="hp-panel" style={{ position: 'relative', boxShadow: 'none', width: 104 }}>
@@ -505,12 +530,12 @@ function ErrorFix() {
         </div>
       </div>
       <div className="hp-a2" style={{ ...DRAWER, width: 170 }}>
-        <div className="hp-head">✦ Assistant IA</div>
+        <div className="hp-head">{t('shared.assistant')}</div>
         <div className="hp-bubble ai hp-abs hp-a3" style={{ left: 8, top: 34, width: 140 }}>
-          <b>Credential Stripe expirée.</b>
+          <b>{t('errorFix.expired')}</b>
         </div>
         <div className="hp-bubble ai hp-abs hp-a4" style={{ left: 8, top: 66, width: 140 }}>
-          À renouveler dans n8n : rien à changer au workflow.
+          {t('errorFix.renew')}
         </div>
       </div>
       <Cursor x1={60} y1={76} mode="one" />
@@ -519,30 +544,32 @@ function ErrorFix() {
 }
 
 function Promote() {
+  const t = useTranslations('misc.aide.scenes.promote');
+  const w = useSample();
   return (
-    <Frame title="Promouvoir · Facturation">
+    <Frame title={t('title', { name: w.billing })}>
       <Body>
         <span style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
           <Tag color="blue">DEV</Tag>→<Tag>PREPROD</Tag>→<span className="hp-tag green hp-glow">PROD</span>
           <Tag className="hp-a5" color="green">
-            1.3.0 en prod
+            {t('inProd')}
           </Tag>
         </span>
         <span className="hp-a1">
-          <span className="hp-ok">✓</span> Tests verts
+          <span className="hp-ok">✓</span> {t('testsGreen')}
         </span>
         <span className="hp-a2">
-          <span className="hp-ok">✓</span> Aucun finding bloquant
+          <span className="hp-ok">✓</span> {t('noBlocking')}
         </span>
         <span className="hp-a3">
-          <span className="hp-ok">✓</span> Colonnes distantes présentes
+          <span className="hp-ok">✓</span> {t('columnsPresent')}
         </span>
         <span className="hp-a3">
-          Version <span className="hp-muted">1.2.0 →</span> <b>1.3.0</b>
+          {t('version')} <span className="hp-muted">1.2.0 →</span> <b>1.3.0</b>
         </span>
       </Body>
       <span className="hp-btn primary hp-abs hp-p2" style={{ right: 8, bottom: 8 }}>
-        Promouvoir
+        {t('promote')}
       </span>
       <Cursor x2={262} y2={140} mode="late" />
     </Frame>
@@ -550,6 +577,7 @@ function Promote() {
 }
 
 function Mapping() {
+  const t = useTranslations('misc.aide.scenes.mapping');
   const swap = (before: React.ReactNode, after: React.ReactNode, step: string) => (
     <span style={{ position: 'relative', display: 'inline-block', minWidth: 150 }}>
       <span className="hp-gone1">{before}</span>
@@ -559,10 +587,10 @@ function Mapping() {
     </span>
   );
   return (
-    <Frame title="Nœud Airtable" right={<Tag color="blue">DEV</Tag>}>
+    <Frame title={t('title')} right={<Tag color="blue">DEV</Tag>}>
       <Body style={{ gap: 7 }}>
         <span>
-          <span className="hp-muted">Base </span>
+          <span className="hp-muted">{t('base')} </span>
           {swap(
             <>
               <b>CRM (dev)</b> <span className="hp-muted">appD3v…</span>
@@ -574,8 +602,8 @@ function Mapping() {
           )}
         </span>
         <span>
-          <span className="hp-muted">Table </span>
-          {swap(<b>Prospects (dev)</b>, <b>Prospects (prod)</b>, 'hp-a3')}
+          <span className="hp-muted">{t('table')} </span>
+          {swap(<b>{t('prospects', { env: 'dev' })}</b>, <b>{t('prospects', { env: 'prod' })}</b>, 'hp-a3')}
         </span>
         <span>
           <span className="hp-muted">Credential </span>
@@ -583,10 +611,10 @@ function Mapping() {
         </span>
       </Body>
       <Tag color="green" className="hp-note hp-a5">
-        3 bascules · ids et noms
+        {t('summary')}
       </Tag>
       <span className="hp-btn primary hp-abs hp-p1" style={{ right: 8, bottom: 8 }}>
-        Basculer vers PROD
+        {t('switch')}
       </span>
       <Cursor x1={250} y1={140} mode="one" />
     </Frame>
@@ -594,8 +622,9 @@ function Mapping() {
 }
 
 function Errors() {
+  const t = useTranslations('misc.aide.scenes.errors');
   return (
-    <Frame title="Erreurs">
+    <Frame title={t('title')}>
       <Body style={{ gap: 0, width: 120 }}>
         <Row className="hp-a1">
           <span className="hp-dot red" /> 10:02 Timeout
@@ -612,15 +641,15 @@ function Errors() {
       </Body>
       <div className="hp-panel" style={{ left: 140, right: 8, top: 34 }}>
         <b>Timeout · Notion</b>
-        <span className="hp-muted">1 problème, 3 exécutions</span>
+        <span className="hp-muted">{t('grouped')}</span>
         <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <span className="hp-btn hp-p2">Traité</span>
+          <span className="hp-btn hp-p2">{t('resolve')}</span>
           <Tag color="green" className="hp-a4">
-            traité
+            {t('resolved')}
           </Tag>
         </span>
         <Tag color="orange" className="hp-a5">
-          rouvert · 1 rechute
+          {t('reopened')}
         </Tag>
       </div>
       <Cursor x2={172} y2={82} mode="late" />
@@ -629,13 +658,15 @@ function Errors() {
 }
 
 function Drift() {
+  const t = useTranslations('misc.aide.scenes.drift');
+  const w = useSample();
   const bars = [30, 34, 28, 32, 36, 31, 33, 29, 52, 58, 61];
   return (
     <Frame
-      title="Performance · Relances - PROD"
+      title={t('title', { name: w.reminders })}
       right={
         <Tag color="red" className="hp-a4">
-          durée ×1,8
+          {t('ratio')}
         </Tag>
       }
     >
@@ -655,26 +686,32 @@ function Drift() {
           <span
             key={i}
             className="hp-rise"
-            style={{ flex: 1, height: h * 1.4, borderRadius: 3, background: i >= 8 ? '#ff7875' : '#91caff' }}
+            style={{
+              flex: 1,
+              height: h * 1.4,
+              borderRadius: 3,
+              background: i >= 8 ? BRAND.corail : '#91caff',
+            }}
           />
         ))}
       </div>
       <div className="hp-panel hp-a5" style={{ right: 10, top: 32, width: 150 }}>
-        <b># alertes</b>
-        <span>Relances ralentit : ×1,8 vs semaine passée</span>
+        <b>{t('channel')}</b>
+        <span>{t('message', { name: w.reminders })}</span>
       </div>
     </Frame>
   );
 }
 
 function Costs() {
+  const t = useTranslations('misc.aide.scenes.costs');
   const rows: Array<[string, number]> = [
-    ['Tri des mails', 62],
-    ['Résumé tickets', 38],
-    ['Devis IA', 21],
+    [t('mailSorting'), 62],
+    [t('ticketSummary'), 38],
+    [t('aiQuotes'), 21],
   ];
   return (
-    <Frame title="Coûts IA · aujourd'hui" right={<b className="hp-a4">5,40 $</b>}>
+    <Frame title={t('title')} right={<b className="hp-a4">{t('total')}</b>}>
       <Body style={{ gap: 10, paddingTop: 12 }}>
         {rows.map(([label, pct]) => (
           <span
@@ -687,38 +724,40 @@ function Costs() {
         ))}
       </Body>
       <Tag color="orange" className="hp-note hp-a5">
-        Budget du jour dépassé (5 $)
+        {t('overBudget')}
       </Tag>
     </Frame>
   );
 }
 
 function Restore() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
-    <Frame title="Versions · Facturation">
+    <Frame title={t('restore.title', { name: w.billing })}>
       <Body style={{ gap: 0 }}>
-        <Row right={<Tag color="blue">courante</Tag>}>
-          <b>v14</b> <span className="hp-muted">aujourd&apos;hui</span>
+        <Row right={<Tag color="blue">{t('restore.current')}</Tag>}>
+          <b>v14</b> <span className="hp-muted">{t('restore.today')}</span>
         </Row>
         <Row>
-          <b>v13</b> <span className="hp-muted">hier</span>
+          <b>v13</b> <span className="hp-muted">{t('restore.yesterday')}</span>
         </Row>
-        <Row right={<span className="hp-btn hp-p1">Restaurer</span>}>
-          <b>v12</b> <span className="hp-muted">lundi</span>
+        <Row right={<span className="hp-btn hp-p1">{t('restore.restore')}</span>}>
+          <b>v12</b> <span className="hp-muted">{t('restore.monday')}</span>
         </Row>
       </Body>
       <div className="hp-abs hp-a2" style={{ left: 96, right: 8, top: 40 }}>
         <div className="hp-panel hp-gone2" style={{ position: 'relative' }}>
-          <b>Revenir à v12 ?</b>
-          <span className="hp-diff del">− Slack · #finance</span>
-          <span className="hp-diff add">+ Slack · #compta</span>
+          <b>{t('restore.confirm')}</b>
+          <span className="hp-diff del">{t('shared.slackFinance', { sign: '−' })}</span>
+          <span className="hp-diff add">{t('shared.slackAccounting', { sign: '+' })}</span>
           <span style={{ alignSelf: 'flex-end' }} className="hp-btn primary hp-p2">
-            Restaurer
+            {t('restore.restore')}
           </span>
         </div>
       </div>
       <Tag color="green" className="hp-note hp-a5">
-        v15 · restaurée depuis v12
+        {t('restore.done')}
       </Tag>
       <Cursor x1={262} y1={87} x2={260} y2={117} />
     </Frame>
@@ -726,22 +765,24 @@ function Restore() {
 }
 
 function Resources() {
+  const t = useTranslations('misc.aide.scenes.resources');
+  const w = useSample();
   return (
-    <Frame title="Ressources externes">
+    <Frame title={t('title')}>
       <Body>
         <span className="hp-input">
           <span className="hp-muted">⌕</span>
           <span className="hp-type1">crm</span>
         </span>
         <b className="hp-a2">Airtable · CRM · Prospects</b>
-        <Row className="hp-a3" right={<span className="hp-muted">écrit Nom, Email</span>}>
-          Facturation - PROD
+        <Row className="hp-a3" right={<span className="hp-muted">{t('writes')}</span>}>
+          {w.billing} - PROD
         </Row>
-        <Row className="hp-a4" right={<span className="hp-muted">lit tout</span>}>
-          Relances - PROD
+        <Row className="hp-a4" right={<span className="hp-muted">{t('readsAll')}</span>}>
+          {w.reminders} - PROD
         </Row>
-        <Row className="hp-a5" right={<Tag color="orange">à rouvrir</Tag>}>
-          Devis - PROD
+        <Row className="hp-a5" right={<Tag color="orange">{t('reopen')}</Tag>}>
+          {w.quotes} - PROD
         </Row>
       </Body>
     </Frame>
@@ -749,34 +790,36 @@ function Resources() {
 }
 
 function ListMemory() {
+  const t = useTranslations('misc.aide.scenes');
+  const w = useSample();
   return (
-    <Frame title="Workflows">
+    <Frame title={t('shared.workflows')}>
       <Body>
         <Row right={<span className="hp-muted hp-p1">⚙</span>}>
-          <span className="hp-muted">Nom</span>
+          <span className="hp-muted">{t('listMemory.name')}</span>
           <span className="hp-muted" style={{ marginLeft: 70 }}>
             Env
           </span>
           <span className="hp-muted hp-gone2" style={{ marginLeft: 22 }}>
-            Tags
+            {t('listMemory.tags')}
           </span>
         </Row>
-        <Row right={<Tag color="green">PROD</Tag>}>Facturation</Row>
-        <Row right={<Tag color="green">PROD</Tag>}>Relances</Row>
+        <Row right={<Tag color="green">PROD</Tag>}>{w.billing}</Row>
+        <Row right={<Tag color="green">PROD</Tag>}>{w.reminders}</Row>
       </Body>
       <div className="hp-panel hp-a2" style={{ right: 8, top: 44, width: 110 }}>
         <span>
-          <Check on /> Nom
+          <Check on /> {t('listMemory.name')}
         </span>
         <span>
           <Check on /> Env
         </span>
         <span>
-          <Check on className="hp-p2" /> Tags
+          <Check on className="hp-p2" /> {t('listMemory.tags')}
         </span>
       </div>
       <div className="hp-abs hp-a4" style={{ left: 14, bottom: 10 }}>
-        <span className="hp-muted">Retrouvée telle quelle au retour</span>
+        <span className="hp-muted">{t('listMemory.kept')}</span>
       </div>
       <Cursor x1={280} y1={42} x2={195} y2={96} />
     </Frame>

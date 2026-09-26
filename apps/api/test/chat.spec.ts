@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { AiPort, DocsPort, N8nWorkflow } from '@nwm/core';
+import { AiAgentParams, AiPort, DocsPort, N8nWorkflow } from '@nwm/core';
 import { ChatService } from '../src/modules/workflow-chat/chat.service';
 import { MakeChatTurnService } from '../src/modules/workflow-chat/make-chat-turn.service';
 import { PrismaService } from '../src/infra/prisma/prisma.service';
@@ -11,6 +11,11 @@ import { LessonRecallService } from '../src/modules/workflow-chat/lesson-recall.
 import { ChatHistoryService } from '../src/modules/workflow-chat/chat-history.service';
 import { InstanceShapesService } from '../src/modules/workflow-chat/instance-shapes.service';
 import { NodeCatalogService } from '../src/infra/node-catalog/node-catalog.service';
+import {
+  NodePackageDocsService,
+  PackageDocAnnounce,
+} from '../src/infra/node-catalog/node-package-docs.service';
+import { NodePackageDocsSyncService } from '../src/infra/node-catalog/node-package-docs-sync.service';
 import { ChatProgressService } from '../src/modules/workflow-chat/chat-progress.service';
 import { ChatCancelService } from '../src/modules/workflow-chat/chat-cancel.service';
 import { DraftRepairService } from '../src/modules/workflow-chat/draft-repair.service';
@@ -42,11 +47,17 @@ interface Fakes {
   /** Le tour d'un scénario Make ; absent, rien ne doit l'appeler. */
   makeTurn?: MakeChatTurnService;
   n8nCalls?: number;
+  /** Ce que l'annonce des nœuds communautaires rend pour le workflow du tour. */
+  community?: PackageDocAnnounce[];
+  /** Paquets dont la lecture en arrière-plan a été demandée. */
+  ensured?: string[];
+  calls?: AiAgentParams[];
 }
 
 function makeService(fakes: Fakes, raw: N8nWorkflow): ChatService {
   const ai = {
-    async chatWithTools() {
+    async chatWithTools(params: AiAgentParams) {
+      (fakes.calls ??= []).push(params);
       if (fakes.reply instanceof Error) throw fakes.reply;
       fakes.n8nCalls = (fakes.n8nCalls ?? 0) + 1;
       return { text: fakes.reply, trace: [], thinking: [] };
@@ -166,6 +177,19 @@ function makeService(fakes: Fakes, raw: N8nWorkflow): ChatService {
     },
   } as unknown as DocsPort;
 
+  const packageDocs = {
+    async announce() {
+      return fakes.community ?? [];
+    },
+    async read() {
+      return null;
+    },
+  } as unknown as NodePackageDocsService;
+  const packageDocsSync = {
+    ensureInBackground(names: string[]) {
+      (fakes.ensured ??= []).push(...names);
+    },
+  } as unknown as NodePackageDocsSyncService;
   return new ChatService(
     prisma as unknown as PrismaService,
     workflows,
@@ -184,6 +208,8 @@ function makeService(fakes: Fakes, raw: N8nWorkflow): ChatService {
     workflowCreate,
     leftovers,
     fakes.makeTurn ?? ({} as MakeChatTurnService),
+    packageDocs,
+    packageDocsSync,
     ai,
     docs,
   );
@@ -246,6 +272,40 @@ describe('ChatService — le tour', () => {
 
       // Un refus prévisible se dit tout de suite, pas après trente secondes d'IA.
       expect(await prisma.workflowChatMessage.count()).toBe(0);
+    });
+  });
+
+  describe('les nœuds communautaires', () => {
+    const firstMessage = () => JSON.stringify(fakes.calls?.[0]?.messages ?? []);
+
+    it('annonce leur mode d’emploi sans le servir', async () => {
+      fakes.community = [
+        {
+          packageName: 'n8n-nodes-foo',
+          nodeTypes: ['n8n-nodes-foo.foo'],
+          installedVersion: '1.2.0',
+          docs: [{ kind: 'auto', source: 'npm', version: '1.2.0', chars: 12000, fetchedAt: new Date() }],
+        },
+      ];
+      await makeService(fakes, raw).sendMessage(sessionId, 'configure Foo');
+
+      expect(firstMessage()).toMatch(/n8n-nodes-foo 1\.2\.0/);
+      expect(firstMessage()).toMatch(/read_node_docs/);
+      expect(fakes.ensured ?? []).toEqual([]);
+    });
+
+    it('dit qu’un paquet n’a pas de doc et la fait chercher pour le tour suivant', async () => {
+      fakes.community = [{ packageName: 'n8n-nodes-bar', nodeTypes: ['n8n-nodes-bar.bar'], docs: [] }];
+      await makeService(fakes, raw).sendMessage(sessionId, 'configure Bar');
+
+      expect(firstMessage()).toMatch(/NO docs/);
+      expect(fakes.ensured).toEqual(['n8n-nodes-bar']);
+    });
+
+    it('ne dit rien d’un workflow sans nœud communautaire', async () => {
+      await makeService(fakes, raw).sendMessage(sessionId, 'bonjour');
+
+      expect(firstMessage()).not.toMatch(/COMMUNITY/);
     });
   });
 

@@ -3,7 +3,9 @@
 import React from 'react';
 import { Space, Spin, Typography } from 'antd';
 import { CheckCircleTwoTone, CloseCircleTwoTone } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
+import { BRAND } from '../lib/brand/colors';
 
 interface TurnProgressStep {
   label: string;
@@ -65,6 +67,7 @@ function foldSteps(steps: TurnProgressStep[]): FoldedStep[] {
  * une attente normale d'un écran figé.
  */
 export function ChatTurnProgress({ sessionId }: { sessionId: string }) {
+  const t = useTranslations('chat.turnProgress');
   const [progress, setProgress] = React.useState<TurnProgress | null>(null);
   const [elapsed, setElapsed] = React.useState(0);
 
@@ -103,7 +106,7 @@ export function ChatTurnProgress({ sessionId }: { sessionId: string }) {
       <Space>
         <Spin size="small" />
         <Typography.Text type="secondary">
-          {current && !current.done ? current.label : 'L’assistant analyse le workflow…'}
+          {current && !current.done ? current.label : t('analysing')}
           {current && !current.done && current.detail ? ` — ${current.detail}` : ''}
         </Typography.Text>
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
@@ -114,16 +117,16 @@ export function ChatTurnProgress({ sessionId }: { sessionId: string }) {
         <div style={{ marginTop: 4, paddingInlineStart: 22 }}>
           {hidden > 0 && (
             <Typography.Link style={{ fontSize: 12 }} onClick={() => setExpanded(true)}>
-              {`Voir les ${hidden} étapes précédentes`}
+              {t('showPrevious', { count: hidden })}
             </Typography.Link>
           )}
           {shown.map((step, index) => (
             <div key={`${step.label}-${index}`}>
               <Space size={6}>
                 {step.failed ? (
-                  <CloseCircleTwoTone twoToneColor="#cf1322" style={{ fontSize: 11 }} />
+                  <CloseCircleTwoTone twoToneColor={BRAND.danger} style={{ fontSize: 11 }} />
                 ) : (
-                  <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: 11 }} />
+                  <CheckCircleTwoTone twoToneColor={BRAND.success} style={{ fontSize: 11 }} />
                 )}
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                   {step.label}

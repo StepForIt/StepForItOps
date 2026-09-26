@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { WorkflowVersion } from '@prisma/client';
-import { VCS_PORT, VcsPort, VcsRepo } from '@nwm/core';
+import { VCS_PORT, VcsPort, VcsRepo, msg } from '@nwm/core';
 import { VersioningService } from './versioning.service';
 import { VersionExportService } from './version-export.service';
 import { ExportPreview, RestorePreview, VersionPreviewService } from './version-preview.service';
@@ -47,7 +47,7 @@ export class VersioningController {
   private async resolveToken(token?: string, targetId?: string): Promise<string> {
     const stored = !token && targetId ? await this.targets.storedSecret(targetId) : undefined;
     const resolved = token || stored || process.env.GITHUB_TOKEN;
-    if (!resolved) throw new BadRequestException('Token GitHub manquant (champ token ou GITHUB_TOKEN)');
+    if (!resolved) throw new BadRequestException(msg('platform.githubTokenMissing'));
     return resolved;
   }
 
@@ -81,10 +81,10 @@ export class VersioningController {
     },
   ): Promise<{ ok: boolean; error?: string }> {
     if (body.kind !== 'github') {
-      return { ok: false, error: 'Test disponible uniquement pour GitHub pour le moment' };
+      return { ok: false, error: msg('platform.targetTestGithubOnly') };
     }
     const { owner, repo, branch } = body.config ?? {};
-    if (!owner || !repo) return { ok: false, error: 'owner et repo requis' };
+    if (!owner || !repo) return { ok: false, error: msg('platform.targetTestOwnerRepo') };
     return this.vcs.testAccess({
       owner,
       repo,

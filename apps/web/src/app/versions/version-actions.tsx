@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button, Space } from 'antd';
+import { useTranslations } from 'next-intl';
 
 /** Ce qu'on peut faire d'une version, où qu'elle soit affichée. */
 export interface VersionHandlers {
@@ -11,20 +12,21 @@ export interface VersionHandlers {
 }
 
 export function VersionActions({ versionId, handlers }: { versionId: string; handlers: VersionHandlers }) {
+  const t = useTranslations('inventory.versions.actions');
   return (
     <Space>
       <Button size="small" onClick={() => handlers.onDiff(versionId)}>
-        Comparer
+        {t('compare')}
       </Button>
       <Button size="small" onClick={() => handlers.onExport(versionId)}>
-        Exporter
+        {t('export')}
       </Button>
       <Button size="small" danger onClick={() => handlers.onRestore(versionId)}>
-        Restaurer
+        {t('restore')}
       </Button>
     </Space>
   );
 }
 
 /** Date d'export, ou « jamais » : même rendu dans les deux vues. */
-export const frDate = (iso: string) => new Date(iso).toLocaleString('fr-FR');
+export const formatDateTime = (iso: string, locale: string) => new Date(iso).toLocaleString(locale);

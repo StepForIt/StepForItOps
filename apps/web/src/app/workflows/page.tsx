@@ -6,6 +6,7 @@ import { CrudFilters, useInvalidate, useSelect } from '@refinedev/core';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { useEnabledModules } from '../../lib/enabled-modules';
 import { apiGet } from '../../lib/api';
@@ -35,13 +36,14 @@ interface GroupOption {
 }
 
 export default function WorkflowsList() {
+  const t = useTranslations('workflowsList.page');
   const envOptions = useEnvOptions();
   const divergenceOptions = [
     ...envOptions
       .filter((env) => env.value !== 'prod')
-      .map((env) => ({ value: env.value, label: `${env.label} à déployer` })),
-    { value: 'diverged', label: 'Différents de la prod' },
-    { value: 'behind', label: 'Prod modifiée depuis' },
+      .map((env) => ({ value: env.value, label: t('toDeploy', { env: env.label }) })),
+    { value: 'diverged', label: t('diverged') },
+    { value: 'behind', label: t('behind') },
   ];
   const { scope, instanceName } = useInstanceScope();
   const [filters, setFilters] = usePersistedState<Filters>('filters', DEFAULT_FILTERS);
@@ -207,7 +209,7 @@ export default function WorkflowsList() {
 
   // Mobile : l'appui long ouvre le mode sélection, qui dure tant qu'une ligne est cochée.
   const selecting = selected.length > 0 || selectedFamilies.length > 0;
-  const searchPlaceholder = `Rechercher par nom (${MIN_SEARCH_CHARS} caractères)…`;
+  const searchPlaceholder = t('searchPlaceholder', { count: MIN_SEARCH_CHARS });
   const filterControls = (block: boolean) => (
     <WorkflowFilterControls
       filters={filters}
@@ -239,12 +241,12 @@ export default function WorkflowsList() {
             type="primary"
             shape="circle"
             icon={<PlusOutlined />}
-            aria-label="Créer un workflow"
+            aria-label={t('create')}
             onClick={() => setCreateOpen(true)}
           />
         ) : (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-            Créer un workflow
+            {t('create')}
           </Button>
         )
       }

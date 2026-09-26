@@ -2,10 +2,17 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Empty, Input, InputRef, Modal, Segmented, Space, Spin, Typography, theme } from 'antd';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { WorkflowRow } from '../app/workflows/workflow-row';
-import { Command, commandGroup, filterCommands, useStaticCommands } from './command-palette-commands';
+import {
+  Command,
+  CommandGroup,
+  commandGroup,
+  filterCommands,
+  useStaticCommands,
+} from './command-palette-commands';
 import { WorkflowHit, preferredMember, useWorkflowSearch } from './command-palette-workflows';
 import { useEnvIds } from '../lib/envs';
 import { MIN_SEARCH_CHARS } from '../lib/workflow-search';
@@ -76,7 +83,7 @@ type Entry =
   { kind: 'workflow'; key: string; hit: WorkflowHit } | { kind: 'command'; key: string; command: Command };
 
 interface Section {
-  title: string;
+  id: 'workflows' | CommandGroup;
   entries: Entry[];
 }
 
@@ -89,6 +96,7 @@ function Palette({ inputRef, onDone }: { inputRef: React.RefObject<InputRef>; on
   const commands = useStaticCommands();
   const envOrder = useEnvIds();
   const { hits, loading, syncing } = useWorkflowSearch(search, grouped);
+  const t = useTranslations('shell.commandPalette');
 
   React.useEffect(() => {
     setGrouped(window.localStorage.getItem(GROUPED_KEY) !== 'false');
@@ -104,20 +112,20 @@ function Palette({ inputRef, onDone }: { inputRef: React.RefObject<InputRef>; on
 
   const sections = React.useMemo<Section[]>(() => {
     const matched = filterCommands(commands, search);
-    const byGroup = (group: string) =>
+    const byGroup = (group: CommandGroup) =>
       matched
         .filter((command) => commandGroup(command) === group)
         .map<Entry>((command) => ({ kind: 'command', key: command.key, command }));
 
     return [
       {
-        title: 'Workflows',
+        id: 'workflows' as const,
         entries: hits.map<Entry>((hit) => ({ kind: 'workflow', key: `workflow:${hit.key}`, hit })),
       },
-      { title: 'Actions', entries: byGroup('Actions') },
-      { title: 'Instances', entries: byGroup('Instances') },
-      { title: 'Pages', entries: byGroup('Pages') },
-      { title: 'Astuces', entries: byGroup('Astuces') },
+      { id: 'actions' as const, entries: byGroup('actions') },
+      { id: 'instances' as const, entries: byGroup('instances') },
+      { id: 'pages' as const, entries: byGroup('pages') },
+      { id: 'tips' as const, entries: byGroup('tips') },
     ].filter((section) => section.entries.length > 0);
   }, [commands, hits, search]);
 
@@ -164,19 +172,19 @@ function Palette({ inputRef, onDone }: { inputRef: React.RefObject<InputRef>; on
         size="large"
         prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
         suffix={loading ? <Spin size="small" /> : null}
-        placeholder="Rechercher un workflow, une instance, une action…"
+        placeholder={t('placeholder')}
         value={search}
         onChange={(event) => setSearch(event.target.value)}
         style={{ padding: '12px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}` }}
       />
       <div role="listbox" style={{ maxHeight: '55vh', overflowY: 'auto', padding: '8px 0' }}>
         {sections.map((section) => (
-          <div key={section.title}>
+          <div key={section.id}>
             <Typography.Text
               type="secondary"
               style={{ fontSize: 11, textTransform: 'uppercase', padding: '4px 16px', display: 'block' }}
             >
-              {section.title}
+              {t(`groups.${section.id}`)}
             </Typography.Text>
             {section.entries.map((entry) => {
               const position = positions.get(entry.key) ?? -1;
@@ -208,7 +216,7 @@ function Palette({ inputRef, onDone }: { inputRef: React.RefObject<InputRef>; on
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             // Une synchro se dit : elle prend quelques secondes, et un « Aucun
             // résultat » affiché pendant ce temps ferait refermer la barre.
-            description={emptyLabel(search, loading, syncing)}
+            description={emptyLabel(t, search, loading, syncing)}
             style={{ margin: '24px 0' }}
           />
         )}
@@ -222,15 +230,15 @@ function Palette({ inputRef, onDone }: { inputRef: React.RefObject<InputRef>; on
         }}
       >
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          ↑↓ naviguer · ↵ ouvrir · échap fermer
+          {t('keyboardHint')}
         </Typography.Text>
         <Segmented
           size="small"
           value={grouped ? 'grouped' : 'flat'}
           onChange={(value) => setGroupedPref(value === 'grouped')}
           options={[
-            { value: 'grouped', label: 'Groupés par env' },
-            { value: 'flat', label: 'Un par workflow n8n' },
+            { value: 'grouped', label: t('grouped') },
+            { value: 'flat', label: t('flat') },
           ]}
         />
       </Space>
@@ -239,13 +247,18 @@ function Palette({ inputRef, onDone }: { inputRef: React.RefObject<InputRef>; on
 }
 
 /** Ce que dit la liste vide : la recherche n'a pas encore de quoi travailler, tourne, ou n'a rien trouvé. */
-function emptyLabel(search: string, loading: boolean, syncing: boolean): string {
-  if (syncing) return 'Rien en local : synchronisation avec n8n…';
-  if (loading) return 'Recherche…';
+function emptyLabel(
+  t: ReturnType<typeof useTranslations<'shell.commandPalette'>>,
+  search: string,
+  loading: boolean,
+  syncing: boolean,
+): string {
+  if (syncing) return t('empty.syncing');
+  if (loading) return t('empty.loading');
   const term = search.trim();
   if (term.length > 0 && term.length < MIN_SEARCH_CHARS)
-    return `Encore ${MIN_SEARCH_CHARS - term.length} caractère(s)…`;
-  return 'Aucun résultat';
+    return t('empty.moreChars', { count: MIN_SEARCH_CHARS - term.length });
+  return t('empty.noResult');
 }
 
 /** Un workflow métier : Entrée ouvre l'env prioritaire, les étiquettes ouvrent les autres. */
@@ -262,12 +275,19 @@ function WorkflowEntry({
   onSelect: () => void;
   onOpenMember: (member: WorkflowRow) => void;
 }) {
+  const t = useTranslations('shell.commandPalette');
   const target = preferredMember(hit.members, useEnvIds());
   return (
     <PaletteRow
       icon={<ApartmentOutlined />}
       label={hit.name}
-      detail={hit.members.length > 1 ? `ouvre ${target.env ?? 'la copie principale'}` : undefined}
+      detail={
+        hit.members.length > 1
+          ? target.env
+            ? t('opensEnv', { env: target.env })
+            : t('opensMain')
+          : undefined
+      }
       active={active}
       onHover={onHover}
       onSelect={onSelect}

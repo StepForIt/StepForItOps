@@ -6,7 +6,9 @@ import {
   MakeBlueprint,
   flattenModules,
   isMakeBlueprint,
+  languageName,
   moduleLabel,
+  msg,
   redactSecrets,
   renameModules,
   unnamedModules,
@@ -63,21 +65,22 @@ export class MakeNamingService {
     );
     const mission =
       scope === 'all'
-        ? "Tu uniformises le naming de TOUS les modules d'un scénario Make : même langue et même style " +
-          '(verbe + objet) pour tous. Ne renvoie QUE les modules dont le nom doit changer.'
-        : "Tu nommes des modules d'un scénario Make laissés sans nom (leur libellé actuel n'est que leur type).";
+        ? 'You harmonise the naming of ALL the modules of a Make scenario: same language and same style ' +
+          '(verb + object) for all. Return ONLY the modules whose name must change.'
+        : 'You name modules of a Make scenario that were left unnamed (their current label is only their type).';
     const naming =
       language === 'en'
-        ? 'Propose un nom court EN ANGLAIS décrivant l\'action (ex: "Fetch Airtable orders", "Filter active clients").'
-        : 'Propose un nom court EN FRANÇAIS décrivant l\'action (ex: "Récupérer commandes Airtable", "Filtrer clients actifs").';
+        ? 'Propose a short name IN ENGLISH describing the action (e.g. "Fetch Airtable orders", "Filter active clients").'
+        : 'Propose a short name IN FRENCH describing the action (e.g. "Récupérer commandes Airtable", "Filtrer clients actifs").';
 
     try {
       const answer = await this.ai.generateJson<
         Array<{ moduleId: number; newName: string; reason?: string }>
       >({
         system:
-          `${mission} ${naming} Chaque module est désigné par son "moduleId" : recopie-le tel quel. ` +
-          'Réponds en JSON: [{"moduleId": 3, "newName": "...", "reason": "..."}]',
+          `${mission} ${naming} Each module is designated by its "moduleId": copy it verbatim. ` +
+          `Write "reason" in ${languageName()}. ` +
+          'Answer in JSON: [{"moduleId": 3, "newName": "...", "reason": "..."}]',
         prompt: JSON.stringify(modules),
         maxTokens: 8192,
       });
@@ -91,7 +94,7 @@ export class MakeNamingService {
         }))
         .filter((suggestion) => suggestion.newName !== suggestion.oldName);
     } catch (error) {
-      this.logger.warn(`Suggestions IA (Make) KO : ${(error as Error).message}`);
+      this.logger.warn(`AI suggestions (Make) failed: ${(error as Error).message}`);
       return [];
     }
   }
@@ -106,14 +109,16 @@ export class MakeNamingService {
     const missingId = renames.filter((rename) => typeof rename.moduleId !== 'number');
     if (missingId.length > 0) {
       throw new BadRequestException(
-        `Un module Make se renomme par son id : absent pour ${missingId.map((r) => `« ${r.oldName} »`).join(', ')}`,
+        msg('analysis.makeRenameNeedsId', {
+          names: missingId.map((r) => msg('analysis.quoted', { name: r.oldName })).join(', '),
+        }),
       );
     }
     await this.envChain.assertDirectWriteAllowed(workflowId);
     await this.locks.assertWritable(workflowId);
     const { workflow, raw, missing } = await this.workflows.getFreshRawAny(workflowId);
     if (missing) {
-      throw new BadRequestException(`« ${workflow.name} » n'existe plus dans Make : rien n'est renommé.`);
+      throw new BadRequestException(msg('analysis.makeScenarioGone', { name: workflow.name }));
     }
 
     let updated: MakeBlueprint;

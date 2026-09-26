@@ -6,6 +6,7 @@ import { List, getDefaultSortOrder } from '@refinedev/antd';
 import { usePersistedState, useTable } from '../../lib/list-memory/use-list-memory';
 import { useSelect } from '@refinedev/core';
 import { Empty, Select, Space, Tag, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { useInstanceScope } from '../../lib/instance-scope';
 
@@ -30,6 +31,8 @@ const statusColor: Record<string, string> = {
 };
 
 export default function TestRunsList() {
+  const t = useTranslations('inventory.testRuns');
+  const locale = useLocale();
   const { scope, instanceName } = useInstanceScope();
   const [workflowId, setWorkflowId] = usePersistedState<string | undefined>('workflow', undefined);
   const { tableProps, setFilters, sorters } = useTable<TestRun>({
@@ -62,7 +65,7 @@ export default function TestRunsList() {
     <List>
       <Space style={{ marginBottom: 16, display: 'flex' }}>
         <Select
-          placeholder="Filtrer par workflow"
+          placeholder={t('filterWorkflow')}
           allowClear
           showSearch
           optionFilterProp="label"
@@ -84,9 +87,9 @@ export default function TestRunsList() {
             <Empty
               description={
                 <>
-                  Aucun test lancé pour l&apos;instant.
+                  {t('emptyTitle')}
                   <br />
-                  Ouvre un workflow → onglet <b>Test</b> pour déclencher son webhook avec un payload.
+                  {t.rich('emptyHint', { b: (chunks) => <b>{chunks}</b> })}
                 </>
               }
             />
@@ -96,9 +99,9 @@ export default function TestRunsList() {
           expandedRowRender: (record: TestRun) => (
             <Space direction="vertical" style={{ width: '100%' }}>
               {record.error && <Typography.Text type="danger">{record.error}</Typography.Text>}
-              <b>Payload</b>
+              <b>{t('payload')}</b>
               <pre style={{ maxHeight: 200, overflow: 'auto' }}>{JSON.stringify(record.input, null, 2)}</pre>
-              <b>Résultat</b>
+              <b>{t('result')}</b>
               <pre style={{ maxHeight: 300, overflow: 'auto' }}>{JSON.stringify(record.output, null, 2)}</pre>
             </Space>
           ),
@@ -106,7 +109,7 @@ export default function TestRunsList() {
       >
         <Table.Column<TestRun>
           dataIndex={['workflow', 'name']}
-          title="Workflow"
+          title={t('columns.workflow')}
           sorter
           defaultSortOrder={getDefaultSortOrder('workflow.name', sorters)}
           render={(name: string, record) => (
@@ -115,30 +118,30 @@ export default function TestRunsList() {
         />
         {!scope && (
           <Table.Column<TestRun>
-            title="Instance"
-            render={(_, record) => <Tag color="geekblue">{instanceName(record.workflow?.instanceId)}</Tag>}
+            title={t('columns.instance')}
+            render={(_, record) => <Tag color="blue">{instanceName(record.workflow?.instanceId)}</Tag>}
           />
         )}
         <Table.Column
           dataIndex="mode"
-          title="Mode"
+          title={t('columns.mode')}
           sorter
           defaultSortOrder={getDefaultSortOrder('mode', sorters)}
           render={(m: string) => <Tag>{m}</Tag>}
         />
         <Table.Column
           dataIndex="status"
-          title="Statut"
+          title={t('columns.status')}
           sorter
           defaultSortOrder={getDefaultSortOrder('status', sorters)}
           render={(s: string) => <Tag color={statusColor[s]}>{s}</Tag>}
         />
         <Table.Column
           dataIndex="startedAt"
-          title="Démarré"
+          title={t('columns.started')}
           sorter
           defaultSortOrder={getDefaultSortOrder('startedAt', sorters)}
-          render={(d: string) => new Date(d).toLocaleString('fr-FR')}
+          render={(d: string) => new Date(d).toLocaleString(locale)}
         />
       </Table>
     </List>

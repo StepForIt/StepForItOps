@@ -14,6 +14,7 @@
  *   limite, et le dire ainsi évite de faire passer notre retard pour une
  *   contrainte du fournisseur.
  */
+import { msg } from '../i18n';
 import { PlatformCapabilities, PlatformId } from '../ports/workflow-platform.port';
 
 export type WorkflowActionId =
@@ -72,25 +73,13 @@ export function workflowActions(platform: PlatformId, capabilities: PlatformCapa
     // Retouche des modules existants seulement : l'ajout demanderait leur description, que Make ne sert pas.
     assistant: OK,
 
-    test: capabilities.pinData
-      ? OK
-      : impossible(
-          "Make n'a pas d'équivalent des données épinglées : on ne peut pas bouchonner un module sans réécrire le scénario.",
-        ),
-    fields: capabilities.executionData
-      ? OK
-      : impossible(
-          "Make ne rend pas les données produites par une exécution — seules les exécutions en échec en gardent. Il n'y a donc rien à confronter aux expressions.",
-        ),
+    test: capabilities.pinData ? OK : impossible(msg('platform.actionMakeNoPinData')),
+    fields: capabilities.executionData ? OK : impossible(msg('platform.actionMakeNoExecutionData')),
 
     // Ce qui manque de notre côté, dit comme tel.
-    envSwitch: notYet('La bascule de ressources et la promotion ne sont pas encore portées sur Make.'),
-    remoteSchema: notYet(
-      "Le contrôle des tables distantes lit les nœuds n8n : il n'est pas encore porté sur les modules Make.",
-    ),
-    publish: impossible(
-      "Make ne sépare pas brouillon et version publiée : un scénario est actif ou il ne l'est pas.",
-    ),
+    envSwitch: notYet(msg('platform.actionMakeEnvSwitchNotYet')),
+    remoteSchema: notYet(msg('platform.actionMakeRemoteSchemaNotYet')),
+    publish: impossible(msg('platform.actionMakeNoPublish')),
   };
 }
 

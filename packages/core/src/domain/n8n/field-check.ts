@@ -8,6 +8,7 @@
 
 import { NodeSamples } from './execution-samples';
 import { FieldRef } from './expression-fields';
+import { msg } from '../../i18n/translate';
 
 export interface FieldFinding {
   severity: 'info' | 'warning' | 'error';
@@ -91,13 +92,17 @@ export function checkFieldRefs(
     if (truncated) continue;
 
     const suggestion = closestField(ref.path, sample.fields);
-    const origin = `« ${ref.source} » (${sample.items} items sur ${sample.executions} exécution(s))`;
+    const origin = msg('checks.fieldOrigin', {
+      source: ref.source,
+      items: sample.items,
+      executions: sample.executions,
+    });
     findings.push({
       severity: suggestion ? 'error' : 'warning',
       code: suggestion ? 'field-typo' : 'field-unknown',
       message: suggestion
-        ? `\`${ref.path}\` n'existe pas dans la sortie de ${origin} ; champ le plus proche : \`${suggestion}\` — probable faute de frappe.`
-        : `\`${ref.path}\` n'apparaît dans aucun échantillon de sortie de ${origin} : le champ est peut-être mal nommé, ou produit seulement dans une branche jamais exécutée sur la période.`,
+        ? msg('checks.fieldTypo', { path: ref.path, origin, suggestion })
+        : msg('checks.fieldUnknown', { path: ref.path, origin }),
       nodeName: ref.node,
       data: {
         source: ref.source,

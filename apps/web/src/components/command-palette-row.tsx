@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Space, Tag, Tooltip, Typography, theme } from 'antd';
+import { useTranslations } from 'next-intl';
 import { WorkflowRow } from '../app/workflows/workflow-row';
 import { useEnvColor } from '../lib/envs';
 
@@ -77,10 +78,11 @@ export function EnvTags({
   onOpen: (member: WorkflowRow) => void;
 }) {
   const envColor = useEnvColor();
+  const t = useTranslations('shell.commandPalette');
   return (
     <Space size={4} onClick={(event) => event.stopPropagation()}>
       {members.map((member) => (
-        <Tooltip key={member.id} title={`Ouvrir ${member.name}`}>
+        <Tooltip key={member.id} title={t('openMember', { name: member.name })}>
           <Tag
             color={member.env ? envColor(member.env) : undefined}
             style={{

@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import { N8N_API_PORT, N8nApiError, N8nApiPort, detectPublishModel } from '@nwm/core';
+import { N8N_API_PORT, N8nApiError, N8nApiPort, detectPublishModel, msg } from '@nwm/core';
 import { WorkflowsService } from './workflows.service';
 import { WorkflowSyncService } from './workflow-sync.service';
 import { InstancesService } from '../instances/instances.service';
@@ -37,17 +37,14 @@ export class WorkflowPublishService {
     // Relu depuis n8n : l'état de publication est précisément ce que la copie
     // locale peut avoir raté, et c'est lui qui décide s'il y a quelque chose à faire.
     const { workflow, raw, missing } = await this.workflows.getFreshRaw(workflowId);
-    if (missing) throw new BadRequestException('n8n ne connaît plus ce workflow.');
+    if (missing) throw new BadRequestException(msg('platform.publishMissing'));
     if (workflow.archived) {
-      throw new BadRequestException('Workflow archivé côté n8n : la publication est refusée.');
+      throw new BadRequestException(msg('platform.publishArchived'));
     }
 
     const model = detectPublishModel(raw);
     if (model === 'direct') {
-      throw new BadRequestException(
-        'Cette instance n8n ne publie pas par versions : un workflow y est simplement actif ou non, ' +
-          'et l’écriture suffit. Il n’y a rien à publier.',
-      );
+      throw new BadRequestException(msg('platform.publishDirectModel'));
     }
     if (model === 'versioned-published') return { ok: true, alreadyPublished: true };
 
@@ -63,7 +60,7 @@ export class WorkflowPublishService {
     // plateforme continuerait d'afficher un workflow non publié qui tourne.
     const fresh = await this.n8n.getWorkflow(config, workflow.externalId);
     await this.sync.upsertWorkflow(workflow.instanceId, fresh);
-    this.logger.log(`Workflow « ${workflow.name} » publié`);
+    this.logger.log(`Workflow "${workflow.name}" published`);
     return { ok: true, alreadyPublished: false };
   }
 
@@ -81,21 +78,19 @@ export class WorkflowPublishService {
       .slice(0, 400)
       .trim();
     if (error.status === 404) {
-      return new BadRequestException(
-        `Cette instance n8n ne connaît pas la publication par versions (route /publish absente) : ` +
-          `elle est trop ancienne, ou « ${workflowName} » a disparu.`,
-      );
+      return new BadRequestException(msg('platform.publishNoRoute', { name: workflowName }));
     }
     if (error.status === 409) {
       return new ConflictException(
-        `n8n refuse de publier « ${workflowName} » : soit une revue de workflow est en cours, ` +
-          `soit un chemin de webhook est déjà pris par un autre workflow. ` +
-          `Ce qu'il répond : ${detail || '(aucun détail)'}`,
+        msg('platform.publishConflict', { name: workflowName, detail: detail || msg('platform.noDetail') }),
       );
     }
     return new BadRequestException(
-      `n8n a refusé de publier « ${workflowName} » (erreur ${error.status}). ` +
-        `Le workflow reste en brouillon. Ce qu'il répond : ${detail || '(aucun détail)'}`,
+      msg('platform.publishRefused', {
+        name: workflowName,
+        status: error.status,
+        detail: detail || msg('platform.noDetail'),
+      }),
     );
   }
 }

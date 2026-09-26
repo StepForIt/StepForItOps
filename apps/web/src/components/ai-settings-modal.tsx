@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Form, Input, Modal, Popconfirm, Segmented, Space, Switch, Tag, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost, apiPut } from '../lib/api';
 
 export interface AiProviderSettings {
@@ -46,6 +47,8 @@ export function AiSettingsModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const t = useTranslations('settings.aiSettings');
+  const tc = useTranslations('common');
   const [form] = Form.useForm<AiSettingsFormValues>();
   const [settings, setSettings] = useState<AiSettings | null>(null);
   const [edited, setEdited] = useState<string | null>(null);
@@ -83,7 +86,7 @@ export function AiSettingsModal({
     setTesting(true);
     try {
       await apiPost(`${SETTINGS_PATH}/test`, { ...values, provider: edited });
-      message.success('Appel IA OK');
+      message.success(t('testOk'));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -97,7 +100,7 @@ export function AiSettingsModal({
     try {
       const next = await apiPut<AiSettings>(SETTINGS_PATH, { ...values, provider: edited });
       setSettings(next);
-      message.success('Réglages IA enregistrés');
+      message.success(t('saved'));
       onChanged();
       onClose();
     } catch (error) {
@@ -112,7 +115,7 @@ export function AiSettingsModal({
       const next = await apiDelete<AiSettings>(`${SETTINGS_PATH}?provider=${edited}`);
       setSettings(next);
       showProvider(next, edited ?? next.provider);
-      message.success("Réglages supprimés : retour aux variables d'env");
+      message.success(t('cleared'));
       onChanged();
     } catch (error) {
       message.error((error as Error).message);
@@ -123,22 +126,22 @@ export function AiSettingsModal({
 
   return (
     <Modal
-      title="Réglages IA"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       footer={
         <Space>
           {current?.source === 'db' && (
-            <Popconfirm title="Supprimer les réglages en base et revenir au .env ?" onConfirm={clear}>
-              <Button danger>Revenir au .env</Button>
+            <Popconfirm title={t('clearConfirm')} onConfirm={clear}>
+              <Button danger>{t('clear')}</Button>
             </Popconfirm>
           )}
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{tc('cancel')}</Button>
           <Button onClick={test} loading={testing}>
-            Tester la clé
+            {t('testKey')}
           </Button>
           <Button type="primary" onClick={save} loading={saving}>
-            Enregistrer
+            {tc('save')}
           </Button>
         </Space>
       }
@@ -157,7 +160,7 @@ export function AiSettingsModal({
                   {provider.label}
                   {provider.id === settings.provider && (
                     <Tag color="green" style={{ marginLeft: 8 }}>
-                      en service
+                      {t('active')}
                     </Tag>
                   )}
                 </span>
@@ -169,7 +172,7 @@ export function AiSettingsModal({
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
-              message={`${current.label} : aucune clé enregistrée.`}
+              message={t('noKey', { provider: current.label })}
             />
           )}
         </>
@@ -177,25 +180,20 @@ export function AiSettingsModal({
       <Form form={form} layout="vertical">
         <Form.Item
           name="apiKey"
-          label={`Clé API ${current?.label ?? ''}`.trim()}
-          rules={[{ required: !keyStored, message: 'Clé API requise' }]}
-          extra={keyStored ? 'Laisser vide pour conserver la clé enregistrée.' : undefined}
+          label={t('apiKey', { provider: current?.label ?? '' }).trim()}
+          rules={[{ required: !keyStored, message: t('apiKeyRequired') }]}
+          extra={keyStored ? t('keepKey') : undefined}
         >
           <Input.Password
             autoComplete="new-password"
             placeholder={keyStored ? '••••••••' : edited === 'mistral' ? '…' : 'sk-ant-…'}
           />
         </Form.Item>
-        <Form.Item name="model" label="Modèle">
+        <Form.Item name="model" label={t('model')}>
           <Input placeholder={current?.defaultModel} />
         </Form.Item>
         {/* Masqué mais enregistré : la valeur `true` du fournisseur actif part toujours. */}
-        <Form.Item
-          name="activate"
-          label="Utiliser ce fournisseur pour les appels IA"
-          valuePropName="checked"
-          hidden={isActive}
-        >
+        <Form.Item name="activate" label={t('activate')} valuePropName="checked" hidden={isActive}>
           <Switch disabled={isActive} />
         </Form.Item>
       </Form>

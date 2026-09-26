@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Typography } from 'antd';
+import { BRAND } from '../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 export interface DiffLine {
   type: 'ctx' | 'add' | 'del';
@@ -44,17 +46,18 @@ function collapse(lines: DiffLine[]): Row[] {
 }
 
 const style: Record<string, React.CSSProperties> = {
-  add: { background: '#f6ffed', color: '#237804' },
-  del: { background: '#fff1f0', color: '#a8071a' },
-  ctx: { color: '#595959' },
+  add: { background: BRAND.papier, color: '#237804' },
+  del: { background: BRAND.papier, color: BRAND.danger },
+  ctx: { color: BRAND.slate },
 };
 
 const marker = { add: '+', del: '-', ctx: ' ' } as const;
 
 /** Diff unifié en monospace, avec repli des plages inchangées. */
 export function DiffLines({ lines, maxHeight = 360 }: { lines: DiffLine[]; maxHeight?: number }) {
+  const t = useTranslations('chat.diff');
   if (lines.length === 0) {
-    return <Typography.Text type="secondary">Aucune différence.</Typography.Text>;
+    return <Typography.Text type="secondary">{t('noDifference')}</Typography.Text>;
   }
   return (
     <div
@@ -71,8 +74,8 @@ export function DiffLines({ lines, maxHeight = 360 }: { lines: DiffLine[]; maxHe
     >
       {collapse(lines).map((row, index) =>
         row.type === 'skip' ? (
-          <div key={index} style={{ background: '#fafafa', color: '#8c8c8c', padding: '0 8px' }}>
-            ⋯ {row.count} ligne{row.count > 1 ? 's' : ''} inchangée{row.count > 1 ? 's' : ''}
+          <div key={index} style={{ background: BRAND.papier, color: BRAND.slate, padding: '0 8px' }}>
+            ⋯ {t('unchangedLines', { count: row.count })}
           </div>
         ) : (
           <div key={index} style={{ ...style[row.type], padding: '0 8px' }}>

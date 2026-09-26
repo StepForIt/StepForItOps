@@ -1,8 +1,10 @@
 import { matchesQuery, normalize } from '../../lib/command-search';
-import { TIP_GROUPS, Tip, TipGroupId } from './tip-catalog';
+import { Tip, TipGroupId } from './tip-catalog';
 
-export function matchesTip(tip: Tip, query: string): boolean {
-  const group = TIP_GROUPS.find((g) => g.id === tip.group)?.label;
+type TipGroups = Array<{ id: TipGroupId; label: string }>;
+
+export function matchesTip(tip: Tip, query: string, groups: TipGroups): boolean {
+  const group = groups.find((g) => g.id === tip.group)?.label;
   return matchesQuery(query, tip.title, tip.text, tip.where, group, tip.keywords);
 }
 
@@ -26,8 +28,11 @@ export function highlight(text: string, query: string): Array<{ text: string; hi
   return parts;
 }
 
-export function groupTips(tips: Tip[]): Array<{ id: TipGroupId; label: string; tips: Tip[] }> {
-  return TIP_GROUPS.map((group) => ({ ...group, tips: tips.filter((tip) => tip.group === group.id) })).filter(
-    (group) => group.tips.length,
-  );
+export function groupTips(
+  tips: Tip[],
+  groups: TipGroups,
+): Array<{ id: TipGroupId; label: string; tips: Tip[] }> {
+  return groups
+    .map((group) => ({ ...group, tips: tips.filter((tip) => tip.group === group.id) }))
+    .filter((group) => group.tips.length);
 }

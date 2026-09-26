@@ -2,31 +2,34 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, Checkbox, Form, Input, Modal, Select, Space } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
 import { useEnvs } from '../../lib/envs';
 import { unshiftEnv } from './procedure-edit';
 import { useReleaseRecorder } from './release-recorder';
 import { TARGETLESS, type EnvHop, type GestureDraft, type MacroAction, type ProcedureStep } from './types';
 
-const ACTIONS: Array<{ value: MacroAction; label: string }> = [
-  { value: 'promote', label: 'Promouvoir' },
-  { value: 'duplicate', label: 'Dupliquer vers un env' },
-  { value: 'mark', label: "Déclarer l'env" },
-  { value: 'switch', label: 'Rebrancher les ressources' },
-  { value: 'run-tests', label: 'Jouer les tests' },
-  { value: 'publish', label: 'Publier' },
-];
+const ACTIONS = [
+  { value: 'promote', label: 'promote' },
+  { value: 'duplicate', label: 'duplicate' },
+  { value: 'mark', label: 'mark' },
+  { value: 'switch', label: 'switch' },
+  { value: 'run-tests', label: 'runTests' },
+  { value: 'publish', label: 'publish' },
+] as const satisfies ReadonlyArray<{ value: MacroAction; label: string }>;
+
+type OptionKey = 'throughChain' | 'cascade' | 'checkRemote' | 'publishLikeSource' | 'rename';
 
 /** Les réglages rejouables de chaque geste, avec les défauts du rejeu (`playAutoStep`). */
-const OPTIONS: Record<MacroAction, Array<{ key: string; label: string; initial: boolean }>> = {
+const OPTIONS: Record<MacroAction, Array<{ key: OptionKey; initial: boolean }>> = {
   promote: [
-    { key: 'throughChain', label: 'Via envs intermédiaires', initial: true },
-    { key: 'cascade', label: 'Créer les sous-workflows manquants', initial: true },
-    { key: 'checkRemote', label: 'Vérifier les tables distantes', initial: false },
-    { key: 'publishLikeSource', label: 'Publier comme la source', initial: false },
+    { key: 'throughChain', initial: true },
+    { key: 'cascade', initial: true },
+    { key: 'checkRemote', initial: false },
+    { key: 'publishLikeSource', initial: false },
   ],
-  duplicate: [{ key: 'cascade', label: 'Créer les sous-workflows manquants', initial: true }],
-  mark: [{ key: 'rename', label: 'Suffixer le nom', initial: false }],
+  duplicate: [{ key: 'cascade', initial: true }],
+  mark: [{ key: 'rename', initial: false }],
   switch: [],
   'run-tests': [],
   publish: [],
@@ -43,7 +46,7 @@ interface Values {
   sourceEnv?: string;
   targetEnv?: string;
   note?: string;
-  options: string[];
+  options: OptionKey[];
 }
 
 const initialOptions = (action: MacroAction) =>
@@ -69,6 +72,8 @@ export function GestureModal({
   onSubmit: (gesture: GestureDraft) => Promise<void>;
   onClose: () => void;
 }) {
+  const t = useTranslations('reviewTools.recorder.gesture');
+  const tCommon = useTranslations('common');
   const { message } = App.useApp();
   const { shift } = useReleaseRecorder();
   const { envs } = useEnvs();
@@ -136,8 +141,8 @@ export function GestureModal({
   return (
     <Modal
       open={open}
-      title={step ? 'Modifier le geste' : 'Ajouter un geste'}
-      okText={step ? 'Enregistrer' : 'Ajouter'}
+      title={step ? t('editTitle') : t('addTitle')}
+      okText={step ? tCommon('save') : tCommon('add')}
       onOk={form.submit}
       onCancel={onClose}
       confirmLoading={saving}
@@ -173,20 +178,22 @@ export function GestureModal({
           if (changed.action) form.setFieldsValue({ options: initialOptions(changed.action) });
         }}
       >
-        <Form.Item name="action" label="Geste">
-          <Select options={ACTIONS} />
+        <Form.Item name="action" label={t('gesture')}>
+          <Select
+            options={ACTIONS.map((option) => ({ value: option.value, label: t(`actions.${option.label}`) }))}
+          />
         </Form.Item>
         <Form.Item
           name="family"
-          label="Workflow"
-          rules={[{ required: true, message: 'Choisis un workflow' }]}
+          label={tCommon('columns.workflow')}
+          rules={[{ required: true, message: t('pickWorkflow') }]}
         >
           <Select
             showSearch
             filterOption={false}
             onSearch={setSearch}
             onChange={(id: string) => setPicked(families.find((family) => family.id === id) ?? null)}
-            placeholder="Rechercher"
+            placeholder={t('search')}
             options={familyOptions}
           />
         </Form.Item>
@@ -195,22 +202,22 @@ export function GestureModal({
             name="sourceEnv"
             label={
               TARGETLESS.has(action)
-                ? 'Sur'
+                ? t('on')
                 : action === 'mark'
-                  ? 'Env actuel'
+                  ? t('currentEnv')
                   : action === 'switch'
-                    ? 'Exemplaire'
-                    : 'Depuis'
+                    ? t('exemplar')
+                    : t('from')
             }
-            rules={[{ required: action !== 'mark', message: 'Obligatoire' }]}
+            rules={[{ required: action !== 'mark', message: t('required') }]}
           >
             <Select style={{ width: 150 }} options={envOptions(false)} allowClear={action === 'mark'} />
           </Form.Item>
           {!TARGETLESS.has(action) && (
             <Form.Item
               name="targetEnv"
-              label={action === 'mark' ? 'Déclarer en' : action === 'switch' ? 'Données de' : 'Vers'}
-              rules={[{ required: true, message: 'Obligatoire' }]}
+              label={action === 'mark' ? t('declareAs') : action === 'switch' ? t('dataOf') : t('to')}
+              rules={[{ required: true, message: t('required') }]}
             >
               <Select style={{ width: 150 }} options={envOptions(true)} />
             </Form.Item>
@@ -220,12 +227,19 @@ export function GestureModal({
           <Form.Item name="options">
             <Checkbox.Group
               style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-              options={OPTIONS[action].map((option) => ({ value: option.key, label: option.label }))}
+              options={OPTIONS[action].map((option) => ({
+                value: option.key,
+                label: t(`options.${option.key}`),
+              }))}
             />
           </Form.Item>
         )}
-        <Form.Item name="note" label="Note" style={{ marginBottom: 0 }}>
-          <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} maxLength={2000} placeholder="Facultatif" />
+        <Form.Item name="note" label={t('note')} style={{ marginBottom: 0 }}>
+          <Input.TextArea
+            autoSize={{ minRows: 1, maxRows: 4 }}
+            maxLength={2000}
+            placeholder={t('optional')}
+          />
         </Form.Item>
       </Form>
     </Modal>

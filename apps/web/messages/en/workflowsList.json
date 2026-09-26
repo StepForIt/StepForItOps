@@ -1,0 +1,275 @@
+{
+  "page": {
+    "toDeploy": "{env} to deploy",
+    "diverged": "Different from prod",
+    "behind": "Prod changed since",
+    "searchPlaceholder": "Search by name ({count} characters)…",
+    "create": "Create a workflow"
+  },
+  "shared": {
+    "columns": {
+      "divergence": "Prod gap",
+      "active": "Active",
+      "group": "Group",
+      "tags": "Tags",
+      "monitoring": "Monitoring",
+      "upstreamUpdated": "Modified (n8n)",
+      "synced": "Synced",
+      "copies": "Copies",
+      "instances": "Instances",
+      "envs": "Environments"
+    },
+    "active": "active",
+    "inactive": "inactive",
+    "probes": "{count, plural, one {# probe} other {# probes}}",
+    "missingCount": "{count} missing from n8n",
+    "archivedCount": "{count} archived"
+  },
+  "nameCell": {
+    "archivedUpstreamTooltip": "Archived in n8n: the public API no longer lists it, the platform fetches it individually on every sync",
+    "archivedUpstream": "archived in n8n",
+    "archived": "archived",
+    "missingTooltip": "n8n has not known this workflow since {date} — deleted on the n8n side. Nothing was erased here: versions and history remain available.",
+    "missing": "missing from n8n"
+  },
+  "familyEnvTags": {
+    "declareTooltip": "Can be declared from the Environments button",
+    "noEnv": "{count} without env"
+  },
+  "divergence": {
+    "labels": {
+      "inSync": "= prod",
+      "ahead": "to deploy",
+      "behind": "prod changed",
+      "notDeployed": "never deployed",
+      "unknown": "?"
+    },
+    "why": {
+      "clickToSee": "Click to see the gap",
+      "behind": "Fix made in prod, to carry over",
+      "notDeployed": "No copy in prod",
+      "unknown": "Not comparable on this platform"
+    },
+    "family": {
+      "inSync": "up to date",
+      "neverDeployed": "Never deployed to prod",
+      "toDeploy": "{env} to deploy"
+    }
+  },
+  "divergenceModal": {
+    "unknownDate": "unknown date",
+    "method": "What the promotion switches on its own (mapped resources, sub-workflows, webhook paths, names and positions) is neutralized. The direction comes from the modification dates in n8n.",
+    "thisCopy": "this copy",
+    "sameContent": "Same content as prod.",
+    "behindTitle": "Prod changed after {own}",
+    "behindDescription": "Promoting would overwrite this fix (red lines). Carry it over first.",
+    "aheadTitle": "{own} newer than prod",
+    "localCopy": "Local copy from {date}",
+    "modifiedInN8n": "{instance} · modified in n8n on {date}",
+    "openPage": "Open page",
+    "promoteTo": "Promote to {env}",
+    "promote": "Promote",
+    "confirmTitle": "Promote despite the gap?",
+    "confirmDescription": "The fix made in prod will be lost when this content lands there, unless it has been carried over here.",
+    "confirmOk": "Open promotion",
+    "promoteAnyway": "Promote anyway",
+    "seeFix": "See the fix in prod",
+    "title": "Gap with prod",
+    "titleWithName": "Gap with prod — {name}",
+    "compareTo": "Compare with:",
+    "copy": "Copy",
+    "prod": "Prod",
+    "beforeAfter": "Before = prod · After = after promotion",
+    "methodLabel": "How the gap is computed"
+  },
+  "actions": {
+    "archivedToast": "“{name}” archived",
+    "unarchivedToast": "“{name}” unarchived",
+    "viewTooltip": "Workflow view + AI assistant",
+    "view": "View",
+    "archivedUpstreamTooltip": "Archived in n8n: unarchive it from n8n",
+    "unarchive": "Unarchive",
+    "unarchiveTooltip": "Removes the tag and the [ARCHIVED] prefix",
+    "archiveConfirmTitle": "Archive this workflow?",
+    "archiveConfirmDescription": "Tag + [ARCHIVED] prefix, nothing is deleted",
+    "archive": "Archive",
+    "missingTooltip": "This workflow no longer exists in n8n"
+  },
+  "createModal": {
+    "ok": "Create and describe",
+    "title": "New workflow",
+    "intro": "Created empty and inactive. The assistant takes it from there.",
+    "instance": "Instance",
+    "instancePlaceholder": "n8n instance",
+    "name": "Name",
+    "namePlaceholder": "E.g. Follow up unanswered quotes - DEV",
+    "error": "Creation refused"
+  },
+  "filters": {
+    "instance": "Instance",
+    "env": "Env",
+    "divergence": "Gap with prod",
+    "group": "Group",
+    "status": "Status",
+    "active": "active",
+    "inactive": "inactive",
+    "archivedDefault": "Archived: default",
+    "archivedHidden": "Archived: hidden",
+    "archivedShown": "Archived: shown",
+    "archivedOnly": "Archived only",
+    "pathsTooltip": "Env copies sharing their original's path",
+    "paths": "Shared entry points…",
+    "viewFlat": "One per n8n workflow",
+    "viewGrouped": "Grouped by env"
+  },
+  "webhookPaths": {
+    "title": "Shared entry points",
+    "fix": "Fix {count, plural, one {# path} other {# paths}}",
+    "fixed": "{count, plural, one {# path fixed} other {# paths fixed}}",
+    "failed": "“{name}”: {error}",
+    "intro": "A copy sharing its original's path receives nothing. Prod keeps its URL.",
+    "chooseInstance": "Choose an instance",
+    "analyse": "Analyze",
+    "analyseError": "Analysis failed",
+    "none": "No shared path on this instance.",
+    "columns": {
+      "copy": "Copy",
+      "path": "Path",
+      "keeper": "Keeps the URL"
+    },
+    "conflicts": "{count, plural, one {# conflict} other {# conflicts}} to resolve manually"
+  },
+  "bulkActions": {
+    "selected": "{count, plural, one {# workflow selected} other {# workflows selected}}",
+    "running": "{label}… {done}/{total}",
+    "confirmTitle": "{label} {count, plural, one {# workflow} other {# workflows}}?",
+    "ignored": "{count} ignored ({reason})",
+    "noTarget": "No row concerned ({reason})",
+    "emptySelection": "empty selection",
+    "clearAll": "Clear selection",
+    "analyseFailed": "analysis failed",
+    "resync": {
+      "label": "Resync",
+      "success": "{count, plural, one {# workflow resynced} other {# workflows resynced}}",
+      "partial": "{ok}/{total} resynced — {failed, plural, one {# failure} other {# failures}}: {first}"
+    },
+    "analyse": {
+      "label": "Analyze",
+      "description": "Structure, JS, naming, fields — AI included (slow)",
+      "skipped": "missing from n8n",
+      "success": "{count, plural, one {# workflow analyzed} other {# workflows analyzed}}",
+      "partial": "{ok}/{total} analyzed — {failed, plural, one {# failure} other {# failures}}: {first}"
+    },
+    "archive": {
+      "label": "Archive",
+      "description": "Tag + [ARCHIVED] prefix, nothing is deleted",
+      "skipped": "already archived or missing",
+      "success": "{count, plural, one {# workflow archived} other {# workflows archived}}",
+      "partial": "{ok}/{total} archived — {failed, plural, one {# failure} other {# failures}}: {first}"
+    },
+    "unarchive": {
+      "label": "Unarchive",
+      "description": "Removes the tag and the [ARCHIVED] prefix",
+      "skipped": "not archived by the platform",
+      "success": "{count, plural, one {# workflow unarchived} other {# workflows unarchived}}",
+      "partial": "{ok}/{total} unarchived — {failed, plural, one {# failure} other {# failures}}: {first}"
+    }
+  },
+  "bulkEnv": {
+    "actions": {
+      "promote": "Promote",
+      "duplicate": "Duplicate to an env",
+      "mark": "Declare the env"
+    },
+    "hints": {
+      "promote": "To the next env, preview per workflow",
+      "duplicate": "Copy into another env, same instance",
+      "mark": "Tag env:x, no data touched"
+    },
+    "selected": "{count, plural, one {# business workflow selected} other {# business workflows selected}}",
+    "clearAll": "Clear selection",
+    "modal": {
+      "title": "{action} — {count, plural, one {# business workflow} other {# business workflows}}",
+      "prepare": "Prepare the batch",
+      "changeSettings": "Change settings",
+      "validateDiffs": "Approve {count, plural, one {# diff} other {# diffs}}",
+      "applyReady": "Apply {count, plural, one {# ready row} other {# ready rows}}",
+      "tally": {
+        "ready": "{count} ready",
+        "decide": "{count} to decide",
+        "blocked": "{count} blocked",
+        "skipped": "{count} skipped",
+        "done": "{count} applied",
+        "failed": "{count} failed"
+      }
+    },
+    "settings": {
+      "from": "From env",
+      "markAs": "Declare as",
+      "to": "To env",
+      "fallbackInstance": "Instance (if the env does not exist)",
+      "fallbackTooltip": "A family that already has the target env is promoted where it lives.",
+      "sameInstance": "Same instance",
+      "options": "Options",
+      "throughChain": "Through intermediate envs",
+      "cascade": "Create missing sub-workflows",
+      "checkRemote": "Check remote tables",
+      "publishLikeSource": "Publish like the source",
+      "rename": "Suffix the name"
+    },
+    "review": {
+      "columns": {
+        "target": "Target",
+        "todo": "To do",
+        "result": "Result"
+      },
+      "validated": "approved",
+      "status": {
+        "ready": "ready",
+        "decide": "to decide",
+        "blocked": "blocked",
+        "skipped": "skipped",
+        "error": "preview failed",
+        "loading": "preview…"
+      },
+      "overwrites": "overwrites",
+      "creates": "creates"
+    },
+    "detail": {
+      "previewFailed": "The preview failed",
+      "retryPreview": "Rerun preview",
+      "previewLoading": "Preview in progress…",
+      "blocked": "Blocked: {reasons}",
+      "duplicate": "Copy “{name}”",
+      "force": "Force despite red gates",
+      "confirmSkip": "Skip the step anyway",
+      "unvalidate": "Undo approval",
+      "firstDo": "First: {list}",
+      "validate": "Approve this row",
+      "missing": {
+        "force": "force the red gates",
+        "confirmSkip": "confirm the skipped step"
+      },
+      "promoteUpdate": "Overwrites “{name}” on {instance}",
+      "promoteCreate": "Creates “{name}” on {instance}",
+      "targetActive": "active target",
+      "cascade": "Created first: {names}"
+    },
+    "requests": {
+      "suffixed": "“{name}” suffixed with {env}",
+      "pausedOn": "publication paused on “{name}”: {reason}",
+      "n8nRefusal": "refused by n8n",
+      "publicationPending": "publication to do: {error}",
+      "overwritten": "overwritten",
+      "created": "created",
+      "quotedName": "“{name}”",
+      "through": "went through {envs}",
+      "subWorkflowsCreated": "sub-workflows created: {names}",
+      "renameFailed": "n8n name not updated: {errors}",
+      "replacements": "{count, plural, one {# base/table replaced} other {# bases/tables replaced}}",
+      "alsoCopied": "also copied: {names}",
+      "copy": "copy “{name}”",
+      "renamed": ", renamed “{name}”"
+    }
+  }
+}

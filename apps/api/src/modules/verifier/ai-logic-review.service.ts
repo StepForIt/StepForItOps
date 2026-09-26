@@ -9,6 +9,8 @@ import {
   isNoisyAiFinding,
   isStickyNote,
   manualOnlyNodes,
+  msg,
+  writeInLanguage,
 } from '@nwm/core';
 import { IgnoredRuleHint } from '../workflows/finding-ignore.service';
 
@@ -72,26 +74,27 @@ export class AiLogicReviewService {
       };
       const result = await this.ai.generateJson<AiReviewResult>({
         system:
-          "Tu es un expert n8n. On te donne le JSON d'un workflow. " +
-          'Analyse sa logique : incohérences, branches mortes, conditions toujours vraies/fausses, ' +
-          "données attendues absentes, gestion d'erreur manquante. " +
-          "Ne signale jamais comme « codée en dur » une valeur d'aspect gabarit ([productId], {{ x }}, <id>, TODO) : " +
-          "c'est un trou à remplir, pas un oubli. Ces valeurs d'exemple restées en place " +
-          '(YOUR_API_KEY, <domaine>, example.com) sont déjà relevées par une règle déterministe : ' +
-          'ne les redis pas. ' +
-          'Chaque remarque doit être actionnable : recopie dans "evidence" la valeur ou l\'expression visée, ' +
-          'et donne dans "suggestion" le correctif concret. ' +
-          'Le champ "alreadyDeclaredNormal" liste des remarques que l\'utilisateur a déjà déclarées ' +
-          'normales et voulues sur ce workflow : ne les resignale pas, ni sous une autre formulation. ' +
-          'Un nœud marqué "manualDebugBranch" n\'est atteignable que par le bouton ' +
-          "« Execute workflow » : c'est de l'outillage de mise au point, jamais du chemin de " +
-          "production. Ne juge pas ces nœuds comme s'ils tournaient en production (écrasement " +
-          "de données, absence de filtre, valeurs en dur : c'est le but) ; ne les signale que " +
-          'si la branche elle-même est cassée. ' +
-          'Le champ "documentation" contient les annotations (sticky notes) laissées par l\'auteur, ' +
-          "avec les nœuds couverts par chaque zone : sers-t'en comme contexte d'intention, " +
-          'ne les signale jamais comme des problèmes. ' +
-          'Réponds en JSON: {"understood": bool, "summary": "...", "issues": [{"nodeName": "...", "message": "...", ' +
+          "You are an n8n expert. You are given a workflow's JSON. " +
+          'Analyse its logic: inconsistencies, dead branches, always-true/false conditions, ' +
+          'expected data that is missing, missing error handling. ' +
+          'Never report as "hardcoded" a template-looking value ([productId], {{ x }}, <id>, TODO): ' +
+          'it is a gap to fill, not an oversight. Example values left in place ' +
+          '(YOUR_API_KEY, <domain>, example.com) are already caught by a deterministic rule: ' +
+          'do not repeat them. ' +
+          'Every remark must be actionable: copy into "evidence" the targeted value or expression, ' +
+          'and give in "suggestion" the concrete fix. ' +
+          'The "alreadyDeclaredNormal" field lists remarks the user has already declared ' +
+          'normal and intended on this workflow: do not report them again, not even reworded. ' +
+          'A node flagged "manualDebugBranch" is only reachable through the ' +
+          '"Execute workflow" button: it is debugging tooling, never a production ' +
+          'path. Do not judge these nodes as if they ran in production (data being ' +
+          'overwritten, no filter, hardcoded values: that is the point); only report them ' +
+          'if the branch itself is broken. ' +
+          'The "documentation" field holds the annotations (sticky notes) left by the author, ' +
+          'with the nodes covered by each zone: use them as context about intent, ' +
+          'never report them as problems. ' +
+          `${writeInLanguage()} ` +
+          'Answer in JSON: {"understood": bool, "summary": "...", "issues": [{"nodeName": "...", "message": "...", ' +
           '"severity": "info"|"warning", "evidence": "...", "suggestion": "..."}]}',
         prompt: JSON.stringify(compact),
         // Le budget couvre aussi le raisonnement du modèle : trop juste, la
@@ -116,7 +119,7 @@ export class AiLogicReviewService {
         findings.unshift({
           severity: 'warning',
           code: 'ai-not-understood',
-          message: `L'IA n'a pas compris ce workflow : ${result.summary}`,
+          message: msg('analysis.aiNotUnderstood', { summary: result.summary }),
         });
       } else {
         findings.unshift({
@@ -127,7 +130,7 @@ export class AiLogicReviewService {
       }
       return findings;
     } catch (error) {
-      this.logger.warn(`Revue IA KO : ${(error as Error).message}`);
+      this.logger.warn(`AI review failed: ${(error as Error).message}`);
       return [];
     }
   }

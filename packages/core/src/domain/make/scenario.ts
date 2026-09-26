@@ -5,6 +5,7 @@
  * veut dire — et c'est ici qu'on teste, puisqu'un compte Make n'est pas une
  * dépendance de test acceptable.
  */
+import { msg } from '../../i18n';
 import { PlatformWorkflow, PlatformWorkflowSummary } from '../../ports/workflow-platform.port';
 import { isMakeBlueprint } from './blueprint';
 
@@ -90,7 +91,7 @@ export function toWorkflow(
 export function readBlueprint(response: MakeBlueprintResponse): unknown {
   const blueprint = response?.response?.blueprint;
   if (blueprint === undefined || blueprint === null) {
-    throw new Error("Réponse de blueprint Make illisible : aucun 'response.blueprint'.");
+    throw new Error(msg('platform.makeBlueprintResponseUnreadable'));
   }
   return blueprint;
 }
@@ -125,7 +126,7 @@ export interface MakeScenarioUpdate {
  */
 export function toScenarioUpdate(blueprint: unknown): MakeScenarioUpdate {
   if (!isMakeBlueprint(blueprint)) {
-    throw new Error("Contenu illisible comme blueprint Make (aucun 'flow') : rien n'est écrit.");
+    throw new Error(msg('platform.makeBlueprintUnreadableWrite'));
   }
   const name = typeof blueprint.name === 'string' && blueprint.name.trim() ? blueprint.name : undefined;
   return { blueprint: JSON.stringify(blueprint), ...(name ? { name } : {}) };

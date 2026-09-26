@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Modal, Select, Tag, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import type { WorkflowMapLink, WorkflowMapNode } from './types';
 
 export interface WorkflowLinkFormValues {
@@ -22,6 +23,7 @@ interface Props {
 
 /** Création / modification d'un lien manuel entre deux workflows. */
 export function WorkflowLinkModal({ open, workflows, editing, onCancel, onSubmit }: Props) {
+  const t = useTranslations('inventory.workflowMap.linkModal');
   const [form] = Form.useForm<WorkflowLinkFormValues>();
   const [saving, setSaving] = useState(false);
 
@@ -53,51 +55,47 @@ export function WorkflowLinkModal({ open, workflows, editing, onCancel, onSubmit
 
   return (
     <Modal
-      title={editing ? 'Modifier le lien' : 'Ajouter un lien entre deux workflows'}
+      title={editing ? t('editTitle') : t('addTitle')}
       open={open}
       onOk={submit}
       confirmLoading={saving}
       onCancel={onCancel}
-      okText={editing ? 'Enregistrer' : 'Ajouter'}
-      cancelText="Annuler"
+      okText={editing ? t('save') : t('add')}
+      cancelText={t('cancel')}
       destroyOnHidden
     >
       <Typography.Paragraph type="secondary">
-        Un lien manuel décrit un enchaînement que le JSON n&apos;expose pas : <Tag>A</Tag> déclenche{' '}
-        <Tag>B</Tag> via un outil tiers, ou doit tourner avant lui.
+        {t.rich('intro', { tag: (chunks) => <Tag>{chunks}</Tag> })}
       </Typography.Paragraph>
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item
           name="fromWorkflowId"
-          label="Workflow de départ"
-          rules={[{ required: true, message: 'Choisis le workflow de départ' }]}
+          label={t('from')}
+          rules={[{ required: true, message: t('fromRequired') }]}
         >
           <Select showSearch optionFilterProp="label" options={options} disabled={editing !== null} />
         </Form.Item>
         <Form.Item
           name="toWorkflowId"
-          label="Workflow d'arrivée"
+          label={t('to')}
           dependencies={['fromWorkflowId']}
           rules={[
-            { required: true, message: 'Choisis le workflow d’arrivée' },
+            { required: true, message: t('toRequired') },
             ({ getFieldValue }) => ({
               validator: (_, value) =>
                 value && value === getFieldValue('fromWorkflowId')
-                  ? Promise.reject(new Error('Un workflow ne peut pas se lier à lui-même'))
+                  ? Promise.reject(new Error(t('self')))
                   : Promise.resolve(),
             }),
           ]}
         >
           <Select showSearch optionFilterProp="label" options={options} disabled={editing !== null} />
         </Form.Item>
-        <Form.Item name="label" label="Libellé (affiché sur la flèche)">
-          <Input placeholder="ex : envoie la facture validée" maxLength={80} />
+        <Form.Item name="label" label={t('label')}>
+          <Input placeholder={t('labelPlaceholder')} maxLength={80} />
         </Form.Item>
-        <Form.Item name="note" label="Note (visible en vue tableau)">
-          <Input.TextArea
-            rows={2}
-            placeholder="Précision utile : condition, fréquence, contrainte d'ordre…"
-          />
+        <Form.Item name="note" label={t('note')}>
+          <Input.TextArea rows={2} placeholder={t('notePlaceholder')} />
         </Form.Item>
       </Form>
     </Modal>

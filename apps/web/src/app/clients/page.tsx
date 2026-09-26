@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Input, Modal, Popconfirm, Space, Tag, message } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { DeleteOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 
 interface Client {
@@ -14,6 +15,8 @@ interface Client {
 
 /** Clients de l'agence : de simples groupes d'instances pour les vues agrégées. */
 export default function ClientsPage() {
+  const t = useTranslations('settings.clients');
+  const tc = useTranslations('common');
   const [rows, setRows] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Client | null | 'new'>(null);
@@ -36,7 +39,7 @@ export default function ClientsPage() {
     try {
       if (editing === 'new') await apiPost('/clients', { name });
       else if (editing) await apiPatch(`/clients/${editing.id}`, { name });
-      message.success('Client enregistré');
+      message.success(t('saved'));
       setEditing(null);
       load();
     } catch (error) {
@@ -49,7 +52,7 @@ export default function ClientsPage() {
   const remove = async (client: Client) => {
     try {
       await apiDelete(`/clients/${client.id}`);
-      message.success('Client supprimé — ses instances restent, sans rattachement.');
+      message.success(t('deleted'));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -58,7 +61,7 @@ export default function ClientsPage() {
 
   return (
     <Card
-      title="Clients"
+      title={t('title')}
       extra={
         <Button
           type="primary"
@@ -68,23 +71,18 @@ export default function ClientsPage() {
             setName('');
           }}
         >
-          Ajouter un client
+          {t('add')}
         </Button>
       }
     >
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="Un client regroupe des instances n8n pour les vues agrégées (dashboard, coûts, temps gagné). Le rattachement se fait sur la fiche de chaque instance."
-      />
+      <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('info')} />
       <Table dataSource={rows} rowKey="id" loading={loading} size="small" pagination={false}>
-        <Table.Column dataIndex="name" title="Nom" />
+        <Table.Column dataIndex="name" title={tc('columns.name')} />
         <Table.Column<Client>
           dataIndex="instanceCount"
-          title="Instances"
+          title={t('instances')}
           width={110}
-          render={(count: number) => <Tag color={count > 0 ? 'geekblue' : 'default'}>{count}</Tag>}
+          render={(count: number) => <Tag color={count > 0 ? 'blue' : 'default'}>{count}</Tag>}
         />
         <Table.Column<Client>
           title=""
@@ -99,10 +97,7 @@ export default function ClientsPage() {
                   setName(record.name);
                 }}
               />
-              <Popconfirm
-                title="Supprimer ce client ? Ses instances restent, sans rattachement."
-                onConfirm={() => remove(record)}
-              >
+              <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record)}>
                 <Button size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
             </Space>
@@ -111,16 +106,16 @@ export default function ClientsPage() {
       </Table>
 
       <Modal
-        title={editing === 'new' ? 'Nouveau client' : 'Renommer le client'}
+        title={editing === 'new' ? t('new') : t('rename')}
         open={editing !== null}
         onOk={save}
         confirmLoading={saving}
         onCancel={() => setEditing(null)}
-        okText="Enregistrer"
+        okText={tc('save')}
       >
         <Input
-          aria-label="Nom du client"
-          placeholder="Nom du client"
+          aria-label={t('name')}
+          placeholder={t('name')}
           value={name}
           onChange={(event) => setName(event.target.value)}
           onPressEnter={save}

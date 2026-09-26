@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 /**
  * n8n refuse d'enregistrer un workflow dont des nœuds sont incomplets de SON point
  * de vue (credential non résolue, paramètre requis vide) : il répond 400 avec un
@@ -51,24 +52,25 @@ export function parsePublishRefusal(message: string): PublishRefusal | undefined
   return { nodes, declared: declared ? Number(declared) : null };
 }
 
-/** Grief n8n rendu en français ; inconnu, il est repris tel quel. */
+/** Grief n8n rendu dans la langue de l'appelant ; inconnu, il est repris tel quel. */
 function describeProblem(problem: string): string {
   const credential = MISSING_CREDENTIAL.exec(problem)?.[1];
-  return credential ? `credential « ${credential.trim()} » non résolue` : problem;
+  return credential ? msg('env.publishCredentialUnresolved', { name: credential.trim() }) : problem;
 }
 
 /** Message destiné à l'utilisateur : ce que n8n reproche, nœud par nœud. */
 export function describePublishRefusal(refusal: PublishRefusal): string {
   const detailed = refusal.nodes
-    .map((issue) => `« ${issue.node} » : ${issue.problems.map(describeProblem).join(', ')}`)
+    .map((issue) =>
+      msg('env.publishRefusalNode', {
+        node: issue.node,
+        problems: issue.problems.map(describeProblem).join(', '),
+      }),
+    )
     .join(' ; ');
   const undetailed = refusal.declared !== null ? refusal.declared - refusal.nodes.length : 0;
-  const rest = undetailed > 0 ? ` (+ ${undetailed} autre${undetailed > 1 ? 's' : ''} nœud(s))` : '';
+  const rest = undetailed > 0 ? msg('env.publishRefusalRest', { count: undetailed }) : '';
   const count = refusal.declared ?? refusal.nodes.length;
 
-  return (
-    `n8n refuse d’enregistrer ce workflow : ${count} nœud${count > 1 ? 's' : ''} ` +
-    `qu’il juge incomplet${count > 1 ? 's' : ''} — ${detailed}${rest}. ` +
-    `Rien n’a été modifié dans n8n : corrige ces nœuds dans n8n (réassigne les credentials), puis resynchronise.`
-  );
+  return msg('env.publishRefusal', { count, detailed, rest });
 }

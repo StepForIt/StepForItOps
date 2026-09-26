@@ -15,6 +15,7 @@ import { WorkflowsService } from '../workflows/workflows.service';
 import { FindingIgnoreService } from '../workflows/finding-ignore.service';
 import { CheckProfilesService } from '../../infra/check-profiles/check-profiles.service';
 import { InstancesService } from '../instances/instances.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { ExecutionSamplerService } from './execution-sampler.service';
 import { FIELD_CHECKER_MANIFEST } from './manifest';
 
@@ -42,6 +43,7 @@ export class FieldCheckerService {
     private readonly profiles: CheckProfilesService,
     private readonly instances: InstancesService,
     private readonly sampler: ExecutionSamplerService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /** Schéma observé seul (sans persistance de findings) : inspection depuis l'UI. */
@@ -51,9 +53,14 @@ export class FieldCheckerService {
   }
 
   /** `disabledChecks` : sélection de l'écran de lancement, prioritaire sur le profil. */
-  async check(
+  check(workflowId: string, limit = DEFAULT_LIMIT, disabledChecks?: string[]): Promise<FieldCheckResult> {
+    // Les findings sont stockés pour tous : dans la langue de la plateforme, pas celle du lanceur.
+    return this.platformLocale.run(() => this.runCheck(workflowId, limit, disabledChecks));
+  }
+
+  private async runCheck(
     workflowId: string,
-    limit = DEFAULT_LIMIT,
+    limit: number,
     disabledChecks?: string[],
   ): Promise<FieldCheckResult> {
     const disabled = await this.profiles.effective(workflowId, disabledChecks);

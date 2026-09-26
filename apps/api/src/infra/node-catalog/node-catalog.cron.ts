@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NodeCatalogSyncService } from './node-catalog-sync.service';
+import { NodePackageDocsSyncService } from './node-package-docs-sync.service';
 
 /**
  * Entretien du catalogue.
@@ -21,15 +22,16 @@ export class NodeCatalogCron {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sync: NodeCatalogSyncService,
+    private readonly packageDocs: NodePackageDocsSyncService,
   ) {}
 
   @Cron(CronExpression.EVERY_WEEK)
   async refresh(): Promise<void> {
     try {
       const result = await this.sync.syncCatalog();
-      if (result.skipped) this.logger.log('Catalogue déjà à jour.');
+      if (result.skipped) this.logger.log('Catalog already up to date.');
     } catch (error) {
-      this.logger.warn(`Catalogue non rafraîchi : ${(error as Error).message}`);
+      this.logger.warn(`Catalog not refreshed: ${(error as Error).message}`);
     }
 
     const instances = await this.prisma.instance.findMany({
@@ -41,8 +43,16 @@ export class NodeCatalogCron {
         await this.sync.syncInstance(instance.id);
       } catch (error) {
         // Une instance injoignable ne doit pas priver les autres de leur passe.
-        this.logger.warn(`Types de « ${instance.name} » non relus : ${(error as Error).message}`);
+        this.logger.warn(`Types of "${instance.name}" not reread: ${(error as Error).message}`);
       }
+    }
+
+    // Après les instances : c'est leur passe qui vient de dire quelle version est installée.
+    try {
+      const counts = await this.packageDocs.refreshAll();
+      this.logger.log(`Community package docs: ${counts.fetched} read, ${counts.failed} failed.`);
+    } catch (error) {
+      this.logger.warn(`Community package docs not reread: ${(error as Error).message}`);
     }
   }
 }

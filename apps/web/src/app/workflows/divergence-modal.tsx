@@ -15,6 +15,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
 import { DiffCounts, WorkflowDiff, WorkflowDiffView } from '../../components/workflow-diff-view';
 import { PromoteModal } from './show/[id]/promote-modal';
@@ -42,43 +43,43 @@ interface DivergenceDetail {
   diff: WorkflowDiff;
 }
 
-const fr = (iso: string | null) => (iso ? new Date(iso).toLocaleString('fr-FR') : 'date inconnue');
-
-const METHOD =
-  'Ce que la promotion bascule d’elle-même (ressources mappées, sous-workflows, paths de webhook, noms et positions) est neutralisé. Le sens vient des dates de modification dans n8n.';
-
 /** La phrase qui fait décider : dans quel sens va l'écart, et ce que promouvoir ferait. */
 function Verdict({ data }: { data: DivergenceDetail }) {
-  const own = data.workflow.env ?? 'cet exemplaire';
+  const t = useTranslations('workflowsList.divergenceModal');
+  const own = data.workflow.env ?? t('thisCopy');
   if (data.status === 'in-sync') {
-    return <Typography.Text type="secondary">Même contenu que la prod.</Typography.Text>;
+    return <Typography.Text type="secondary">{t('sameContent')}</Typography.Text>;
   }
   if (data.status === 'behind') {
     return (
       <Alert
         type="warning"
         showIcon
-        message={`Prod modifiée après ${own}`}
-        description="Promouvoir écraserait ce correctif (lignes rouges). À reporter d’abord."
+        message={t('behindTitle', { own })}
+        description={t('behindDescription')}
       />
     );
   }
-  return <Alert type="info" showIcon message={`${own} plus récent que la prod`} />;
+  return <Alert type="info" showIcon message={t('aheadTitle', { own })} />;
 }
 
 function SideCell({ side }: { side: DivergenceSide }) {
+  const t = useTranslations('workflowsList.divergenceModal');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale) : t('unknownDate'));
   return (
     <Space direction="vertical" size={0}>
       <Typography.Text strong>{side.name}</Typography.Text>
-      <Tooltip title={`Copie locale du ${fr(side.mirroredAt)}`}>
+      <Tooltip title={t('localCopy', { date: date(side.mirroredAt) })}>
         <Typography.Text type="secondary">
-          {side.instanceName} · modifié dans n8n le {fr(side.upstreamUpdatedAt)}
+          {t('modifiedInN8n', { instance: side.instanceName, date: date(side.upstreamUpdatedAt) })}
         </Typography.Text>
       </Tooltip>
       <Space size={12}>
-        <Link href={`/workflows/show/${side.id}`}>Ouvrir la page</Link>
+        <Link href={`/workflows/show/${side.id}`}>{t('openPage')}</Link>
         <a href={side.n8nUrl} target="_blank" rel="noreferrer">
-          Ouvrir dans n8n
+          {tCommon('openInN8n')}
         </a>
       </Space>
     </Space>
@@ -91,6 +92,8 @@ function SideCell({ side }: { side: DivergenceSide }) {
  * l'empreinte elle-même : un écart constaté a toujours au moins une ligne ici.
  */
 export function DivergenceModal({ workflowId, onClose }: { workflowId: string | null; onClose: () => void }) {
+  const t = useTranslations('workflowsList.divergenceModal');
+  const tCommon = useTranslations('common');
   const [referenceId, setReferenceId] = React.useState<string | undefined>(undefined);
   const [data, setData] = React.useState<DivergenceDetail | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -117,24 +120,26 @@ export function DivergenceModal({ workflowId, onClose }: { workflowId: string | 
   // par PREPROD, et l'écran de promotion laisse choisir une autre cible.
   const envLabel = useEnvLabel();
   const defaults = usePromoteDefaults(data?.workflow.id, data !== null && data.status !== 'in-sync');
-  const promoteLabel = defaults?.targetEnv ? `Promouvoir vers ${envLabel(defaults.targetEnv)}` : 'Promouvoir';
+  const promoteLabel = defaults?.targetEnv
+    ? t('promoteTo', { env: envLabel(defaults.targetEnv) })
+    : t('promote');
 
   const footer = data && (
     <Space>
-      <Button onClick={onClose}>Fermer</Button>
+      <Button onClick={onClose}>{tCommon('close')}</Button>
       {data.status === 'behind' && (
         <>
           <Popconfirm
-            title="Promouvoir malgré l’écart ?"
-            description="Le correctif fait en prod sera perdu quand ce contenu y arrivera, s’il n’a pas été reporté ici."
-            okText="Ouvrir la promotion"
+            title={t('confirmTitle')}
+            description={t('confirmDescription')}
+            okText={t('confirmOk')}
             okButtonProps={{ danger: true }}
             onConfirm={() => setPromoteOpen(true)}
           >
-            <Button danger>Promouvoir quand même</Button>
+            <Button danger>{t('promoteAnyway')}</Button>
           </Popconfirm>
           <Link href={`/workflows/show/${data.reference.id}`}>
-            <Button type="primary">Voir le correctif en prod</Button>
+            <Button type="primary">{t('seeFix')}</Button>
           </Link>
         </>
       )}
@@ -149,7 +154,7 @@ export function DivergenceModal({ workflowId, onClose }: { workflowId: string | 
   return (
     <>
       <Modal
-        title={data ? `Écart avec la prod — ${data.workflow.name}` : 'Écart avec la prod'}
+        title={data ? t('titleWithName', { name: data.workflow.name }) : t('title')}
         open={workflowId !== null}
         onCancel={onClose}
         footer={footer ?? null}
@@ -165,7 +170,7 @@ export function DivergenceModal({ workflowId, onClose }: { workflowId: string | 
 
             {data.references.length > 1 && (
               <Space>
-                <Typography.Text>Comparer à :</Typography.Text>
+                <Typography.Text>{t('compareTo')}</Typography.Text>
                 <Select
                   style={{ minWidth: 320 }}
                   value={data.reference.id}
@@ -179,17 +184,17 @@ export function DivergenceModal({ workflowId, onClose }: { workflowId: string | 
             )}
 
             <Descriptions size="small" column={2} bordered>
-              <Descriptions.Item label={data.workflow.env ?? 'Exemplaire'}>
+              <Descriptions.Item label={data.workflow.env ?? t('copy')}>
                 <SideCell side={data.workflow} />
               </Descriptions.Item>
-              <Descriptions.Item label="Prod">
+              <Descriptions.Item label={t('prod')}>
                 <SideCell side={data.reference} />
               </Descriptions.Item>
             </Descriptions>
 
             {data.diff.hasChanges && (
               <>
-                <Typography.Text type="secondary">Avant = prod · Après = après promotion</Typography.Text>
+                <Typography.Text type="secondary">{t('beforeAfter')}</Typography.Text>
                 <DiffCounts counts={data.diff.counts} />
                 <WorkflowDiffView diff={data.diff} />
               </>
@@ -201,8 +206,8 @@ export function DivergenceModal({ workflowId, onClose }: { workflowId: string | 
               items={[
                 {
                   key: 'method',
-                  label: 'Comment l’écart est calculé',
-                  children: <Typography.Paragraph type="secondary">{METHOD}</Typography.Paragraph>,
+                  label: t('methodLabel'),
+                  children: <Typography.Paragraph type="secondary">{t('method')}</Typography.Paragraph>,
                 },
               ]}
             />

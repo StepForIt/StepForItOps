@@ -10,6 +10,7 @@ import {
   isWorkflowArchived,
   workflowTriggerKinds,
   workflowEntryPoints,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { TESTER_WORKFLOW_WHERE } from '../../infra/settings/tester-workflows.where';
@@ -209,7 +210,7 @@ export class WorkflowMapService {
         // « archivé » ne départage que si au moins un homonyme est vivant.
         let ambiguous = others;
         if (isArchived(workflow) && others.some((o) => !isArchived(o))) {
-          parts.push('archivé');
+          parts.push(msg('platform.mapArchived'));
           ambiguous = others.filter((o) => isArchived(o));
         } else if (!isArchived(workflow)) {
           ambiguous = others.filter((o) => !isArchived(o));
@@ -217,7 +218,7 @@ export class WorkflowMapService {
         if (ambiguous.some((o) => o.instanceId === workflow.instanceId)) {
           parts.push(`#${workflow.externalId}`);
         } else if (ambiguous.length > 0) {
-          parts.push(instanceNames.get(workflow.instanceId) ?? 'instance inconnue');
+          parts.push(instanceNames.get(workflow.instanceId) ?? msg('platform.mapUnknownInstance'));
         }
         labels.set(workflow.id, [workflow.name, ...parts].join(' · '));
       }

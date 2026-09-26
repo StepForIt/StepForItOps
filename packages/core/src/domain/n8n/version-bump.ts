@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { BumpLevel } from '../semver';
 import { WorkflowDiff } from './workflow-diff';
 import { isStickyNote, isTriggerNode } from './workflow-graph';
@@ -26,7 +27,10 @@ export function suggestBumpLevel(diff: WorkflowDiff): BumpProposal {
   if (removed.length > 0) {
     return {
       level: 'major',
-      reason: `${removed.length} nœud(s) retiré(s) (${removed.map((n) => n.name).join(', ')}) : le workflow ne fait plus une partie de ce qu'il faisait.`,
+      reason: msg('edit.bumpRemoved', {
+        count: removed.length,
+        names: removed.map((n) => n.name).join(', '),
+      }),
     };
   }
 
@@ -40,14 +44,14 @@ export function suggestBumpLevel(diff: WorkflowDiff): BumpProposal {
   if (triggers.length > 0) {
     return {
       level: 'major',
-      reason: `Déclencheur touché (${triggers.map((n) => n.name).join(', ')}) : c'est le point d'entrée du workflow qui change.`,
+      reason: msg('edit.bumpTrigger', { names: triggers.map((n) => n.name).join(', ') }),
     };
   }
 
   if (diff.nameChange) {
     return {
       level: 'major',
-      reason: `Renommé « ${diff.nameChange.before} » → « ${diff.nameChange.after} » : c'est le nom qui apparie les exemplaires d'un env à l'autre.`,
+      reason: msg('edit.bumpRenamed', { before: diff.nameChange.before, after: diff.nameChange.after }),
     };
   }
 
@@ -55,14 +59,14 @@ export function suggestBumpLevel(diff: WorkflowDiff): BumpProposal {
   if (added.length > 0) {
     return {
       level: 'minor',
-      reason: `${added.length} nœud(s) ajouté(s) (${added.map((n) => n.name).join(', ')}) : le workflow fait quelque chose de plus.`,
+      reason: msg('edit.bumpAdded', { count: added.length, names: added.map((n) => n.name).join(', ') }),
     };
   }
 
   if (diff.connections.changed) {
     return {
       level: 'minor',
-      reason: 'Câblage modifié : le chemin des données change sans que rien ne disparaisse.',
+      reason: msg('edit.bumpWiring'),
     };
   }
 
@@ -72,15 +76,16 @@ export function suggestBumpLevel(diff: WorkflowDiff): BumpProposal {
   if (substantial.length > 0) {
     return {
       level: 'patch',
-      reason: `Réglages ajustés sur ${substantial.length} nœud(s) (${substantial.map((n) => n.name).join(', ')}).`,
+      reason: msg('edit.bumpSettings', {
+        count: substantial.length,
+        names: substantial.map((n) => n.name).join(', '),
+      }),
     };
   }
 
   return {
     level: 'patch',
-    reason: diff.hasChanges
-      ? 'Changements de forme seulement (position, notes, renommage de nœud).'
-      : 'Contenu identique à la cible : la promotion ne fait que reposer le même workflow.',
+    reason: diff.hasChanges ? msg('edit.bumpCosmetic') : msg('edit.bumpIdentical'),
   };
 }
 

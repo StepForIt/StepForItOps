@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { App, Button, Input, List, Modal, Popover, Space, Tag, Tooltip, Typography } from 'antd';
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
 import { useWorkflowLocks } from '../lib/workflow-lock/workflow-locks';
 
@@ -14,23 +15,27 @@ interface LockOverrideRow {
   createdAt: string;
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+const formatDate = (iso: string, locale: string) =>
+  new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
 
 /** Petit cadenas des listes et des onglets d'env : rien quand l'exemplaire est libre. */
 export function LockIcon({ workflowId }: { workflowId: string }) {
+  const t = useTranslations('reviewTools.lock');
   const { lockOf } = useWorkflowLocks();
   const lock = lockOf(workflowId);
   if (!lock) return null;
   return (
-    <Tooltip title={lock.lockedBy ? `Verrouillé par ${lock.lockedBy}` : 'Verrouillé'}>
-      <LockOutlined aria-label="Verrouillé" style={{ color: 'var(--ant-color-warning, #faad14)' }} />
+    <Tooltip title={lock.lockedBy ? t('lockedBy', { user: lock.lockedBy }) : t('locked')}>
+      <LockOutlined aria-label={t('locked')} style={{ color: 'var(--ant-color-warning, #faad14)' }} />
     </Tooltip>
   );
 }
 
 /** Le verrou sur la fiche : qui, quand, pourquoi, et les forçages passés. */
 export function WorkflowLockTag({ workflowId }: { workflowId: string }) {
+  const t = useTranslations('reviewTools.lock');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { lockOf, unlock } = useWorkflowLocks();
   const { message } = App.useApp();
   const [overrides, setOverrides] = useState<LockOverrideRow[] | null>(null);
@@ -48,25 +53,27 @@ export function WorkflowLockTag({ workflowId }: { workflowId: string }) {
     <Popover
       trigger="click"
       onOpenChange={load}
-      title="Verrouillé"
+      title={t('locked')}
       content={
         <Space direction="vertical" style={{ maxWidth: 360 }}>
           <Typography.Text type="secondary">
-            {lock.lockedBy ? `Par ${lock.lockedBy}, ` : ''}le {formatDate(lock.lockedAt)}
+            {lock.lockedBy
+              ? t('lockedAtBy', { user: lock.lockedBy, date: formatDate(lock.lockedAt, locale) })
+              : t('lockedAt', { date: formatDate(lock.lockedAt, locale) })}
           </Typography.Text>
           {lock.note && <Typography.Text>{lock.note}</Typography.Text>}
-          <Typography.Text strong>Forçages</Typography.Text>
+          <Typography.Text strong>{t('overrides')}</Typography.Text>
           <List
             size="small"
             loading={overrides === null}
-            locale={{ emptyText: 'Aucun' }}
+            locale={{ emptyText: tCommon('none') }}
             dataSource={overrides ?? []}
             renderItem={(row) => (
               <List.Item style={{ paddingInline: 0 }}>
                 <Space direction="vertical" size={0}>
                   <Typography.Text>{row.reason}</Typography.Text>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {formatDate(row.createdAt)}
+                    {formatDate(row.createdAt, locale)}
                     {row.author ? ` · ${row.author}` : ''} · {row.action}
                   </Typography.Text>
                 </Space>
@@ -78,18 +85,18 @@ export function WorkflowLockTag({ workflowId }: { workflowId: string }) {
             icon={<UnlockOutlined />}
             onClick={() =>
               unlock(workflowId).then(
-                () => message.success('Déverrouillé'),
+                () => message.success(t('unlocked')),
                 (error: Error) => message.error(error.message),
               )
             }
           >
-            Déverrouiller
+            {t('unlock')}
           </Button>
         </Space>
       }
     >
       <Tag color="gold" icon={<LockOutlined />} style={{ cursor: 'pointer' }}>
-        verrouillé
+        {t('lockedTag')}
       </Tag>
     </Popover>
   );
@@ -97,6 +104,8 @@ export function WorkflowLockTag({ workflowId }: { workflowId: string }) {
 
 /** L'entrée « Verrouiller » / « Déverrouiller » du menu « ⋯ », et la modale qui demande une note. */
 export function useLockAction(workflowId: string) {
+  const t = useTranslations('reviewTools.lock');
+  const tCommon = useTranslations('common');
   const { isLocked, lock, unlock } = useWorkflowLocks();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
@@ -106,19 +115,19 @@ export function useLockAction(workflowId: string) {
   const action = locked
     ? {
         key: 'unlock',
-        label: 'Déverrouiller',
+        label: t('unlock'),
         icon: <UnlockOutlined />,
         onClick: () =>
           unlock(workflowId).then(
-            () => message.success('Déverrouillé'),
+            () => message.success(t('unlocked')),
             (error: Error) => message.error(error.message),
           ),
       }
     : {
         key: 'lock',
-        label: 'Verrouiller',
+        label: t('lock'),
         icon: <LockOutlined />,
-        hint: 'Plus aucune écriture de la plateforme sans forçage justifié',
+        hint: t('lockHint'),
         onClick: () => {
           setNote('');
           setOpen(true);
@@ -128,15 +137,15 @@ export function useLockAction(workflowId: string) {
   const modal = (
     <Modal
       open={open}
-      title="Verrouiller ce workflow"
-      okText="Verrouiller"
-      cancelText="Annuler"
+      title={t('lockTitle')}
+      okText={t('lock')}
+      cancelText={tCommon('cancel')}
       onCancel={() => setOpen(false)}
       onOk={() =>
         lock(workflowId, note).then(
           () => {
             setOpen(false);
-            message.success('Verrouillé');
+            message.success(t('locked'));
           },
           (error: Error) => message.error(error.message),
         )
@@ -144,14 +153,11 @@ export function useLockAction(workflowId: string) {
       destroyOnHidden
     >
       <Space direction="vertical" style={{ width: '100%' }}>
-        <Typography.Text type="secondary">
-          Promotions, assistant IA, restaurations, renommages, publication, archivage et procédures
-          demanderont une raison. Une édition faite directement dans n8n n’est pas bloquée.
-        </Typography.Text>
+        <Typography.Text type="secondary">{t('lockDescription')}</Typography.Text>
         <Input.TextArea
           rows={2}
           maxLength={500}
-          placeholder="Note (facultative)"
+          placeholder={t('notePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
         />

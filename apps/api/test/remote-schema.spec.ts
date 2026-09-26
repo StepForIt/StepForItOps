@@ -9,6 +9,7 @@ import { FindingIgnoreService } from '../src/modules/workflows/finding-ignore.se
 import { WorkflowsService } from '../src/modules/workflows/workflows.service';
 import { InstancesService } from '../src/modules/instances/instances.service';
 import { resetDb, testPrisma } from './helpers/db';
+import { PlatformLocale } from '../src/infra/i18n/platform-locale';
 
 /**
  * Ce que le contrôle lancé depuis la page d'un workflow PERSISTE : ses
@@ -70,6 +71,7 @@ async function setup() {
         return report;
       },
     } as unknown as RemoteSchemaCheckService,
+    { run: (fn: () => unknown) => fn() } as unknown as PlatformLocale,
   );
   return { service, workflowId: workflow.id, checks };
 }

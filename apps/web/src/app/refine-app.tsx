@@ -3,16 +3,13 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import { Refine } from '@refinedev/core';
-import {
-  useNotificationProvider,
-  ThemedLayoutV2,
-  ThemedSiderV2,
-  ThemedTitleV2,
-  RefineThemes,
-} from '@refinedev/antd';
+import { useNotificationProvider, ThemedLayoutV2, ThemedSiderV2, ThemedTitleV2 } from '@refinedev/antd';
 import routerProvider from '@refinedev/nextjs-router';
 import dataProvider from '@refinedev/simple-rest';
 import { App as AntdApp, ConfigProvider } from 'antd';
+import enUS from 'antd/locale/en_US';
+import frFR from 'antd/locale/fr_FR';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   ApartmentOutlined,
   ApiOutlined,
@@ -56,21 +53,26 @@ import { MobileTopBar } from '../components/mobile-top-bar';
 import { WorkflowChatProvider } from '../components/workflow-chat-drawer';
 import { ReleaseRecorderProvider } from '../components/release-recorder/release-recorder';
 import { WorkflowLocksProvider } from '../lib/workflow-lock/workflow-locks';
+import { LanguageMenuItem } from '../components/language-menu-item';
+import { useI18nProvider } from '../i18n/refine-i18n-provider';
+import { BrandMark, BrandWordmark } from '../components/brand-mark';
+import { CONSOLE_THEME, SIDER_THEME } from '../lib/brand/theme';
 import '@refinedev/antd/dist/reset.css';
 
 export function RefineApp({ children }: { children: React.ReactNode }) {
+  const antdLocale = useLocale() === 'en' ? enUS : frFR;
   // Login et premier setup s'affichent hors console : ni menu, ni providers
   // Refine (qui interrogeraient l'API alors que la session n'existe pas encore).
   if (['/login', '/setup'].includes(usePathname())) {
     return (
-      <ConfigProvider theme={RefineThemes.Blue}>
+      <ConfigProvider theme={CONSOLE_THEME} locale={antdLocale}>
         <AntdApp>{children}</AntdApp>
       </ConfigProvider>
     );
   }
 
   return (
-    <ConfigProvider theme={RefineThemes.Blue}>
+    <ConfigProvider theme={CONSOLE_THEME} locale={antdLocale}>
       <AntdApp>
         <EnabledModulesProvider>
           <EnvsProvider>
@@ -84,34 +86,34 @@ export function RefineApp({ children }: { children: React.ReactNode }) {
 
 // L'ordre du tableau est celui du menu : un groupe s'affiche à la position de son
 // premier enfant, donc les enfants d'un même groupe restent contigus.
-const RESOURCES = [
+const buildResources = (t: ReturnType<typeof useTranslations<'app.menu'>>) => [
   {
     name: 'workflows',
     list: '/workflows',
     show: '/workflows/show/:id',
-    meta: { label: 'Workflows', icon: <ApartmentOutlined /> },
+    meta: { label: t('workflows'), icon: <ApartmentOutlined /> },
   },
   // Vue groupée de la même liste (workflows d'un même métier, un par env) : pas d'entrée de menu.
   { name: 'workflows/families', meta: { hide: true } },
   {
     name: 'versions',
     list: '/versions',
-    meta: { label: 'Versions', icon: <BranchesOutlined /> },
+    meta: { label: t('versions'), icon: <BranchesOutlined /> },
   },
   {
     name: 'workflow-map',
     list: '/workflow-map',
-    meta: { label: 'Carte workflows', icon: <ShareAltOutlined /> },
+    meta: { label: t('workflowMap'), icon: <ShareAltOutlined /> },
   },
   {
     name: 'findings',
     list: '/findings',
-    meta: { label: 'Findings', icon: <BugOutlined />, parent: 'quality' },
+    meta: { label: t('findings'), icon: <BugOutlined />, parent: 'quality' },
   },
   {
     name: 'test-runs',
     list: '/test-runs',
-    meta: { label: 'Tests', icon: <ExperimentOutlined />, parent: 'quality' },
+    meta: { label: t('testRuns'), icon: <ExperimentOutlined />, parent: 'quality' },
   },
   {
     name: 'monitors',
@@ -119,31 +121,31 @@ const RESOURCES = [
     create: '/monitors/create',
     edit: '/monitors/edit/:id',
     meta: {
-      label: 'Monitoring',
+      label: t('monitors'),
       icon: <HeartOutlined />,
       parent: 'health',
-      createLabel: 'Nouveau monitor',
+      createLabel: t('monitorsCreate'),
     },
   },
   {
     name: 'execution-errors',
     list: '/errors',
-    meta: { label: 'Erreurs', icon: <WarningOutlined />, parent: 'health' },
+    meta: { label: t('errors'), icon: <WarningOutlined />, parent: 'health' },
   },
   {
     name: 'performance',
     list: '/performance',
-    meta: { label: 'Performance', icon: <DashboardOutlined />, parent: 'health' },
+    meta: { label: t('performance'), icon: <DashboardOutlined />, parent: 'health' },
   },
   {
     name: 'ai-cost',
     list: '/llm-costs',
-    meta: { label: 'Coûts IA', icon: <DollarOutlined />, parent: 'health' },
+    meta: { label: t('aiCost'), icon: <DollarOutlined />, parent: 'health' },
   },
   {
     name: 'model-audit',
     list: '/model-audit',
-    meta: { label: 'Modèles IA', icon: <RobotOutlined />, parent: 'health' },
+    meta: { label: t('modelAudit'), icon: <RobotOutlined />, parent: 'health' },
   },
   // Même page que « Erreurs » (onglet Problèmes) : pas d'entrée de menu.
   { name: 'error-groups', meta: { hide: true } },
@@ -153,21 +155,21 @@ const RESOURCES = [
     create: '/resource-mappings/create',
     edit: '/resource-mappings/edit/:id',
     meta: {
-      label: 'Mappings env',
+      label: t('resourceMappings'),
       icon: <SwapOutlined />,
       parent: 'environments',
-      createLabel: 'Nouveau mapping env',
+      createLabel: t('resourceMappingsCreate'),
     },
   },
   {
     name: 'release-procedures',
     list: '/procedures',
-    meta: { label: 'Procédures', icon: <OrderedListOutlined />, parent: 'environments' },
+    meta: { label: t('procedures'), icon: <OrderedListOutlined />, parent: 'environments' },
   },
   {
     name: 'resources',
     list: '/resources',
-    meta: { label: 'Ressources externes', icon: <TableOutlined />, parent: 'environments' },
+    meta: { label: t('resources'), icon: <TableOutlined />, parent: 'environments' },
   },
   {
     name: 'instances',
@@ -176,16 +178,16 @@ const RESOURCES = [
     edit: '/instances/edit/:id',
     show: '/instances/show/:id',
     meta: {
-      label: 'Instances',
+      label: t('instances'),
       icon: <ApiOutlined />,
       parent: 'settings',
-      createLabel: 'Nouvelle instance n8n',
+      createLabel: t('instancesCreate'),
     },
   },
   {
     name: 'clients',
     list: '/clients',
-    meta: { label: 'Clients', icon: <TeamOutlined />, parent: 'settings' },
+    meta: { label: t('clients'), icon: <TeamOutlined />, parent: 'settings' },
   },
   {
     name: 'workflow-groups',
@@ -193,26 +195,26 @@ const RESOURCES = [
     create: '/workflow-groups/create',
     edit: '/workflow-groups/edit/:id',
     meta: {
-      label: 'Groupes',
+      label: t('workflowGroups'),
       icon: <FolderOpenOutlined />,
       parent: 'settings',
-      createLabel: 'Nouveau groupe de workflows',
+      createLabel: t('workflowGroupsCreate'),
     },
   },
   {
     name: 'finding-ignores',
     list: '/finding-ignores',
-    meta: { label: 'Findings ignorés', icon: <EyeInvisibleOutlined />, parent: 'settings' },
+    meta: { label: t('findingIgnores'), icon: <EyeInvisibleOutlined />, parent: 'settings' },
   },
   {
     name: 'assistant-lessons',
     list: '/assistant-lessons',
-    meta: { label: 'Leçons IA', icon: <BulbOutlined />, parent: 'settings' },
+    meta: { label: t('assistantLessons'), icon: <BulbOutlined />, parent: 'settings' },
   },
   {
     name: 'notification-channels',
     list: '/notification-channels',
-    meta: { label: 'Alertes', icon: <BellOutlined />, parent: 'settings' },
+    meta: { label: t('notificationChannels'), icon: <BellOutlined />, parent: 'settings' },
   },
   {
     name: 'export-targets',
@@ -220,33 +222,40 @@ const RESOURCES = [
     create: '/export-targets/create',
     edit: '/export-targets/edit/:id',
     meta: {
-      label: 'Cibles export',
+      label: t('exportTargets'),
       icon: <CloudUploadOutlined />,
       parent: 'settings',
-      createLabel: "Nouvelle cible d'export",
+      createLabel: t('exportTargetsCreate'),
     },
   },
   {
     name: 'modules',
     list: '/modules',
-    meta: { label: 'Modules', icon: <AppstoreOutlined />, parent: 'settings' },
+    meta: { label: t('modules'), icon: <AppstoreOutlined />, parent: 'settings' },
   },
   {
     name: 'app-logs',
     list: '/app-logs',
-    meta: { label: 'Logs', icon: <FileTextOutlined />, parent: 'settings' },
+    meta: { label: t('appLogs'), icon: <FileTextOutlined />, parent: 'settings' },
   },
   {
     name: 'config-transfer',
     list: '/config-transfer',
-    meta: { label: 'Export / Import', icon: <DeliveredProcedureOutlined />, parent: 'settings' },
+    meta: { label: t('configTransfer'), icon: <DeliveredProcedureOutlined />, parent: 'settings' },
   },
   {
     name: 'aide',
     list: '/aide',
-    meta: { label: 'Aide', icon: <QuestionCircleOutlined />, bottom: true },
+    meta: { label: t('help'), icon: <QuestionCircleOutlined />, bottom: true },
   },
 ];
+
+const MENU_GROUP_KEYS = {
+  quality: 'quality',
+  health: 'health',
+  environments: 'environments',
+  settings: 'settings',
+} as const;
 
 /**
  * react-query arbitre par défaut sur `navigator.onLine` : navigateur déclaré hors-ligne, il
@@ -267,13 +276,24 @@ const REACT_QUERY = {
 /** La console : menu + providers Refine, une fois la session établie. */
 function Console({ children }: { children: React.ReactNode }) {
   const { enabled } = useEnabledModules();
+  const tMenu = useTranslations('app.menu');
+  const tGroups = useTranslations('app.menuGroups');
+  const i18nProvider = useI18nProvider();
+  const resources = React.useMemo(
+    () =>
+      withMenuGroups(hideDisabledResources(buildResources(tMenu), enabled), (id) =>
+        id in MENU_GROUP_KEYS ? tGroups(MENU_GROUP_KEYS[id as keyof typeof MENU_GROUP_KEYS]) : id,
+      ),
+    [tMenu, tGroups, enabled],
+  );
 
   return (
     <Refine
       routerProvider={routerProvider}
       dataProvider={dataProvider(API_URL)}
       notificationProvider={useNotificationProvider}
-      resources={withMenuGroups(hideDisabledResources(RESOURCES, enabled))}
+      i18nProvider={i18nProvider}
+      resources={resources}
       options={{ syncWithLocation: true, warnWhenUnsavedChanges: true, reactQuery: REACT_QUERY }}
     >
       <InstanceScopeProvider>
@@ -285,20 +305,29 @@ function Console({ children }: { children: React.ReactNode }) {
                 // `display: contents` : l'enveloppe ne compte pas dans la mise en page,
                 // elle ne sert qu'à masquer le bouton de menu mobile du sider (cf. MobileTopBar).
                 <div className="app-sider">
-                  <ThemedSiderV2
-                    Title={({ collapsed }) => <ThemedTitleV2 collapsed={collapsed} text="StepForIt Ops" />}
-                    render={({ items, logout, collapsed }) => (
-                      <>
-                        <CommandSearchMenuItem collapsed={collapsed} />
-                        <InstanceScopeMenuItem collapsed={collapsed} />
-                        {items}
-                        {logout}
-                        <InstallAppButton collapsed={collapsed} />
-                        <UserMenuItem collapsed={collapsed} />
-                        <LicenseNotice collapsed={collapsed} />
-                      </>
-                    )}
-                  />
+                  <ConfigProvider theme={SIDER_THEME}>
+                    <ThemedSiderV2
+                      Title={({ collapsed }) => (
+                        <ThemedTitleV2
+                          collapsed={collapsed}
+                          icon={<BrandMark size={26} onDark />}
+                          text={<BrandWordmark onDark />}
+                        />
+                      )}
+                      render={({ items, logout, collapsed }) => (
+                        <>
+                          <CommandSearchMenuItem collapsed={collapsed} />
+                          <InstanceScopeMenuItem collapsed={collapsed} />
+                          {items}
+                          {logout}
+                          <InstallAppButton collapsed={collapsed} />
+                          <LanguageMenuItem collapsed={collapsed} />
+                          <UserMenuItem collapsed={collapsed} />
+                          <LicenseNotice collapsed={collapsed} />
+                        </>
+                      )}
+                    />
+                  </ConfigProvider>
                 </div>
               )}
             >

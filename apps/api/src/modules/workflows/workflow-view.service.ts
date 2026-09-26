@@ -15,6 +15,7 @@ import {
   makeModuleEdges,
   makeScenarioUrl,
   moduleLabel,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowsService, WorkflowWithEnv } from './workflows.service';
@@ -209,7 +210,7 @@ export class WorkflowViewService {
             ...(edge.outputType !== 'main'
               ? { branch: edge.outputType }
               : edge.outputIndex > 0
-                ? { branch: `sortie ${edge.outputIndex}` }
+                ? { branch: msg('platform.viewOutputBranch', { index: edge.outputIndex }) }
                 : {}),
           })),
           parameters: node.parameters ?? {},
@@ -277,7 +278,7 @@ export class WorkflowViewService {
       const incoming = edges.filter((edge) => edge.toId === flat.module.id).length;
       return {
         name: labelById.get(flat.module.id) ?? `#${flat.module.id}`,
-        type: flat.module.module ?? 'inconnu',
+        type: flat.module.module ?? msg('platform.unknownType'),
         ...(flat.module.version !== undefined ? { typeVersion: flat.module.version } : {}),
         disabled: false,
         sticky: false,

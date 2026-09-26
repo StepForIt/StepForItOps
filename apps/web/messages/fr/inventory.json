@@ -1,0 +1,432 @@
+{
+  "versions": {
+    "page": {
+      "exportDone": "{exported, plural, one {# version exportée} other {# versions exportées}}",
+      "exportPartial": "{done} — {failed} échec(s)",
+      "nothingMovedFailed": "Rien rangé — {failed} échec(s)",
+      "nothingToMove": "Rien à ranger",
+      "movedTitle": "{count} fichier(s) rangé(s)",
+      "movedFailed": "{count} échec(s) — voir les logs de l’API",
+      "forceExport": "Forcer le ré-export",
+      "cleanup": "Nettoyer les doublons d’une cible…",
+      "sweepScoped": "Ranger les archivés de cette instance",
+      "sweepAll": "Ranger les archivés (toutes instances)",
+      "exportAll": "Tout exporter",
+      "filterWorkflow": "Filtrer par workflow",
+      "grouped": "Groupées par env",
+      "flat": "Par workflow n8n",
+      "nothingToExport": "Rien à exporter"
+    },
+    "actions": {
+      "compare": "Comparer",
+      "export": "Exporter",
+      "restore": "Restaurer"
+    },
+    "columns": {
+      "workflow": "Workflow",
+      "instance": "Instance",
+      "hash": "Hash",
+      "origin": "Origine",
+      "lastVersion": "Dernière version",
+      "versions": "Versions",
+      "exported": "Exporté",
+      "actions": "Actions",
+      "version": "Version",
+      "message": "Message",
+      "created": "Créée",
+      "env": "Env",
+      "envs": "Environnements"
+    },
+    "table": {
+      "previous": "Précédente : {date}",
+      "setByPromotion": "Posée par une promotion",
+      "declarable": "Déclarable depuis le bouton Environnements",
+      "noEnv": "{count} sans env",
+      "neverExported": "{notExported}/{total} jamais exporté"
+    },
+    "cleanup": {
+      "status": {
+        "duplicate": "doublon",
+        "pending": "à ré-exporter",
+        "unknown": "workflow inconnu"
+      },
+      "title": "Nettoyer les doublons d'une cible",
+      "close": "Fermer",
+      "delete": "Supprimer {count} doublon(s)",
+      "deleted": "{count} fichier(s) supprimé(s)",
+      "selectTarget": "Choisir une cible d'export",
+      "analyse": "Analyser",
+      "analyseFailed": "Analyse impossible",
+      "deletable": "<b>{count}</b> doublon(s) supprimable(s)",
+      "pendingTitle": "Lance d'abord « Tout ré-exporter »",
+      "pendingDescription": "Ces fichiers sont à l'ancien format et leur version à jour n'existe pas encore dans la cible : les supprimer maintenant ferait perdre la sauvegarde.",
+      "columns": {
+        "state": "État",
+        "file": "Fichier",
+        "workflow": "Workflow",
+        "why": "Pourquoi"
+      }
+    },
+    "restore": {
+      "items": {
+        "n8n": "nœuds",
+        "make": "modules"
+      },
+      "itemsTitle": {
+        "n8n": "Nœuds",
+        "make": "Modules"
+      },
+      "nodeList": "{label} ({count}) :",
+      "more": "+{count} autres",
+      "title": "Restaurer cette version",
+      "titleTo": "Restaurer cette version vers {platform}",
+      "ok": "Restaurer — écraser dans {platform}",
+      "close": "Fermer",
+      "cancel": "Annuler",
+      "identical": "Identique : sans effet.",
+      "overwrite": "Écrase « {name} » sur {instance}. Modifs {platform} depuis le {date} perdues.",
+      "restoredVersion": "Version restaurée",
+      "newerVersions": "Versions plus récentes",
+      "bypassed": "{count} contournée(s)",
+      "unchanged": "— {items} inchangés",
+      "differs": " ; diffère : {list}",
+      "connections": "les connexions",
+      "settings": "les réglages",
+      "added": "Ajoutés",
+      "removed": "Supprimés",
+      "modified": "Modifiés",
+      "alsoChanged": "Également modifié : {list}.",
+      "rename": "Renommage",
+      "renameTag": "« {from} » → « {to} »",
+      "active": "Actif sur {platform} : la version restaurée tournera dès le prochain déclenchement.",
+      "notesTitle": "À savoir avant de restaurer",
+      "archived": "Archivé côté n8n : la restauration échouera. Désarchive-le d'abord.",
+      "done": "Version restaurée vers {platform}",
+      "failed": "Restauration impossible"
+    },
+    "diff": {
+      "title": "Changements de « {name} »",
+      "titleLoading": "Comparaison",
+      "version": "Version",
+      "comparedTo": "Comparée à",
+      "noPrevious": "aucune version antérieure",
+      "noChange": "Aucune différence visible",
+      "rename": "Renommage : « {before} » → « {after} »"
+    },
+    "export": {
+      "title": "Exporter cette version",
+      "close": "Fermer",
+      "ok": "Exporter",
+      "cancel": "Annuler",
+      "workflow": "Workflow",
+      "version": "Version",
+      "file": "Fichier écrit",
+      "size": "{size} Ko",
+      "alreadyExported": "Déjà exportée",
+      "noTarget": "Aucune cible d'export active",
+      "noTargetDescription": "Configure une cible GitHub ou Google Drive dans « Cibles export » avant d'exporter.",
+      "targetsTitle": "Cibles qui vont recevoir le fichier",
+      "movedFrom": "Déplacé depuis <code>{from}</code> (l'ancien fichier est supprimé)",
+      "noCredentials": "Sans credentials",
+      "exportedTo": "Exporté vers : {list}",
+      "noneAccepted": "Aucune cible n’a accepté l’export",
+      "checkTargets": "Vérifie les identifiants et les droits des cibles dans « Cibles export ».",
+      "failed": "Export échoué"
+    }
+  },
+  "resources": {
+    "page": {
+      "impact": {
+        "toUpdate": "À modifier",
+        "unknown": "À vérifier",
+        "noAction": "Sans action"
+      },
+      "access": {
+        "read": "lecture",
+        "write": "écriture",
+        "delete": "suppression",
+        "other": "autre"
+      },
+      "option": "{item} — {nodes} nœuds · {workflows} workflows",
+      "renamed": "Nom mis à jour",
+      "aliasRemoved": "Nom retiré",
+      "columns": {
+        "impact": "Impact",
+        "workflow": "Workflow",
+        "node": "Nœud",
+        "access": "Sens",
+        "fields": "Champs figés",
+        "method": "Méthode",
+        "route": "Route appelée"
+      },
+      "matching": "Rapprochement sur {list}",
+      "requiredNotMapped": "obligatoire non mappé : {list}",
+      "disabled": "désactivé",
+      "dynamicTableHint": "La table est désignée par une expression : ce nœud vise peut-être une autre table à l'exécution.",
+      "dynamicTable": "table dynamique",
+      "fieldCount": "{count, plural, one {# champ} other {# champs}}",
+      "title": "Ressources externes",
+      "selectPlaceholder": "Choisir une ressource (système, base, table, hôte, id…)",
+      "rename": "Renommer",
+      "columnPlaceholder": "Colonne ajoutée (facultatif)",
+      "namesHint": "Lit les noms de tables dans NocoDB",
+      "pickInstance": "Choisis une instance dans le menu de gauche",
+      "namesButton": "Vrais noms (NocoDB)",
+      "hideCopies": "Masque les copies DEV/PREPROD",
+      "prodOnly": "Prod uniquement",
+      "columnExists": "Colonne déjà existante.",
+      "toUpdateCount": "{count, plural, one {# nœud à modifier} other {# nœuds à modifier}}",
+      "routesTitle": "Routes appelées · {nodes, plural, one {# nœud} other {# nœuds}} · {routes, plural, one {# route} other {# routes}}",
+      "nodeCount": "{count, plural, one {# nœud} other {# nœuds}}",
+      "all": "Tout ({count})",
+      "impactCount": "{label} ({count})",
+      "empty": "Choisis une ressource pour voir les nœuds qui la touchent",
+      "renameTitle": "Nommer la ressource",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "labelPlaceholder": "Ex : NocoDB · Contacts CRM",
+      "emptyAuto": "Vide = nom automatique."
+    },
+    "nocodb": {
+      "title": "Retrouver les vrais noms (NocoDB)",
+      "close": "Fermer",
+      "run": "Lancer la découverte",
+      "intro": "URL de chaque instance NocoDB (le token reste dans n8n).",
+      "noNodes": "Aucun nœud NocoDB dans les workflows de cette instance.",
+      "missingHost": "host manquant",
+      "counts": "{nodes} nœuds · {bases, plural, one {# base} other {# bases}}",
+      "hostPlaceholder": "https://nocodb.exemple.fr",
+      "save": "Enregistrer",
+      "saved": "Host enregistré",
+      "seenIn": "Vu dans tes workflows :",
+      "hint": "{workflow} / {node} appelle {url}",
+      "aWorkflow": "un workflow",
+      "aNode": "un nœud",
+      "resolved": "{count} noms retrouvés",
+      "ignored": "Credentials ignorés faute de host",
+      "failedOnBase": "Échec sur la base {base}",
+      "failedListing": "Échec au listing des bases"
+    }
+  },
+  "workflowMap": {
+    "page": {
+      "kinds": {
+        "execute": "appelle",
+        "tool": "outil IA",
+        "webhook": "webhook",
+        "manual": "lien manuel"
+      },
+      "triggers": {
+        "schedule": "planifié",
+        "webhook": "webhook",
+        "form": "formulaire",
+        "chat": "chat",
+        "app": "app",
+        "error": "erreur",
+        "subWorkflow": "sous-workflow",
+        "manual": "test manuel"
+      },
+      "contexts": {
+        "loop": "boucle",
+        "manual": "manuel",
+        "subWorkflow": "sous-workflow"
+      },
+      "contextHints": {
+        "loop": "Le nœud qui appelle est dans une boucle : l'appel part une fois par tour.",
+        "manual": "Le nœud qui appelle est dans un bout de workflow dont le seul déclencheur est le bouton « Execute workflow » : rien ne part sans un clic dans l’éditeur.",
+        "subWorkflow": "Le nœud qui appelle est dans une branche déclenchée par un autre workflow : l'appel ne part que si le parent tourne."
+      },
+      "contextLabel": "{context} ({count})",
+      "contextTooltip": "{hint} Ce bout de workflow fait {count, plural, one {# nœud} other {# nœuds}}.",
+      "noTrigger": "aucun trigger actif",
+      "openWorkflow": "Ouvrir le workflow",
+      "selfCall": "lui-même, en sous-workflow",
+      "outOfScope": "hors périmètre",
+      "startsWith": "Démarre par : {triggers}",
+      "linkUpdated": "Lien mis à jour",
+      "linkAdded": "Lien ajouté",
+      "linkDeleted": "Lien supprimé",
+      "title": "Carte des workflows",
+      "intro": "Le schéma des enchaînements entre workflows : ce que la plateforme détecte toute seule dans le JSON n8n (sous-workflow appelé, sous-workflow branché sur un agent IA, appel HTTP vers le webhook d'un autre workflow) et les liens que tu ajoutes à la main pour les enchaînements invisibles dans le JSON.",
+      "filterPlaceholder": "Filtrer par nom de workflow",
+      "hideIsolatedHint": "Masque les workflows qui n'ont aucun lien affiché.",
+      "hideIsolated": "Masquer les isolés",
+      "entryPointsHint": "Ajoute devant chaque workflow ce qui le met en route : l'URL publique s'il est appelable (webhook, formulaire, chat), sinon « planifié », l'application tierce, ou le lancement à la main. Un workflow appelé par un parent n'en a pas — c'est déjà une flèche. Ces pastilles ne comptent pas comme des liens : elles n'empêchent pas un workflow d'être « isolé ».",
+      "entryPoints": "Points d'entrée",
+      "monitoredHint": "Ne montre que les envs déclarés « surveillés » (la prod, par défaut) : les autres exemplaires d'un même workflow métier ont le même schéma d'appels et doublaient la carte. Un workflow dont l'environnement est indéterminé reste affiché.",
+      "monitored": "Envs surveillés",
+      "hideArchivedHint": "Les workflows archivés dans n8n (masqués dans sa liste) ne tournent plus : leurs appels sortants sont retirés du schéma. Ils restent affichés s'ils sont appelés par un workflow vivant — c'est alors un appel mort à corriger.",
+      "hideArchived": "Masquer les archivés",
+      "viewGraph": "graphe",
+      "viewTable": "tableau",
+      "refresh": "Rafraîchir",
+      "addLink": "Ajouter un lien",
+      "counts": {
+        "live": "{count, plural, one {# workflow vivant} other {# workflows vivants}}",
+        "archived": "{count, plural, one {# archivé} other {# archivés}}",
+        "hidden": "{count, plural, one {# masqué hors surveillance} other {# masqués hors surveillance}}",
+        "detected": "{count, plural, one {# lien détecté} other {# liens détectés}}",
+        "manual": "{count, plural, one {# lien manuel} other {# liens manuels}}"
+      },
+      "noWorkflow": "Aucun workflow",
+      "noWorkflowDescription": "Synchronise une instance depuis la page Workflows : la carte se construit à partir des workflows déjà synchronisés.",
+      "nothingToShow": "Rien à afficher avec ces filtres",
+      "nothingToShowDescription": "Aucun lien ne correspond. Décoche « Masquer les isolés » pour voir tous les workflows, ou ajoute un lien manuel.",
+      "graphTitle": "Schéma ({nodes} workflows, {links} liens)",
+      "tooMany": "Trop de workflows pour un rendu lisible — filtre par nom, ou passe en vue tableau.",
+      "clickHint": "Clique sur un workflow du schéma pour ouvrir sa fiche. Les cibles hors périmètre (encadré orange) n'en ont pas.",
+      "linksTitle": "Liens ({count})",
+      "columns": {
+        "workflow": "Workflow",
+        "relation": "Relation",
+        "to": "Vers",
+        "detectedOn": "Détecté sur",
+        "from": "De",
+        "label": "Libellé",
+        "note": "Note"
+      },
+      "manualTitle": "Liens manuels ({count})",
+      "manualIntro": "À utiliser dès qu'un enchaînement n'est pas lisible dans le JSON : passage par un outil tiers, workflow déclenché par la même donnée, ordre d'exécution à respecter.",
+      "noManual": "Aucun lien manuel pour l'instant",
+      "noManualDescription": "Clique sur « Ajouter un lien » pour relier deux workflows toi-même.",
+      "editHint": "Modifier le libellé et la note",
+      "deleteConfirm": "Supprimer ce lien ?",
+      "delete": "Supprimer",
+      "cancel": "Annuler"
+    },
+    "linkModal": {
+      "editTitle": "Modifier le lien",
+      "addTitle": "Ajouter un lien entre deux workflows",
+      "save": "Enregistrer",
+      "add": "Ajouter",
+      "cancel": "Annuler",
+      "intro": "Un lien manuel décrit un enchaînement que le JSON n'expose pas : <tag>A</tag> déclenche <tag>B</tag> via un outil tiers, ou doit tourner avant lui.",
+      "from": "Workflow de départ",
+      "fromRequired": "Choisis le workflow de départ",
+      "to": "Workflow d'arrivée",
+      "toRequired": "Choisis le workflow d’arrivée",
+      "self": "Un workflow ne peut pas se lier à lui-même",
+      "label": "Libellé (affiché sur la flèche)",
+      "labelPlaceholder": "ex : envoie la facture validée",
+      "note": "Note (visible en vue tableau)",
+      "notePlaceholder": "Précision utile : condition, fréquence, contrainte d'ordre…"
+    },
+    "help": {
+      "title": "À quoi sert cette page et comment l'utiliser",
+      "intro": "Cette page ne montre <strong>que les workflows</strong> et la façon dont ils s'enchaînent — pas les bases ni les APIs (c'est le rôle de la page <strong>Dépendances</strong>). Elle répond à : « qui déclenche qui, et dans quel ordre ça tourne ? »",
+      "detected": {
+        "title": "Liens détectés automatiquement",
+        "execute": "<tagBlue>appelle</tagBlue> nœud <code>Execute Workflow</code> : le workflow en déclenche un autre comme sous-workflow.",
+        "tool": "<tagPurple>outil IA</tagPurple> sous-workflow branché comme outil sur un agent IA (nœud <code>Call n8n Workflow Tool</code>).",
+        "webhook": "<tagCyan>webhook</tagCyan> nœud <code>HTTP Request</code> qui tape l'URL de webhook d'un autre workflow (rapprochement fait sur le chemin du webhook).",
+        "context": "Quand l'appel ne part pas d'un flux ordinaire, la flèche annonce <strong>d'où il part</strong> plutôt que sa nature, suivi du nombre de nœuds de ce bout de workflow : <tag>boucle (3)</tag> le nœud appelant est dans une boucle, l'appel part une fois par tour ; <tag>manuel (2)</tag> son seul déclencheur est le bouton <code>Execute workflow</code> — c'est un bouton de test, pas un enchaînement de production (typiquement le nœud qui tape le webhook de son propre workflow, d'où les fausses récursions) ; <tag>sous-workflow (5)</tag> la branche n'est déclenchée que par un autre workflow, l'appel ne part que si le parent tourne.",
+        "recomputed": "La détection est <strong>recalculée à chaque ouverture</strong> à partir des workflows synchronisés : pas de bouton « reconstruire » ici. Un workflow modifié dans n8n apparaît dès qu'il a été resynchronisé depuis la page Workflows."
+      },
+      "manual": {
+        "title": "Liens manuels",
+        "body": "<tagMagenta>lien manuel</tagMagenta> ce que le JSON ne dira jamais : un workflow qui en déclenche un autre en passant par un outil tiers (Make, Zapier, un cron externe, une action humaine), deux workflows qui doivent tourner dans un ordre précis, ou une dépendance métier que tu veux garder écrite quelque part. Bouton <strong>« Ajouter un lien »</strong> → workflow de départ, workflow d'arrivée, libellé affiché sur la flèche, note. Ces liens sont stockés en base : <strong>ils survivent aux resynchros</strong> et suivent le workflow s'il est renommé."
+      },
+      "reading": {
+        "title": "Lire le schéma",
+        "lines": "Trait plein = lien détecté. Pointillés = lien que tu as posé toi-même.",
+        "frames": "Cadre bleu = workflow actif ; gris = workflow désactivé dans n8n ; gris pointillé = archivé.",
+        "triggers": "Sous le nom, la <strong>façon de démarrer</strong> : planifié, webhook, formulaire, chat, app (Telegram, Gmail…), erreur, sous-workflow — plusieurs si le workflow a plusieurs triggers, les triggers désactivés exclus. <strong>aucun trigger actif</strong> veut dire que plus rien ne peut le lancer. <strong>test manuel</strong> est affiché en dernier et ne compte pas dans la nature du workflow : un bouton « Execute workflow » sert à tester, pas à faire tourner — un workflow <em>sous-workflow · test manuel</em> reste un sous-workflow (cadre violet).",
+        "subWorkflow": "Cadre violet = <strong>sous-workflow</strong> : il ne tourne jamais seul, son seul déclencheur est <code>When Executed by Another Workflow</code>. S'il n'a aucune flèche entrante, plus personne ne l'appelle.",
+        "self": "Un workflow qui s'appelle <em>lui-même</em> en sous-workflow n'a pas de flèche qui revient sur sa boîte : la cible est dessinée à part, en <strong>violet pointillé « lui-même, en sous-workflow »</strong>. C'est bien la même fiche, relancée par la première — souvent une branche qui traite une liste et rappelle le workflow ligne par ligne (l'étiquette de la flèche dit alors <tag>boucle (n)</tag>).",
+        "archived": "<strong>Masquer les archivés</strong> (activé par défaut) — un workflow archivé dans n8n est masqué dans la liste n8n et ne tourne plus, mais son JSON contient toujours ses appels : sans ce filtre, il pollue le schéma avec des liens morts. Il reste affiché s'il est <em>appelé</em> par un workflow vivant, parce que c'est alors un vrai problème à corriger. Attention aux <strong>homonymes</strong> : quand un archivé et un vivant portent le même nom, le nom affiché est complété par l'instance ou l'id n8n.",
+        "entryPoints": "Pastille verte pointillée en amont = <strong>ce qui met le workflow en route</strong> et qui ne vient pas de la carte : l'URL publique quand il est appelable (webhook, formulaire, chat), sinon <em>planifié</em>, l'application tierce (Telegram, Gmail…), <em>erreur d'un workflow</em> ou <em>lancé à la main</em>. Une pastille par trigger : un workflow à la fois webhook et formulaire en a deux, il n'y a rien à départager. Un workflow appelé par un parent n'en a pas — c'est déjà une flèche. Ces pastilles ne comptent pas comme des liens : un workflow qui n'a que ça reste « isolé ». Interrupteur <strong>Points d'entrée</strong> pour les masquer.",
+        "outOfScope": "Cadre orange pointillé = <strong>cible hors périmètre</strong> : un workflow appelé qui n'est pas (ou plus) synchronisé, ou qui vit sur une autre instance. C'est souvent le signe d'un appel cassé — à vérifier.",
+        "isolated": "<strong>Masquer les isolés</strong> (activé par défaut) cache les workflows sans aucun lien. Décoche-le pour avoir l'inventaire complet."
+      },
+      "limits": {
+        "title": "Limites",
+        "expression": "Un <code>workflowId</code> construit par expression n'est pas résolvable : ce lien-là, il faut le poser à la main.",
+        "webhook": "Les appels webhook sont rapprochés par chemin, mais seulement si l'URL vise une instance connue de la plateforme. Un appel vers une autre installation n8n s'affiche avec son <strong>URL complète</strong>, en cible hors périmètre. Deux instances connues exposant le même chemin peuvent encore être confondues.",
+        "disabled": "Les nœuds désactivés sont ignorés.",
+        "scope": "Le sélecteur d'instance en haut de l'application restreint la carte à une seule instance ; les liens qui la quittent apparaissent alors comme hors périmètre."
+      }
+    }
+  },
+  "findings": {
+    "detail": {
+      "reanalyseFailed": "Analyse non relancée — {error}",
+      "loadFailed": "Findings non chargés",
+      "retry": "Réessayer",
+      "emptyLoadFailed": "Findings non chargés : voir le message ci-dessus.",
+      "emptyNone": "Aucun finding — lance une analyse.",
+      "emptyFiltered": "Tous les findings de ce workflow sont masqués par les filtres.",
+      "renameNodes": "Renommer les nœuds (suggestions IA)",
+      "documentZones": "Documenter les zones (sticky notes IA)",
+      "hidden": "{count, plural, one {# finding masqué par les filtres} other {# findings masqués par les filtres}}"
+    },
+    "page": {
+      "runPartial": "Analyse : {ok}/4 modules — {error}",
+      "runDone": "Analyse terminée",
+      "massPartial": "Vérification terminée sur {total} workflows — {failed} analyses en échec (ex. : {example})",
+      "massDone": "Vérification terminée sur {total} workflows",
+      "runAllHint": "Tous les contrôles sur chaque workflow affiché",
+      "runAllProgress": "Vérification… {done}/{total}",
+      "runAll": "Tout vérifier ({count})",
+      "refresh": "Rafraîchir",
+      "severity": "Sévérité",
+      "moduleFilter": "Module avec findings",
+      "env": "Env",
+      "unknownEnv": "inconnu",
+      "onlyWithFindings": "Uniquement avec findings",
+      "title": "Couverture d'analyse",
+      "searchPlaceholder": "Rechercher un workflow…",
+      "openInN8n": "Ouvrir dans n8n",
+      "neverAnalysed": "jamais analysé",
+      "moduleCount": "{module} · {count, plural, one {# finding} other {# findings}}",
+      "modulesOk": "{count, plural, one {# module OK} other {# modules OK}}",
+      "runHint": "Tous les contrôles, IA incluse",
+      "run": "Vérifier",
+      "columns": {
+        "workflow": "Workflow",
+        "instance": "Instance",
+        "env": "Env",
+        "findings": "Findings",
+        "modules": "Modules passés",
+        "lastCheck": "Dernière analyse"
+      }
+    }
+  },
+  "findingIgnores": {
+    "removed": "Règle supprimée — relance une analyse pour revoir le finding",
+    "title": "Findings ignorés",
+    "refresh": "Rafraîchir",
+    "module": "Module",
+    "empty": "Aucune règle",
+    "familyHint": "Le même workflow métier dans tous ses environnements déclarés",
+    "family": "{family} — tous env.",
+    "global": "tous les workflows",
+    "confirmTitle": "Ne plus ignorer ?",
+    "confirmDescription": "Le finding réapparaîtra à la prochaine analyse du workflow.",
+    "reactivate": "Réactiver",
+    "cancel": "Annuler",
+    "stopIgnoring": "Ne plus ignorer",
+    "columns": {
+      "module": "Module",
+      "rule": "Règle",
+      "message": "Remarque",
+      "scope": "Portée",
+      "node": "Nœud",
+      "reason": "Raison",
+      "since": "Depuis"
+    }
+  },
+  "testRuns": {
+    "filterWorkflow": "Filtrer par workflow",
+    "emptyTitle": "Aucun test lancé pour l'instant.",
+    "emptyHint": "Ouvre un workflow → onglet <b>Test</b> pour déclencher son webhook avec un payload.",
+    "payload": "Payload",
+    "result": "Résultat",
+    "columns": {
+      "workflow": "Workflow",
+      "instance": "Instance",
+      "mode": "Mode",
+      "status": "Statut",
+      "started": "Démarré"
+    }
+  }
+}

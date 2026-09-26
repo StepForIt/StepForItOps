@@ -85,7 +85,7 @@ export class WorkflowExportService {
       const { raw, workflow, missing } = await this.workflows.getFreshRawAny(id);
       return { raw, workflow, stale: missing };
     } catch (error) {
-      this.logger.warn(`Export ${id} : plateforme injoignable (${(error as Error).message}) — copie locale`);
+      this.logger.warn(`Export ${id}: platform unreachable (${(error as Error).message}) — local copy`);
       return { ...(await this.workflows.getRawAny(id)), stale: true };
     }
   }

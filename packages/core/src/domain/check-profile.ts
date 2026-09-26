@@ -13,18 +13,17 @@
  */
 
 import { normalizeDisabled } from './check-catalog';
+import { msg } from '../i18n/translate';
 
 /** Du plus précis au plus large. La famille couvre le workflow dans tous ses envs. */
 export type CheckScope = 'family' | 'group' | 'instance' | 'global';
 
 export const CHECK_SCOPES: CheckScope[] = ['family', 'group', 'instance', 'global'];
 
-export const CHECK_SCOPE_LABELS: Record<CheckScope, string> = {
-  family: 'ce workflow (tous ses environnements)',
-  group: 'ce groupe de workflows',
-  instance: 'cette instance n8n',
-  global: 'toute l’application',
-};
+/** Libellé d'un périmètre, dans la langue courante. */
+export function checkScopeLabel(scope: CheckScope): string {
+  return msg('checks.scopeLabel', { scope });
+}
 
 export interface CheckProfileLike {
   scope: CheckScope;
@@ -114,7 +113,7 @@ export function decideSaveScope(input: SaveDecisionInput): SaveDecision {
     return {
       action: 'auto',
       scope: 'global',
-      notice: 'Sélection enregistrée comme configuration par défaut de l’application.',
+      notice: msg('checks.savedAsAppDefault'),
     };
   }
 
@@ -122,27 +121,27 @@ export function decideSaveScope(input: SaveDecisionInput): SaveDecision {
     return {
       action: 'ask',
       suggested: 'group',
-      reason: `${twinFamilies.group + 1} workflows de ce groupe utiliseraient la même sélection.`,
+      reason: msg('checks.twinSelection', { scope: 'group', count: twinFamilies.group + 1 }),
     };
   }
   if (twinFamilies.instance > 0) {
     return {
       action: 'ask',
       suggested: 'instance',
-      reason: `${twinFamilies.instance + 1} workflows de cette instance utiliseraient la même sélection.`,
+      reason: msg('checks.twinSelection', { scope: 'instance', count: twinFamilies.instance + 1 }),
     };
   }
   if (twinFamilies.anywhere > 0) {
     return {
       action: 'ask',
       suggested: 'global',
-      reason: `${twinFamilies.anywhere + 1} workflows utiliseraient la même sélection.`,
+      reason: msg('checks.twinSelection', { scope: 'global', count: twinFamilies.anywhere + 1 }),
     };
   }
 
   return {
     action: 'auto',
     scope: 'family',
-    notice: 'Sélection enregistrée pour ce workflow (tous ses environnements).',
+    notice: msg('checks.savedForFamily'),
   };
 }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Collapse, Space, Tag, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 
 /** Résumé du raisonnement d'un tour, tel que l'API le rend. */
 export interface ThinkingStep {
@@ -48,12 +49,13 @@ export function ChatToolTrace({
   steps: ToolTraceStep[];
   thinking?: ThinkingStep[];
 }) {
+  const t = useTranslations('chat.toolTrace');
   if (steps.length === 0 && thinking.length === 0) return null;
   const failures = steps.filter((step) => step.failed).length;
   const severalRounds = new Set(thinking.map((step) => step.round)).size > 1;
   const label = [
-    thinking.length > 0 ? 'raisonnement' : '',
-    steps.length > 0 ? `${steps.length} outil${steps.length > 1 ? 's' : ''}` : '',
+    thinking.length > 0 ? t('thinking') : '',
+    steps.length > 0 ? t('tools', { count: steps.length }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -69,7 +71,7 @@ export function ChatToolTrace({
           label: (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               🔍 {label}
-              {failures > 0 && ` · ${failures} en échec`}
+              {failures > 0 && ` · ${t('failures', { count: failures })}`}
             </Typography.Text>
           ),
           children: (
@@ -77,10 +79,10 @@ export function ChatToolTrace({
               {thinking.map((step, index) => (
                 <div key={`thinking-${index}`}>
                   <Space size={6}>
-                    <Tag color="purple">raisonnement</Tag>
+                    <Tag color="purple">{t('thinking')}</Tag>
                     {severalRounds && (
                       <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                        tour {step.round + 1}
+                        {t('round', { round: step.round + 1 })}
                       </Typography.Text>
                     )}
                   </Space>
@@ -114,7 +116,7 @@ export function ChatToolTrace({
                     }}
                   >
                     {step.result.length > MAX_RESULT
-                      ? `${step.result.slice(0, MAX_RESULT)}\n[…] résultat tronqué à l'affichage`
+                      ? `${step.result.slice(0, MAX_RESULT)}\n${t('truncated')}`
                       : step.result}
                   </pre>
                 </div>

@@ -114,6 +114,18 @@ export interface N8nApiPort {
     instance: N8nInstanceConfig,
     refs: NodeTypeVersionRef[],
   ): Promise<N8nVersionedNodeType[]>;
+  /**
+   * Paquets communautaires installés, avec leur version (`GET /rest/community-packages`,
+   * même session). C'est la seule source de la version INSTALLÉE — celle dont le
+   * README fait foi. Réservé aux comptes propriétaire ou admin de n8n.
+   */
+  listCommunityPackages(instance: N8nInstanceConfig): Promise<N8nCommunityPackage[]>;
+}
+
+/** Un paquet communautaire tel que l'instance le déclare installé. */
+export interface N8nCommunityPackage {
+  packageName: string;
+  installedVersion?: string;
 }
 
 /** Un type de nœud tel qu'il est EMPLOYÉ : son nom et la version écrite dans le JSON. */

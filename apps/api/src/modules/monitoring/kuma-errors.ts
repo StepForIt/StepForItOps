@@ -1,4 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
+import { msg } from '@nwm/core';
 
 /** Colonne SQLite manquante dans le payload envoyé à Kuma (schéma qui a bougé entre versions). */
 const MISSING_COLUMN = /NOT NULL constraint failed: monitor\.(\w+)/;
@@ -12,11 +13,10 @@ const MAX_DETAIL = 300;
 export function kumaFailure(action: string, error: unknown): BadGatewayException {
   const detail = error instanceof Error ? error.message : String(error);
   const missing = MISSING_COLUMN.exec(detail)?.[1];
-  const hint = missing
-    ? ` — la colonne « ${missing} » est obligatoire dans cette version de Kuma et n'est pas envoyée : ` +
-      'compléter le payload de `KumaAdminAdapter.createPushProbe`.'
-    : '';
-  return new BadGatewayException(`Uptime Kuma — ${action} : ${detail.slice(0, MAX_DETAIL)}${hint}`);
+  const hint = missing ? msg('ops.kumaMissingColumnHint', { column: missing }) : '';
+  return new BadGatewayException(
+    msg('ops.kumaFailure', { action, detail: detail.slice(0, MAX_DETAIL), hint }),
+  );
 }
 
 /** Exécute un appel au port Kuma en traduisant toute erreur en 502 lisible. */

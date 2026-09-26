@@ -1,0 +1,54 @@
+{
+  "title": "StepForIt Ops",
+  "description": "Versioning, vérification et monitoring de workflows n8n et Make",
+  "menu": {
+    "workflows": "Workflows",
+    "versions": "Versions",
+    "workflowMap": "Carte workflows",
+    "findings": "Findings",
+    "testRuns": "Tests",
+    "monitors": "Monitoring",
+    "monitorsCreate": "Nouveau monitor",
+    "errors": "Erreurs",
+    "performance": "Performance",
+    "aiCost": "Coûts IA",
+    "modelAudit": "Modèles IA",
+    "resourceMappings": "Mappings env",
+    "resourceMappingsCreate": "Nouveau mapping env",
+    "procedures": "Procédures",
+    "resources": "Ressources externes",
+    "instances": "Instances",
+    "instancesCreate": "Nouvelle instance n8n",
+    "clients": "Clients",
+    "workflowGroups": "Groupes",
+    "workflowGroupsCreate": "Nouveau groupe de workflows",
+    "findingIgnores": "Findings ignorés",
+    "assistantLessons": "Leçons IA",
+    "notificationChannels": "Alertes",
+    "exportTargets": "Cibles export",
+    "exportTargetsCreate": "Nouvelle cible d'export",
+    "modules": "Modules",
+    "appLogs": "Logs",
+    "configTransfer": "Export / Import",
+    "help": "Aide"
+  },
+  "menuGroups": {
+    "quality": "Qualité",
+    "health": "Santé",
+    "environments": "Environnements",
+    "settings": "Paramètres"
+  },
+  "user": {
+    "logoutTooltip": "{email} — se déconnecter",
+    "logout": "Se déconnecter"
+  },
+  "language": {
+    "label": "Langue",
+    "fr": "Français",
+    "en": "English"
+  },
+  "middleware": {
+    "notConfigured": "Plateforme non configurée — passe par /setup.",
+    "sessionExpired": "Session expirée — reconnecte-toi."
+  }
+}

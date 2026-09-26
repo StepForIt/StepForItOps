@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PrismaListArgs } from '../../common/crud/paginate';
 
@@ -66,13 +67,13 @@ export class WorkflowGroupsService {
 
   async get(id: string): Promise<GroupRow> {
     const group = await this.prisma.workflowGroup.findUnique({ where: { id }, include: INCLUDE });
-    if (!group) throw new NotFoundException(`Groupe ${id} inconnu`);
+    if (!group) throw new NotFoundException(msg('platform.groupUnknown', { id }));
     return toRow(group);
   }
 
   async create(input: GroupInput): Promise<GroupRow> {
     if (!input.name?.trim() || !input.instanceId) {
-      throw new BadRequestException('name et instanceId sont requis');
+      throw new BadRequestException(msg('platform.groupNameInstanceRequired'));
     }
     const group = await this.prisma.workflowGroup.create({
       data: {

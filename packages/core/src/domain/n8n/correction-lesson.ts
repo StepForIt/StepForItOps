@@ -33,6 +33,7 @@
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { looksLikeExampleValue } from './placeholder-params';
 import { isStickyNote } from './workflow-graph';
+import { msg } from '../../i18n';
 
 /** Nature du changement, telle qu'on sait la lire sans rien demander. */
 export type CorrectionKind =
@@ -200,14 +201,12 @@ function verdictForValue(wrote: unknown, path: string): { verdict: CorrectionVer
   if (typeof wrote === 'string' && looksLikeExampleValue(wrote)) {
     return {
       verdict: 'ask',
-      reason:
-        `Valeur d'exemple posée par l'assistant en ${path}, remplacée à la main : ` +
-        'à confirmer comme erreur (une valeur inventée) plutôt que comme choix métier.',
+      reason: msg('learning.reasonExampleValue', { path }),
     };
   }
   return {
     verdict: 'ignore',
-    reason: `Changement de valeur en ${path} : un fait propre à ce workflow, pas une règle.`,
+    reason: msg('learning.reasonValueChange', { path }),
   };
 }
 
@@ -254,9 +253,7 @@ export function readCorrection(input: CorrectionInput): CorrectionReading {
         path: '',
         wrote: '(absent)',
         fixed: fixedNode.type,
-        reason:
-          `Nœud "${name}" (${fixedNode.type}) ajouté à la main après la proposition : ` +
-          "manquait-il à ce que l'assistant a proposé, ou est-ce autre chose ?",
+        reason: msg('learning.reasonNodeAdded', { name, type: fixedNode.type }),
       });
       continue;
     }
@@ -272,9 +269,7 @@ export function readCorrection(input: CorrectionInput): CorrectionReading {
           verdict: 'lesson',
           wrote: excerpt(leaf.wrote),
           fixed: excerpt(leaf.fixed),
-          reason:
-            `La FORME de ${leaf.path || 'parameters'} a été corrigée : ce que le schéma du ` +
-            "nœud déclare, l'assistant ne l'avait pas respecté.",
+          reason: msg('learning.reasonShapeFixed', { path: leaf.path || 'parameters' }),
         });
         continue;
       }
@@ -302,7 +297,7 @@ export function readCorrection(input: CorrectionInput): CorrectionReading {
         path: field,
         wrote: excerpt(wroteNode[field]),
         fixed: excerpt(fixedNode[field]),
-        reason: `Réglage "${field}" corrigé à la main sur "${name}".`,
+        reason: msg('learning.reasonSettingFixed', { field, name }),
       });
     }
   }
@@ -317,10 +312,8 @@ export function readCorrection(input: CorrectionInput): CorrectionReading {
       verdict: 'ask',
       path: '',
       wrote: wroteNode.type,
-      fixed: '(supprimé)',
-      reason:
-        `Nœud "${name}" (${wroteNode.type}) supprimé après la proposition : ` +
-        'était-il de trop, ou le besoin a-t-il changé ?',
+      fixed: msg('learning.valueRemoved'),
+      reason: msg('learning.reasonNodeRemoved', { name, type: wroteNode.type }),
     });
   }
 
@@ -331,11 +324,9 @@ export function readCorrection(input: CorrectionInput): CorrectionReading {
       kind: 'wiring',
       verdict: 'ask',
       path: 'connections',
-      wrote: '(câblage proposé)',
-      fixed: '(câblage corrigé)',
-      reason:
-        'Le câblage a été refait à la main sur des nœuds que la proposition touchait : ' +
-        "montage mal compris, ou changement d'avis ?",
+      wrote: msg('learning.wiringProposed'),
+      fixed: msg('learning.wiringFixed'),
+      reason: msg('learning.reasonWiringRedone'),
     });
   }
 
@@ -358,8 +349,5 @@ export function readCorrection(input: CorrectionInput): CorrectionReading {
 export function correctionQuestion(reading: CorrectionReading): string | null {
   const first = reading.questions[0];
   if (!first) return null;
-  const others = reading.questions.length - 1;
-  const tail =
-    others > 0 ? ` (${others} autre${others > 1 ? 's' : ''} point${others > 1 ? 's' : ''} non repris)` : '';
-  return `${first.reason}${tail}`;
+  return msg('learning.question', { reason: first.reason, others: reading.questions.length - 1 });
 }

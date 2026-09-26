@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
-import { N8N_API_PORT, N8nApiPort, buildBlankWorkflow } from '@nwm/core';
+import { N8N_API_PORT, N8nApiPort, buildBlankWorkflow, msg } from '@nwm/core';
 import { InstancesService } from '../instances/instances.service';
 import { WorkflowSyncService } from './workflow-sync.service';
 import { WorkflowWithEnv, WorkflowsService } from './workflows.service';
@@ -24,14 +24,14 @@ export class WorkflowCreateService {
 
   async create(instanceId: string, name: string): Promise<WorkflowWithEnv> {
     const trimmed = name?.trim();
-    if (!trimmed) throw new BadRequestException('Nom du workflow attendu');
+    if (!trimmed) throw new BadRequestException(msg('platform.workflowNameExpected'));
     const config = await this.instances.getConfig(instanceId);
 
     const created = await this.n8n.createWorkflow(config, buildBlankWorkflow(trimmed));
     // Le miroir local est alimenté par la réponse de n8n, jamais par ce qu'on a
     // envoyé : c'est elle qui porte l'id, et elle seule dit ce que n8n a retenu.
     const synced = await this.sync.upsertWorkflow(instanceId, created);
-    this.logger.log(`Workflow « ${trimmed} » créé sur l'instance ${instanceId} (n8n ${synced.externalId})`);
+    this.logger.log(`Workflow "${trimmed}" created on instance ${instanceId} (n8n ${synced.externalId})`);
     return this.workflows.get(synced.workflowId);
   }
 }

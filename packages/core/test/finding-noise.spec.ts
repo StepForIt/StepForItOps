@@ -30,6 +30,14 @@ describe('isNoisyAiFinding', () => {
     expect(isNoisyAiFinding('Le token est codé en dur', 'const t = "sk-live-9f2c"')).toBe(false);
   });
 
+  it('reconnaît les mêmes bruits dans une revue écrite en anglais', () => {
+    expect(isNoisyAiFinding('The Code node must return an array of items, not the expected format')).toBe(
+      true,
+    );
+    expect(isNoisyAiFinding('The product code is hard coded', '{ product: "[productId]" }')).toBe(true);
+    expect(isNoisyAiFinding('The token is hardcoded', 'const t = "sk-live-9f2c"')).toBe(false);
+  });
+
   it('garde une remarque ordinaire', () => {
     expect(isNoisyAiFinding('Aucune garde sur items[0] : erreur si input vide')).toBe(false);
   });

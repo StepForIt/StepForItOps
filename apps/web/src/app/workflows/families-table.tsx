@@ -4,6 +4,7 @@ import React from 'react';
 import { getDefaultSortOrder } from '@refinedev/antd';
 import { CrudFilters } from '@refinedev/core';
 import { Space, Tag, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { WorkflowActions } from './workflow-actions';
 import { WorkflowNameCell } from './workflow-name-cell';
@@ -37,6 +38,10 @@ export function WorkflowFamiliesTable({
   selection: WorkflowSelection;
   familySelection: FamilySelection;
 }) {
+  const t = useTranslations('workflowsList.shared');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const date = (value: string | null) => formatDate(value, locale);
   const envColor = useEnvColor();
   const { tableProps, sorters, syncing, refetch } = useWorkflowList<WorkflowFamily>({
     resource: 'workflows/families',
@@ -57,36 +62,39 @@ export function WorkflowFamiliesTable({
       }}
     >
       <Table.Column<WorkflowRow>
-        title="Nom"
+        title={tCommon('columns.name')}
         dataIndex="name"
         render={(_, record) => <WorkflowNameCell workflow={record} />}
       />
       <Table.Column
         dataIndex="env"
-        title="Env"
+        title={tCommon('columns.env')}
         render={(env: WorkflowRow['env']) => (env ? <Tag color={envColor(env)}>{env}</Tag> : <Tag>?</Tag>)}
       />
       <Table.Column
         dataIndex="divergence"
-        title="Écart prod"
+        title={t('columns.divergence')}
         render={(divergence: WorkflowRow['divergence'], row: WorkflowRow) => (
           <DivergenceTag workflowId={row.id} divergence={divergence} />
         )}
       />
       <Table.Column
         dataIndex="instanceId"
-        title="Instance"
-        render={(id: string) => <Tag color="geekblue">{instanceName(id)}</Tag>}
+        title={tCommon('columns.instance')}
+        render={(id: string) => <Tag color="blue">{instanceName(id)}</Tag>}
       />
       <Table.Column
         dataIndex="active"
-        title="Actif"
-        render={(active: boolean) => (active ? <Tag color="green">actif</Tag> : <Tag>inactif</Tag>)}
+        title={t('columns.active')}
+        render={(active: boolean) =>
+          active ? <Tag color="green">{t('active')}</Tag> : <Tag>{t('inactive')}</Tag>
+        }
       />
-      <Table.Column dataIndex="upstreamUpdatedAt" title="Modifié (n8n)" render={formatDate} />
-      <Table.Column dataIndex="updatedAt" title="Synchronisé" render={formatDate} />
+      <Table.Column dataIndex="upstreamUpdatedAt" title={t('columns.upstreamUpdated')} render={date} />
+      <Table.Column dataIndex="updatedAt" title={t('columns.synced')} render={date} />
       <Table.Column<WorkflowRow>
-        title="Actions"
+        key="actions"
+        title={tCommon('columns.actions')}
         className="row-actions"
         render={(_, record) => <WorkflowActions workflow={record} onChange={refetch} />}
       />
@@ -106,42 +114,46 @@ export function WorkflowFamiliesTable({
     >
       <Table.Column<WorkflowFamily>
         dataIndex="name"
-        title="Workflow"
+        title={tCommon('columns.workflow')}
         sorter
         defaultSortOrder={getDefaultSortOrder('name', sorters)}
         render={(name: string) => <Typography.Text strong>{name}</Typography.Text>}
       />
       <Table.Column<WorkflowFamily>
         dataIndex="envs"
-        title="Environnements"
+        title={t('columns.envs')}
         render={(_, record) => <FamilyEnvTags family={record} />}
       />
       <Table.Column<WorkflowFamily>
         key="deploy"
-        title="Écart prod"
+        title={t('columns.divergence')}
         render={(_, record) => <FamilyDivergence family={record} />}
       />
       <Table.Column<WorkflowFamily>
         dataIndex="memberCount"
-        title="Copies"
+        title={t('columns.copies')}
         sorter
         defaultSortOrder={getDefaultSortOrder('memberCount', sorters)}
         render={(_, record) => (
           <Space size={4}>
-            {record.missingCount > 0 && <Tag color="volcano">{record.missingCount} absent(s) de n8n</Tag>}
+            {record.missingCount > 0 && (
+              <Tag color="volcano">{t('missingCount', { count: record.missingCount })}</Tag>
+            )}
             {record.archivedCount > 0 && (
-              <Typography.Text type="secondary">{record.archivedCount} archivé(s)</Typography.Text>
+              <Typography.Text type="secondary">
+                {t('archivedCount', { count: record.archivedCount })}
+              </Typography.Text>
             )}
           </Space>
         )}
       />
       <Table.Column<WorkflowFamily>
         dataIndex="instanceIds"
-        title="Instances"
+        title={t('columns.instances')}
         render={(ids: string[]) => (
           <Space size={4} wrap>
             {ids.map((id) => (
-              <Tag key={id} color="geekblue">
+              <Tag key={id} color="blue">
                 {instanceName(id)}
               </Tag>
             ))}
@@ -150,17 +162,17 @@ export function WorkflowFamiliesTable({
       />
       <Table.Column
         dataIndex="upstreamUpdatedAt"
-        title="Modifié (n8n)"
+        title={t('columns.upstreamUpdated')}
         sorter
         defaultSortOrder={getDefaultSortOrder('upstreamUpdatedAt', sorters)}
-        render={formatDate}
+        render={date}
       />
       <Table.Column
         dataIndex="updatedAt"
-        title="Synchronisé"
+        title={t('columns.synced')}
         sorter
         defaultSortOrder={getDefaultSortOrder('updatedAt', sorters)}
-        render={formatDate}
+        render={date}
       />
     </Table>
   );

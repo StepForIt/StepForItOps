@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Modal, Tooltip, Typography } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { useInstallState } from '../lib/pwa-install';
@@ -16,6 +17,7 @@ const { Paragraph, Text } = Typography;
  * explique le geste au lieu de disparaître.
  */
 export function InstallAppButton({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations('shell.installApp');
   const state = useInstallState();
   const [iosOpen, setIosOpen] = React.useState(false);
 
@@ -27,7 +29,7 @@ export function InstallAppButton({ collapsed }: { collapsed: boolean }) {
   };
 
   const button = collapsed ? (
-    <Tooltip placement="right" title="Installer l'app">
+    <Tooltip placement="right" title={t('button')}>
       <div style={{ textAlign: 'center', padding: '8px 0' }}>
         <Button type="text" size="small" icon={<DownloadOutlined />} onClick={onClick} />
       </div>
@@ -41,7 +43,7 @@ export function InstallAppButton({ collapsed }: { collapsed: boolean }) {
         onClick={onClick}
         style={{ paddingLeft: 0 }}
       >
-        Installer l&apos;app
+        {t('button')}
       </Button>
     </div>
   );
@@ -53,17 +55,15 @@ export function InstallAppButton({ collapsed }: { collapsed: boolean }) {
         open={iosOpen}
         onCancel={() => setIosOpen(false)}
         onOk={() => setIosOpen(false)}
-        title="Installer sur l'écran d'accueil"
-        okText="Compris"
+        title={t('iosTitle')}
+        okText={t('iosOk')}
         cancelButtonProps={{ style: { display: 'none' } }}
       >
+        <Paragraph>{t('iosIntro')}</Paragraph>
         <Paragraph>
-          Safari ne propose pas l&apos;installation automatiquement : elle se fait en deux gestes.
-        </Paragraph>
-        <Paragraph>
-          1. Touche le bouton <Text strong>Partager</Text> de la barre du navigateur.
+          {t.rich('iosStep1', { b: (chunks) => <Text strong>{chunks}</Text> })}
           <br />
-          2. Choisis <Text strong>Sur l&apos;écran d&apos;accueil</Text>.
+          {t.rich('iosStep2', { b: (chunks) => <Text strong>{chunks}</Text> })}
         </Paragraph>
       </Modal>
     </>

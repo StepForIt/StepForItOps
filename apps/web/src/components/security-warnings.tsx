@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Alert } from 'antd';
 
 /**
@@ -10,13 +11,18 @@ import { Alert } from 'antd';
  * voit jamais, et en dev local elle rappelle que tout est ouvert.
  */
 
-const MESSAGES: Record<string, string> = {
-  'auth-open': "Accès sans authentification — créer l'admin via /setup.",
-  'api-open': 'API_ACCESS_TOKEN absent : API anonyme.',
-  'no-session-secret': 'SESSION_SECRET absent.',
-};
+const MESSAGES = {
+  'auth-open': 'authOpen',
+  'api-open': 'apiOpen',
+  'no-session-secret': 'noSessionSecret',
+} as const;
+
+function isKnown(code: string): code is keyof typeof MESSAGES {
+  return code in MESSAGES;
+}
 
 export function SecurityWarnings() {
+  const t = useTranslations('shell.securityWarnings');
   const [warnings, setWarnings] = useState<string[]>([]);
 
   useEffect(() => {
@@ -33,11 +39,11 @@ export function SecurityWarnings() {
       showIcon
       closable
       style={{ marginBottom: 16 }}
-      message="Configuration de sécurité incomplète"
+      message={t('title')}
       description={
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           {warnings.map((code) => (
-            <li key={code}>{MESSAGES[code] ?? code}</li>
+            <li key={code}>{isKnown(code) ? t(`codes.${MESSAGES[code]}`) : code}</li>
           ))}
         </ul>
       }

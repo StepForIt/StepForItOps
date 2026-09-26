@@ -3,6 +3,7 @@ import { WorkflowGraph, hasTrigger, isStickyNote } from './workflow-graph';
 import { RefReach, classifyRefReach } from './expression-reach';
 import { extractNodeRefs } from './expression-refs';
 import { activeParameters } from './inert-params';
+import { msg } from '../../i18n/translate';
 
 /**
  * Pourquoi une ref pose problème, dit dans les termes de l'exécution. La branche
@@ -10,11 +11,9 @@ import { activeParameters } from './inert-params';
  * signaler revenait à crier au « node not executed » sur un montage qui marche.
  */
 const REACH_PROBLEMS: Partial<Record<RefReach, (node: string, ref: string) => string>> = {
-  exclusive: (node, ref) =>
-    `"${node}" référence "${ref}", situé sur une branche exclusive du même IF/Switch (risque "node not executed")`,
-  downstream: (node, ref) => `"${node}" référence "${ref}", qui s'exécute APRÈS lui`,
-  unrelated: (node, ref) =>
-    `"${node}" référence "${ref}", qui dépend d'un autre trigger (jamais la même exécution)`,
+  exclusive: (node, ref) => msg('checks.refExclusiveBranch', { node, ref }),
+  downstream: (node, ref) => msg('checks.refDownstream', { node, ref }),
+  unrelated: (node, ref) => msg('checks.refOtherTrigger', { node, ref }),
 };
 
 /** Regroupe les refs identiques d'un même nœud (une ref citée à N chemins = 1 entrée). */
@@ -54,7 +53,7 @@ export function runStructuralChecks(workflow: N8nWorkflow): CheckFinding[] {
         findings.push({
           severity: 'error',
           code: 'expression-missing-node',
-          message: `"${node.name}" référence le nœud inexistant "${ref}"`,
+          message: msg('checks.refMissingNode', { node: node.name, ref }),
           nodeName: node.name,
           data: { path, ref },
         });
@@ -62,7 +61,7 @@ export function runStructuralChecks(workflow: N8nWorkflow): CheckFinding[] {
         findings.push({
           severity: 'warning',
           code: 'expression-disabled-node',
-          message: `"${node.name}" référence le nœud désactivé "${ref}"`,
+          message: msg('checks.refDisabledNode', { node: node.name, ref }),
           nodeName: node.name,
           data: { path, ref },
         });
@@ -89,7 +88,7 @@ export function runStructuralChecks(workflow: N8nWorkflow): CheckFinding[] {
       findings.push({
         severity: 'warning',
         code: 'orphan-node',
-        message: `Nœud "${orphan}" non connecté`,
+        message: msg('checks.orphanNode', { node: orphan }),
         nodeName: orphan,
       });
     }
@@ -100,7 +99,7 @@ export function runStructuralChecks(workflow: N8nWorkflow): CheckFinding[] {
     findings.push({
       severity: 'info',
       code: 'no-trigger',
-      message: 'Aucun nœud trigger détecté (workflow uniquement manuel ?)',
+      message: msg('checks.noTrigger'),
     });
   }
 

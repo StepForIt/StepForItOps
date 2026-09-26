@@ -110,15 +110,19 @@ export interface ModelPriceRow {
 }
 
 /** 0,0042 $ se lit mieux que 4.2e-3 ; au-delà du dollar, deux décimales suffisent. */
-export function formatUsd(value: number | null): string {
+export function formatUsd(value: number | null, locale: string): string {
   if (value === null) return '—';
   const digits = value >= 1 ? 2 : value >= 0.01 ? 3 : 4;
-  return `${value.toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits })} $`;
+  const amount = value.toLocaleString(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  return locale.startsWith('fr') ? `${amount} $` : `$${amount}`;
 }
 
 /** 1 234 / 45,6 k / 12,3 M : les tokens se comparent à l'ordre de grandeur. */
-export function formatTokens(value: number): string {
-  if (value < 10_000) return value.toLocaleString('fr-FR');
-  if (value < 1_000_000) return `${(value / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} k`;
-  return `${(value / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M`;
+export function formatTokens(value: number, locale: string): string {
+  if (value < 10_000) return value.toLocaleString(locale);
+  if (value < 1_000_000) return `${(value / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} k`;
+  return `${(value / 1_000_000).toLocaleString(locale, { maximumFractionDigits: 1 })} M`;
 }

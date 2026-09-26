@@ -115,7 +115,7 @@ const PROMPT_KEYS = new Set([
 /** Coupe les longues chaînes d'un arbre, en le disant sur place. */
 function truncateStrings(value: unknown, max: number): unknown {
   if (typeof value === 'string') {
-    return value.length > max ? `${value.slice(0, max)}… [coupé, ${value.length} caractères]` : value;
+    return value.length > max ? `${value.slice(0, max)}… [truncated, ${value.length} characters]` : value;
   }
   if (Array.isArray(value)) return value.map((item) => truncateStrings(item, max));
   if (value && typeof value === 'object') {
@@ -276,7 +276,7 @@ export function workflowSkeleton(workflow: ExampleWorkflow): WorkflowSkeleton {
       (edge) =>
         `${edge.from} → ${edge.to}` +
         (edge.outputType !== 'main' ? ` [${edge.outputType}]` : '') +
-        (edge.outputIndex > 0 ? ` (sortie ${edge.outputIndex})` : ''),
+        (edge.outputIndex > 0 ? ` (output ${edge.outputIndex})` : ''),
     ),
     orphans: graph.orphanNodes(),
   };

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button, Tooltip, Typography, theme } from 'antd';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 
 const { Text } = Typography;
 
@@ -17,6 +18,7 @@ interface SessionInfo {
  */
 export function UserMenuItem({ collapsed }: { collapsed: boolean }) {
   const { token } = theme.useToken();
+  const t = useTranslations('app.user');
   const [session, setSession] = React.useState<SessionInfo | null>(null);
 
   React.useEffect(() => {
@@ -36,7 +38,7 @@ export function UserMenuItem({ collapsed }: { collapsed: boolean }) {
 
   if (collapsed) {
     return (
-      <Tooltip placement="right" title={`${session.user.email} — se déconnecter`}>
+      <Tooltip placement="right" title={t('logoutTooltip', { email: session.user.email })}>
         <div style={{ textAlign: 'center', padding: '12px 0' }}>
           <Button type="text" size="small" icon={<LogoutOutlined />} onClick={logout} />
         </div>
@@ -54,7 +56,7 @@ export function UserMenuItem({ collapsed }: { collapsed: boolean }) {
         {session.user.email}
       </Text>
       <Button type="text" size="small" icon={<LogoutOutlined />} onClick={logout} style={{ paddingLeft: 0 }}>
-        Se déconnecter
+        {t('logout')}
       </Button>
     </div>
   );

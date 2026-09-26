@@ -89,7 +89,7 @@ export class ExecutionStatSamplerService {
             : await this.samplePlatformInstance(instance, cursor?.lastPolledAt ?? null);
       } catch (error) {
         // Instance en panne : le curseur n'a pas bougé, tout sera repris au retour.
-        this.logger.warn(`Poll perf KO pour ${instance.name} : ${(error as Error).message}`);
+        this.logger.warn(`Perf poll failed for ${instance.name}: ${(error as Error).message}`);
       }
     }
     return { instances: polled, inserted };
@@ -286,7 +286,7 @@ export class ExecutionStatSamplerService {
     const { count } = await this.prisma.executionStat.deleteMany({
       where: { startedAt: { lt: limit } },
     });
-    if (count > 0) this.logger.log(`Purge perf : ${count} exécution(s) de plus de ${RETENTION_DAYS} j`);
+    if (count > 0) this.logger.log(`Perf purge: ${count} execution(s) older than ${RETENTION_DAYS} d`);
     await this.purgeOutOfScope();
   }
 
@@ -306,6 +306,6 @@ export class ExecutionStatSamplerService {
     const { count } = await this.prisma.executionStat.deleteMany({
       where: { OR: outOfScope.map((w) => ({ instanceId: w.instanceId, externalWorkflowId: w.externalId })) },
     });
-    if (count > 0) this.logger.log(`Purge perf : ${count} exécution(s) hors env surveillé`);
+    if (count > 0) this.logger.log(`Perf purge: ${count} execution(s) outside monitored envs`);
   }
 }

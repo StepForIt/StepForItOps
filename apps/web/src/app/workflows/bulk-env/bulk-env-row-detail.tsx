@@ -3,6 +3,7 @@
 import React from 'react';
 import { Alert, Button, Checkbox, Space, Tag, Typography } from 'antd';
 import { CheckOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { SwitchedResources } from '../../../components/switched-resources';
 import { WorkflowDiffView } from '../../../components/workflow-diff-view';
 import { PromoteVersionCard } from '../show/[id]/promote-version-card';
@@ -27,19 +28,20 @@ export function BulkEnvRowDetail({
   /** Un lot est en cours d'écriture : on ne change pas une décision sous ses pieds. */
   locked: boolean;
 }) {
+  const t = useTranslations('workflowsList.bulkEnv.detail');
   if (row.plan.status === 'skipped')
     return <Typography.Text type="secondary">{row.plan.reason}</Typography.Text>;
   if (row.previewError) {
     return (
       <Space direction="vertical">
-        <Alert type="error" showIcon message="L’aperçu a échoué" description={row.previewError} />
+        <Alert type="error" showIcon message={t('previewFailed')} description={row.previewError} />
         <Button size="small" icon={<ReloadOutlined />} onClick={onRefresh} disabled={locked}>
-          Relancer l’aperçu
+          {t('retryPreview')}
         </Button>
       </Space>
     );
   }
-  if (!row.preview) return <Typography.Text type="secondary">Aperçu en cours…</Typography.Text>;
+  if (!row.preview) return <Typography.Text type="secondary">{t('previewLoading')}</Typography.Text>;
 
   const { readiness } = row.preview.data;
   const codes = readiness.decisions.map((decision) => decision.code);
@@ -48,7 +50,7 @@ export function BulkEnvRowDetail({
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       {readiness.status === 'blocked' && (
-        <Alert type="error" showIcon message={`Bloquée : ${readiness.reasons.join(' ; ')}`} />
+        <Alert type="error" showIcon message={t('blocked', { reasons: readiness.reasons.join(' ; ') })} />
       )}
 
       {/* Les décisions sont déjà en tag dans la colonne « À faire » : seul leur détail s'ajoute ici. */}
@@ -77,7 +79,7 @@ export function BulkEnvRowDetail({
       )}
       {row.preview.kind === 'duplicate' && (
         <div>
-          <Typography.Text>Copie « {row.preview.data.targetName} »</Typography.Text>
+          <Typography.Text>{t('duplicate', { name: row.preview.data.targetName })}</Typography.Text>
           <SwitchedResources
             switched={row.preview.data.switched}
             replacements={row.preview.data.replacements}
@@ -93,7 +95,7 @@ export function BulkEnvRowDetail({
               disabled={locked}
               onChange={(e) => onChoices({ force: e.target.checked, validated: false })}
             >
-              Forcer malgré les gates au rouge
+              {t('force')}
             </Checkbox>
           )}
           {codes.includes('confirm-skip') && (
@@ -102,12 +104,12 @@ export function BulkEnvRowDetail({
               disabled={locked}
               onChange={(e) => onChoices({ confirmSkip: e.target.checked, validated: false })}
             >
-              Sauter l’étape quand même
+              {t('confirmSkip')}
             </Checkbox>
           )}
           {row.choices.validated ? (
             <Button size="small" onClick={() => onChoices({ validated: false })} disabled={locked}>
-              Revenir sur la validation
+              {t('unvalidate')}
             </Button>
           ) : (
             <Button
@@ -115,14 +117,18 @@ export function BulkEnvRowDetail({
               type="primary"
               icon={<CheckOutlined />}
               disabled={missing.length > 0 || locked}
-              title={missing.length > 0 ? `D’abord : ${missing.join(', ')}` : undefined}
+              title={
+                missing.length > 0
+                  ? t('firstDo', { list: missing.map((check) => t(`missing.${check}`)).join(', ') })
+                  : undefined
+              }
               onClick={() => onChoices({ validated: true })}
             >
-              Valider cette ligne
+              {t('validate')}
             </Button>
           )}
           <Button size="small" icon={<ReloadOutlined />} onClick={onRefresh} disabled={locked}>
-            Relancer l’aperçu
+            {t('retryPreview')}
           </Button>
         </Space>
       )}
@@ -141,20 +147,23 @@ function PromoteDetail({
   onChoices: (choices: Partial<RowChoices>) => void;
   locked: boolean;
 }) {
+  const t = useTranslations('workflowsList.bulkEnv.detail');
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       <Typography.Text>
-        {preview.mode === 'update' ? 'Écrase' : 'Crée'} « {preview.targetName} » sur{' '}
-        {preview.targetInstanceName}
+        {t(preview.mode === 'update' ? 'promoteUpdate' : 'promoteCreate', {
+          name: preview.targetName,
+          instance: preview.targetInstanceName,
+        })}
         {preview.targetActive && (
           <Tag color="red" style={{ marginLeft: 8 }}>
-            cible active
+            {t('targetActive')}
           </Tag>
         )}
       </Typography.Text>
       {preview.cascade.length > 0 && (
         <Typography.Text type="secondary">
-          Créés d’abord : {preview.cascade.map((item) => item.targetName).join(', ')}
+          {t('cascade', { names: preview.cascade.map((item) => item.targetName).join(', ') })}
         </Typography.Text>
       )}
       <div style={{ pointerEvents: locked ? 'none' : undefined }}>

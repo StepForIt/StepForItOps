@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const RESOURCE_DISCOVERY_MANIFEST: ModuleManifest = {
   id: 'resource-discovery',
-  name: 'Découverte de ressources',
-  description: 'Liste les bases et tables réelles via n8n',
+  get name() {
+    return msg('platform.moduleResourceDiscoveryName');
+  },
+  get description() {
+    return msg('platform.moduleResourceDiscoveryDescription');
+  },
 };

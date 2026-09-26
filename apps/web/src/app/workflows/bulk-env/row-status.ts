@@ -3,13 +3,14 @@ import { ReviewRow } from './types';
 /** Où en est une ligne de la revue, du point de vue de l'humain qui la regarde. */
 export type RowStatus = 'skipped' | 'loading' | 'error' | 'blocked' | 'decide' | 'ready';
 
-export const STATUS_TAG: Record<RowStatus, { color: string; label: string }> = {
-  ready: { color: 'green', label: 'prête' },
-  decide: { color: 'orange', label: 'à décider' },
-  blocked: { color: 'red', label: 'bloquée' },
-  skipped: { color: 'default', label: 'ignorée' },
-  error: { color: 'volcano', label: 'aperçu en échec' },
-  loading: { color: 'processing', label: 'aperçu…' },
+/** Couleur du tag de statut ; le libellé se traduit au rendu (`bulkEnv.review.status.<statut>`). */
+export const STATUS_COLOR: Record<RowStatus, string> = {
+  ready: 'green',
+  decide: 'orange',
+  blocked: 'red',
+  skipped: 'default',
+  error: 'volcano',
+  loading: 'processing',
 };
 
 /** Une ligne « à décider » validée par l'humain devient prête : elle part avec les autres. */
@@ -23,12 +24,15 @@ export function rowStatus(row: ReviewRow): RowStatus {
   return 'ready';
 }
 
+/** Une case qu'une décision exige ; son libellé se traduit au rendu (`bulkEnv.detail.missing.<case>`). */
+export type MissingCheck = 'force' | 'confirmSkip';
+
 /** Les cases qu'une décision exige avant de pouvoir la valider — les autres ne demandent qu'un regard. */
-export function missingChecks(row: ReviewRow): string[] {
+export function missingChecks(row: ReviewRow): MissingCheck[] {
   const codes = row.preview?.data.readiness.decisions.map((decision) => decision.code) ?? [];
-  const missing: string[] = [];
-  if (codes.includes('force') && !row.choices.force) missing.push('forcer les gates au rouge');
-  if (codes.includes('confirm-skip') && !row.choices.confirmSkip) missing.push('confirmer le saut d’étape');
+  const missing: MissingCheck[] = [];
+  if (codes.includes('force') && !row.choices.force) missing.push('force');
+  if (codes.includes('confirm-skip') && !row.choices.confirmSkip) missing.push('confirmSkip');
   return missing;
 }
 

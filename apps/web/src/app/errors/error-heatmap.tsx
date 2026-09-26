@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { Empty } from 'antd';
+import { useTranslations } from 'next-intl';
 import { heatColor } from './error-chart-colors';
 import type { ErrorStats } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 const CELL = 15;
 const GAP = 3;
@@ -23,8 +25,9 @@ interface Props {
  * Sépare l'accident isolé (une case foncée) du workflow qui pisse le sang (une ligne entière).
  */
 export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
+  const t = useTranslations('health.errors');
   if (stats.total === 0) {
-    return <Empty description="Aucune erreur sur la période" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    return <Empty description={t('emptyPeriod')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   const workflows = stats.workflows.slice(0, MAX_ROWS);
@@ -40,7 +43,7 @@ export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <svg width={width} height={height} role="img" aria-label="Erreurs par workflow et par jour">
+      <svg width={width} height={height} role="img" aria-label={t('heatmap.ariaLabel')}>
         {stats.buckets.map((bucket, index) =>
           index % labelEvery === 0 ? (
             <text
@@ -49,7 +52,7 @@ export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
               y={12}
               textAnchor="middle"
               fontSize={10}
-              fill="#8c8c8c"
+              fill={BRAND.slate}
             >
               {bucket.date.slice(5)}
             </text>
@@ -66,13 +69,13 @@ export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
                 y={y + CELL - 3}
                 textAnchor="end"
                 fontSize={12}
-                fill={rowSelected ? '#1677ff' : '#434343'}
+                fill={rowSelected ? BRAND.primary : '#434343'}
                 fontWeight={rowSelected ? 600 : 400}
                 style={{ cursor: 'pointer' }}
                 onClick={() => onSelectCell(rowSelected ? null : workflow.externalWorkflowId, null)}
               >
                 {truncate(workflow.name, 30)}
-                <title>{`${workflow.name} — ${workflow.total} erreur(s) sur la période`}</title>
+                <title>{t('heatmap.rowTitle', { name: workflow.name, count: workflow.total })}</title>
               </text>
               {stats.buckets.map((bucket, column) => {
                 const count = bucket.byWorkflow[workflow.externalWorkflowId] ?? 0;
@@ -92,7 +95,7 @@ export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
                     style={{ cursor: count > 0 ? 'pointer' : 'default' }}
                     onClick={() => count > 0 && onSelectCell(workflow.externalWorkflowId, bucket.date)}
                   >
-                    <title>{`${workflow.name}\n${bucket.date} — ${count} erreur(s)`}</title>
+                    <title>{t('heatmap.cellTitle', { name: workflow.name, date: bucket.date, count })}</title>
                   </rect>
                 );
               })}
@@ -101,8 +104,8 @@ export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
         })}
       </svg>
       {stats.workflows.length > MAX_ROWS && (
-        <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 8 }}>
-          +{stats.workflows.length - MAX_ROWS} workflow(s), dans le tableau.
+        <div style={{ color: BRAND.slate, fontSize: 12, marginTop: 8 }}>
+          {t('heatmap.moreWorkflows', { count: stats.workflows.length - MAX_ROWS })}
         </div>
       )}
     </div>

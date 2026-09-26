@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Select, Tooltip, theme } from 'antd';
 import { ApiOutlined } from '@ant-design/icons';
 import { useInstanceScope } from '../lib/instance-scope';
@@ -12,10 +13,14 @@ import { useInstanceScope } from '../lib/instance-scope';
 export function InstanceScopeMenuItem({ collapsed }: { collapsed: boolean }) {
   const { token } = theme.useToken();
   const { scope, setScope, instances, instanceName } = useInstanceScope();
+  const t = useTranslations('shell.instanceScope');
 
   if (collapsed) {
     return (
-      <Tooltip placement="right" title={`Instance : ${scope ? instanceName(scope) : 'toutes'}`}>
+      <Tooltip
+        placement="right"
+        title={scope ? t('tooltipOne', { name: instanceName(scope) }) : t('tooltipAll')}
+      >
         <div style={{ textAlign: 'center', padding: '12px 0' }}>
           <ApiOutlined style={{ color: scope ? token.colorPrimary : token.colorTextSecondary }} />
         </div>
@@ -35,7 +40,7 @@ export function InstanceScopeMenuItem({ collapsed }: { collapsed: boolean }) {
         value={scope ?? 'all'}
         onChange={(value) => setScope(value === 'all' ? null : value)}
         options={[
-          { value: 'all', label: 'Toutes les instances' },
+          { value: 'all', label: t('all') },
           ...instances.map((instance) => ({ value: instance.id, label: instance.name })),
         ]}
       />

@@ -58,18 +58,18 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env.API_PORT ?? 3001);
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`API démarrée sur http://localhost:${port}`);
+  console.log(`API listening on http://localhost:${port}`);
   if (isSentryEnabled()) {
     // eslint-disable-next-line no-console
-    console.log('Sentry actif (erreurs remontées vers SENTRY_DSN).');
+    console.log('Sentry enabled (errors reported to SENTRY_DSN).');
   }
   if (!process.env.API_ACCESS_TOKEN) {
     // Fail-open assumé en dev local, mais jamais silencieux : sur un serveur,
     // une API joignable sans jeton expose toute la plateforme anonymement.
     // eslint-disable-next-line no-console
     console.warn(
-      '⚠️  API_ACCESS_TOKEN absent : l’API accepte tous les appels sans authentification. ' +
-        'À poser impérativement dès que ce port est joignable au-delà de la machine locale.',
+      '⚠️  API_ACCESS_TOKEN is not set: the API accepts every call without authentication. ' +
+        'Set it as soon as this port is reachable beyond the local machine.',
     );
   }
 }

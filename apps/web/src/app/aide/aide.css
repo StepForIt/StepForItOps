@@ -3,21 +3,22 @@
  * à l'échelle de son cadre. Une boucle de 7 s commune : apparitions hp-a1→a5, curseur à deux clics.
  */
 .hp-root {
-  --hp-accent: #1677ff;
-  --hp-accent-soft: #e6f4ff;
-  --hp-txt: rgba(0, 0, 0, 0.88);
+  --hp-accent: #047a76; /* lagon 700 de la charte (brand/colors.ts) */
+  --hp-accent-soft: #e6f6f5;
+  --hp-txt: #06182d;
   --hp-muted: rgba(0, 0, 0, 0.45);
   --hp-line: #f0f0f0;
-  --hp-line-2: #d9d9d9;
+  --hp-line-2: #dde4ea;
   --hp-panel: #fff;
-  --hp-bg: #f5f7fa;
-  --hp-ok: #389e0d;
-  --hp-ok-soft: #f6ffed;
-  --hp-warn: #d46b08;
-  --hp-warn-soft: #fff7e6;
-  --hp-danger: #cf1322;
-  --hp-danger-soft: #fff1f0;
+  --hp-bg: #f4f6f8;
+  --hp-ok: #12865a;
+  --hp-ok-soft: #f4f6f8;
+  --hp-warn: #9a6200;
+  --hp-warn-soft: #f4f6f8;
+  --hp-danger: #c8363b;
+  --hp-danger-soft: #f4f6f8;
   --hp-dur: 7s;
+  /* Mêmes teintes que la console (lib/brand/colors.ts) : l'aide rejoue ses écrans. */
 }
 
 /* ── Page ── */
@@ -256,13 +257,13 @@
   background: var(--hp-line-2);
 }
 .hp-dot.green {
-  background: #52c41a;
+  background: #12865a;
 }
 .hp-dot.red {
-  background: #ff4d4f;
+  background: #c8363b;
 }
 .hp-dot.orange {
-  background: #fa8c16;
+  background: #f5b301;
 }
 .hp-panel {
   position: absolute;

@@ -52,9 +52,9 @@ describe('findPastedWorkflows', () => {
 describe('pastedWorkflowBrief', () => {
   it('nomme chaque nœud collé et rappelle qu’aucun ne se perd', () => {
     const brief = pastedWorkflowBrief(findPastedWorkflows(FRAGMENT));
-    expect(brief).toContain('« Route » (n8n-nodes-base.if v2)');
+    expect(brief).toContain('"Route" (n8n-nodes-base.if v2)');
     expect(brief).toContain('Analyze image → Route');
-    expect(brief).toContain('données épinglées');
+    expect(brief).toContain('pinned data');
   });
 
   it('ne dit rien quand rien n’a été collé', () => {

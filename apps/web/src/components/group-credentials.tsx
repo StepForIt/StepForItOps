@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Empty, List, Select, Space, Spin, Tag, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
 
 interface CredentialUsage {
@@ -20,6 +21,7 @@ interface HarvestedCredential {
 
 /** Credentials utilisés par les workflows d'un groupe, avec le détail workflow → nœuds. */
 export function GroupCredentials({ groupId }: { groupId: string }) {
+  const t = useTranslations('settings.groupCredentials');
   const [credentials, setCredentials] = useState<HarvestedCredential[] | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>();
 
@@ -32,7 +34,7 @@ export function GroupCredentials({ groupId }: { groupId: string }) {
 
   if (credentials === null) return <Spin />;
   if (credentials.length === 0) {
-    return <Empty description="Aucun credential dans les workflows de ce groupe" />;
+    return <Empty description={t('empty')} />;
   }
 
   const types = [...new Set(credentials.map((c) => c.type))].sort();
@@ -42,11 +44,11 @@ export function GroupCredentials({ groupId }: { groupId: string }) {
     <Space direction="vertical" style={{ width: '100%' }} size="small">
       <Select
         allowClear
-        placeholder="Filtrer par type"
+        placeholder={t('filterByType')}
         style={{ minWidth: 240 }}
         value={typeFilter}
         onChange={setTypeFilter}
-        options={types.map((t) => ({ value: t, label: t }))}
+        options={types.map((type) => ({ value: type, label: type }))}
       />
       <List
         size="small"
@@ -59,7 +61,7 @@ export function GroupCredentials({ groupId }: { groupId: string }) {
                   <Tag>{credential.type}</Tag>
                   {credential.name ?? credential.id}
                   <Typography.Text type="secondary">
-                    {credential.usedBy} nœud{credential.usedBy > 1 ? 's' : ''}
+                    {t('nodes', { count: credential.usedBy })}
                   </Typography.Text>
                 </Space>
               }

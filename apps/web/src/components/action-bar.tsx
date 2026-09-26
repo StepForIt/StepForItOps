@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
 import { useIsMobile } from './mobile/use-is-mobile';
@@ -36,6 +37,7 @@ export function ActionBar({
   collapse?: 'mobile' | 'always';
 }) {
   const mobile = useIsMobile();
+  const t = useTranslations('shell.actionBar');
   const collapsed = collapse === 'always' || mobile;
   if (!collapsed) {
     return (
@@ -74,7 +76,7 @@ export function ActionBar({
           onClick: ({ key }) => actions.find((action) => action.key === key)?.onClick(),
         }}
       >
-        <Button icon={<MoreOutlined />} aria-label="Autres actions" />
+        <Button icon={<MoreOutlined />} aria-label={t('more')} />
       </Dropdown>
     </Space>
   );

@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { DEFAULT_ENVS, EnvDefinition, findEnv } from '../env';
 import { envWebhookPath } from './webhook-paths';
 import { EnvName } from '../env';
@@ -86,7 +87,7 @@ export function findPathConflicts(
       standoffs.push({
         path,
         workflows: entries.map((e) => e.holder.name),
-        reason: 'aucun exemplaire en env d’URL publique ni actif : impossible de savoir lequel garde l’URL',
+        reason: msg('env.pathNoKeeper'),
       });
       continue;
     }
@@ -98,8 +99,7 @@ export function findPathConflicts(
       standoffs.push({
         path,
         workflows: idOnly.map((e) => e.holder.name),
-        reason:
-          'URL tirée de l’identifiant du nœud, que n8n ne laisse pas modifier : recrée le nœud dans la copie',
+        reason: msg('env.pathIdOnly'),
       });
     }
     // Un formulaire servi par son uuid se suffixe comme un path : `<uuid>-dev`.
@@ -113,7 +113,7 @@ export function findPathConflicts(
       standoffs.push({
         path,
         workflows: undecidable.map((p) => p.entry.holder.name),
-        reason: 'env indéterminé : nomme le workflow « - DEV » ou pose son tag env:*',
+        reason: msg('env.pathEnvUnknown'),
       });
     }
     // Deux copies du même env retomberaient sur le même path : on ne déplace rien
@@ -126,7 +126,7 @@ export function findPathConflicts(
         standoffs.push({
           path,
           workflows: decided.filter((d) => d.to === p.to).map((d) => d.entry.holder.name),
-          reason: `plusieurs copies viseraient /${p.to} : donne-leur des paths distincts à la main`,
+          reason: msg('env.pathSameTarget', { path: p.to }),
         });
         break;
       }

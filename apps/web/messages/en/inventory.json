@@ -1,0 +1,432 @@
+{
+  "versions": {
+    "page": {
+      "exportDone": "{exported, plural, one {# version exported} other {# versions exported}}",
+      "exportPartial": "{done} — {failed, plural, one {# failure} other {# failures}}",
+      "nothingMovedFailed": "Nothing moved — {failed, plural, one {# failure} other {# failures}}",
+      "nothingToMove": "Nothing to move",
+      "movedTitle": "{count, plural, one {# file moved} other {# files moved}}",
+      "movedFailed": "{count, plural, one {# failure} other {# failures}} — see the API logs",
+      "forceExport": "Force re-export",
+      "cleanup": "Clean up a target's duplicates…",
+      "sweepScoped": "Move this instance's archived workflows",
+      "sweepAll": "Move archived workflows (all instances)",
+      "exportAll": "Export all",
+      "filterWorkflow": "Filter by workflow",
+      "grouped": "Grouped by env",
+      "flat": "By n8n workflow",
+      "nothingToExport": "Nothing to export"
+    },
+    "actions": {
+      "compare": "Compare",
+      "export": "Export",
+      "restore": "Restore"
+    },
+    "columns": {
+      "workflow": "Workflow",
+      "instance": "Instance",
+      "hash": "Hash",
+      "origin": "Origin",
+      "lastVersion": "Latest version",
+      "versions": "Versions",
+      "exported": "Exported",
+      "actions": "Actions",
+      "version": "Version",
+      "message": "Message",
+      "created": "Created",
+      "env": "Env",
+      "envs": "Environments"
+    },
+    "table": {
+      "previous": "Previous: {date}",
+      "setByPromotion": "Set by a promotion",
+      "declarable": "Can be declared from the Environments button",
+      "noEnv": "{count} without env",
+      "neverExported": "{notExported}/{total} never exported"
+    },
+    "cleanup": {
+      "status": {
+        "duplicate": "duplicate",
+        "pending": "to re-export",
+        "unknown": "unknown workflow"
+      },
+      "title": "Clean up a target's duplicates",
+      "close": "Close",
+      "delete": "Delete {count, plural, one {# duplicate} other {# duplicates}}",
+      "deleted": "{count, plural, one {# file deleted} other {# files deleted}}",
+      "selectTarget": "Choose an export target",
+      "analyse": "Analyze",
+      "analyseFailed": "Analysis failed",
+      "deletable": "<b>{count}</b> deletable {count, plural, one {duplicate} other {duplicates}}",
+      "pendingTitle": "Run “Re-export all” first",
+      "pendingDescription": "These files use the old format and their up-to-date version doesn't exist in the target yet: deleting them now would lose the backup.",
+      "columns": {
+        "state": "State",
+        "file": "File",
+        "workflow": "Workflow",
+        "why": "Why"
+      }
+    },
+    "restore": {
+      "items": {
+        "n8n": "nodes",
+        "make": "modules"
+      },
+      "itemsTitle": {
+        "n8n": "Nodes",
+        "make": "Modules"
+      },
+      "nodeList": "{label} ({count}):",
+      "more": "+{count} more",
+      "title": "Restore this version",
+      "titleTo": "Restore this version to {platform}",
+      "ok": "Restore — overwrite in {platform}",
+      "close": "Close",
+      "cancel": "Cancel",
+      "identical": "Identical: no effect.",
+      "overwrite": "Overwrites “{name}” on {instance}. {platform} changes since {date} will be lost.",
+      "restoredVersion": "Restored version",
+      "newerVersions": "Newer versions",
+      "bypassed": "{count} skipped",
+      "unchanged": "— {items} unchanged",
+      "differs": "; differs: {list}",
+      "connections": "connections",
+      "settings": "settings",
+      "added": "Added",
+      "removed": "Removed",
+      "modified": "Modified",
+      "alsoChanged": "Also changed: {list}.",
+      "rename": "Rename",
+      "renameTag": "“{from}” → “{to}”",
+      "active": "Active on {platform}: the restored version will run on the next trigger.",
+      "notesTitle": "Before you restore",
+      "archived": "Archived in n8n: the restore will fail. Unarchive it first.",
+      "done": "Version restored to {platform}",
+      "failed": "Restore failed"
+    },
+    "diff": {
+      "title": "Changes to “{name}”",
+      "titleLoading": "Comparison",
+      "version": "Version",
+      "comparedTo": "Compared with",
+      "noPrevious": "no earlier version",
+      "noChange": "No visible difference",
+      "rename": "Renamed: “{before}” → “{after}”"
+    },
+    "export": {
+      "title": "Export this version",
+      "close": "Close",
+      "ok": "Export",
+      "cancel": "Cancel",
+      "workflow": "Workflow",
+      "version": "Version",
+      "file": "File written",
+      "size": "{size} KB",
+      "alreadyExported": "Already exported",
+      "noTarget": "No active export target",
+      "noTargetDescription": "Set up a GitHub or Google Drive target in “Export targets” before exporting.",
+      "targetsTitle": "Targets that will receive the file",
+      "movedFrom": "Moved from <code>{from}</code> (the old file is deleted)",
+      "noCredentials": "Without credentials",
+      "exportedTo": "Exported to: {list}",
+      "noneAccepted": "No target accepted the export",
+      "checkTargets": "Check the targets' credentials and permissions in “Export targets”.",
+      "failed": "Export failed"
+    }
+  },
+  "resources": {
+    "page": {
+      "impact": {
+        "toUpdate": "To update",
+        "unknown": "To check",
+        "noAction": "No action"
+      },
+      "access": {
+        "read": "read",
+        "write": "write",
+        "delete": "delete",
+        "other": "other"
+      },
+      "option": "{item} — {nodes, plural, one {# node} other {# nodes}} · {workflows, plural, one {# workflow} other {# workflows}}",
+      "renamed": "Name updated",
+      "aliasRemoved": "Name removed",
+      "columns": {
+        "impact": "Impact",
+        "workflow": "Workflow",
+        "node": "Node",
+        "access": "Direction",
+        "fields": "Fixed fields",
+        "method": "Method",
+        "route": "Route called"
+      },
+      "matching": "Matched on {list}",
+      "requiredNotMapped": "required but not mapped: {list}",
+      "disabled": "disabled",
+      "dynamicTableHint": "The table is set by an expression: this node may target another table at run time.",
+      "dynamicTable": "dynamic table",
+      "fieldCount": "{count, plural, one {# field} other {# fields}}",
+      "title": "External resources",
+      "selectPlaceholder": "Choose a resource (system, base, table, host, id…)",
+      "rename": "Rename",
+      "columnPlaceholder": "Added column (optional)",
+      "namesHint": "Reads table names from NocoDB",
+      "pickInstance": "Pick an instance in the left menu",
+      "namesButton": "Real names (NocoDB)",
+      "hideCopies": "Hides DEV/PREPROD copies",
+      "prodOnly": "Prod only",
+      "columnExists": "Column already exists.",
+      "toUpdateCount": "{count, plural, one {# node to update} other {# nodes to update}}",
+      "routesTitle": "Routes called · {nodes, plural, one {# node} other {# nodes}} · {routes, plural, one {# route} other {# routes}}",
+      "nodeCount": "{count, plural, one {# node} other {# nodes}}",
+      "all": "All ({count})",
+      "impactCount": "{label} ({count})",
+      "empty": "Choose a resource to see the nodes that use it",
+      "renameTitle": "Name the resource",
+      "save": "Save",
+      "cancel": "Cancel",
+      "labelPlaceholder": "E.g. NocoDB · CRM contacts",
+      "emptyAuto": "Empty = automatic name."
+    },
+    "nocodb": {
+      "title": "Find the real names (NocoDB)",
+      "close": "Close",
+      "run": "Run discovery",
+      "intro": "URL of each NocoDB instance (the token stays in n8n).",
+      "noNodes": "No NocoDB node in this instance's workflows.",
+      "missingHost": "host missing",
+      "counts": "{nodes, plural, one {# node} other {# nodes}} · {bases, plural, one {# base} other {# bases}}",
+      "hostPlaceholder": "https://nocodb.example.com",
+      "save": "Save",
+      "saved": "Host saved",
+      "seenIn": "Seen in your workflows:",
+      "hint": "{workflow} / {node} calls {url}",
+      "aWorkflow": "a workflow",
+      "aNode": "a node",
+      "resolved": "{count, plural, one {# name found} other {# names found}}",
+      "ignored": "Credentials skipped for lack of a host",
+      "failedOnBase": "Failed on base {base}",
+      "failedListing": "Failed to list bases"
+    }
+  },
+  "workflowMap": {
+    "page": {
+      "kinds": {
+        "execute": "calls",
+        "tool": "AI tool",
+        "webhook": "webhook",
+        "manual": "manual link"
+      },
+      "triggers": {
+        "schedule": "scheduled",
+        "webhook": "webhook",
+        "form": "form",
+        "chat": "chat",
+        "app": "app",
+        "error": "error",
+        "subWorkflow": "sub-workflow",
+        "manual": "manual test"
+      },
+      "contexts": {
+        "loop": "loop",
+        "manual": "manual",
+        "subWorkflow": "sub-workflow"
+      },
+      "contextHints": {
+        "loop": "The calling node is inside a loop: the call fires once per iteration.",
+        "manual": "The calling node is in a part of the workflow whose only trigger is the “Execute workflow” button: nothing fires without a click in the editor.",
+        "subWorkflow": "The calling node is in a branch triggered by another workflow: the call only fires if the parent runs."
+      },
+      "contextLabel": "{context} ({count})",
+      "contextTooltip": "{hint} This part of the workflow has {count, plural, one {# node} other {# nodes}}.",
+      "noTrigger": "no active trigger",
+      "openWorkflow": "Open the workflow",
+      "selfCall": "itself, as a sub-workflow",
+      "outOfScope": "out of scope",
+      "startsWith": "Starts with: {triggers}",
+      "linkUpdated": "Link updated",
+      "linkAdded": "Link added",
+      "linkDeleted": "Link deleted",
+      "title": "Workflow map",
+      "intro": "How workflows chain together: what the platform detects on its own in the n8n JSON (called sub-workflow, sub-workflow plugged into an AI agent, HTTP call to another workflow's webhook) and the links you add by hand for sequences the JSON doesn't show.",
+      "filterPlaceholder": "Filter by workflow name",
+      "hideIsolatedHint": "Hides workflows that have no link shown.",
+      "hideIsolated": "Hide isolated",
+      "entryPointsHint": "Adds in front of each workflow what starts it: the public URL if it's callable (webhook, form, chat), otherwise “scheduled”, the third-party app, or a manual start. A workflow called by a parent has none — that's already an arrow. These pills don't count as links: they don't stop a workflow from being “isolated”.",
+      "entryPoints": "Entry points",
+      "monitoredHint": "Shows only envs declared “monitored” (prod, by default): the other copies of the same business workflow have the same call graph and doubled the map. A workflow whose environment is unknown stays visible.",
+      "monitored": "Monitored envs",
+      "hideArchivedHint": "Workflows archived in n8n (hidden from its list) no longer run: their outgoing calls are removed from the diagram. They stay visible if a live workflow calls them — that's then a dead call to fix.",
+      "hideArchived": "Hide archived",
+      "viewGraph": "graph",
+      "viewTable": "table",
+      "refresh": "Refresh",
+      "addLink": "Add a link",
+      "counts": {
+        "live": "{count, plural, one {# live workflow} other {# live workflows}}",
+        "archived": "{count, plural, one {# archived} other {# archived}}",
+        "hidden": "{count, plural, one {# hidden (not monitored)} other {# hidden (not monitored)}}",
+        "detected": "{count, plural, one {# detected link} other {# detected links}}",
+        "manual": "{count, plural, one {# manual link} other {# manual links}}"
+      },
+      "noWorkflow": "No workflows",
+      "noWorkflowDescription": "Sync an instance from the Workflows page: the map is built from the workflows already synced.",
+      "nothingToShow": "Nothing to show with these filters",
+      "nothingToShowDescription": "No link matches. Uncheck “Hide isolated” to see all workflows, or add a manual link.",
+      "graphTitle": "Diagram ({nodes, plural, one {# workflow} other {# workflows}}, {links, plural, one {# link} other {# links}})",
+      "tooMany": "Too many workflows for a readable diagram — filter by name, or switch to table view.",
+      "clickHint": "Click a workflow in the diagram to open its page. Out-of-scope targets (orange frame) don't have one.",
+      "linksTitle": "Links ({count})",
+      "columns": {
+        "workflow": "Workflow",
+        "relation": "Relation",
+        "to": "To",
+        "detectedOn": "Detected on",
+        "from": "From",
+        "label": "Label",
+        "note": "Note"
+      },
+      "manualTitle": "Manual links ({count})",
+      "manualIntro": "Use them whenever a sequence can't be read from the JSON: a hop through a third-party tool, workflows triggered by the same data, an execution order to respect.",
+      "noManual": "No manual links yet",
+      "noManualDescription": "Click “Add a link” to connect two workflows yourself.",
+      "editHint": "Edit the label and note",
+      "deleteConfirm": "Delete this link?",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "linkModal": {
+      "editTitle": "Edit the link",
+      "addTitle": "Add a link between two workflows",
+      "save": "Save",
+      "add": "Add",
+      "cancel": "Cancel",
+      "intro": "A manual link describes a sequence the JSON doesn't show: <tag>A</tag> triggers <tag>B</tag> through a third-party tool, or must run before it.",
+      "from": "Source workflow",
+      "fromRequired": "Choose the source workflow",
+      "to": "Target workflow",
+      "toRequired": "Choose the target workflow",
+      "self": "A workflow can't link to itself",
+      "label": "Label (shown on the arrow)",
+      "labelPlaceholder": "e.g. sends the approved invoice",
+      "note": "Note (visible in table view)",
+      "notePlaceholder": "Useful detail: condition, frequency, ordering constraint…"
+    },
+    "help": {
+      "title": "What this page is for and how to use it",
+      "intro": "This page shows <strong>only workflows</strong> and how they chain together — not bases or APIs (that's the job of the <strong>Dependencies</strong> page). It answers: “who triggers whom, and in what order does it run?”",
+      "detected": {
+        "title": "Automatically detected links",
+        "execute": "<tagBlue>calls</tagBlue> <code>Execute Workflow</code> node: the workflow triggers another one as a sub-workflow.",
+        "tool": "<tagPurple>AI tool</tagPurple> sub-workflow plugged in as a tool on an AI agent (<code>Call n8n Workflow Tool</code> node).",
+        "webhook": "<tagCyan>webhook</tagCyan> <code>HTTP Request</code> node that hits another workflow's webhook URL (matched on the webhook path).",
+        "context": "When the call doesn't come from a regular flow, the arrow says <strong>where it comes from</strong> rather than what it is, followed by the number of nodes in that part of the workflow: <tag>loop (3)</tag> the calling node is inside a loop, the call fires once per iteration; <tag>manual (2)</tag> its only trigger is the <code>Execute workflow</code> button — it's a test button, not a production sequence (typically the node that hits its own workflow's webhook, hence the false recursions); <tag>sub-workflow (5)</tag> the branch is only triggered by another workflow, the call only fires if the parent runs.",
+        "recomputed": "Detection is <strong>recomputed every time the page opens</strong> from the synced workflows: there's no “rebuild” button here. A workflow changed in n8n shows up as soon as it has been resynced from the Workflows page."
+      },
+      "manual": {
+        "title": "Manual links",
+        "body": "<tagMagenta>manual link</tagMagenta> what the JSON will never tell: a workflow that triggers another through a third-party tool (Make, Zapier, an external cron, a human action), two workflows that must run in a precise order, or a business dependency you want written down somewhere. <strong>“Add a link”</strong> button → source workflow, target workflow, label shown on the arrow, note. These links are stored in the database: <strong>they survive resyncs</strong> and follow the workflow if it's renamed."
+      },
+      "reading": {
+        "title": "Reading the diagram",
+        "lines": "Solid line = detected link. Dotted = link you added yourself.",
+        "frames": "Blue frame = active workflow; grey = workflow disabled in n8n; dotted grey = archived.",
+        "triggers": "Under the name, <strong>how it starts</strong>: scheduled, webhook, form, chat, app (Telegram, Gmail…), error, sub-workflow — several if the workflow has several triggers, disabled triggers excluded. <strong>no active trigger</strong> means nothing can start it anymore. <strong>manual test</strong> is shown last and doesn't count toward the workflow's nature: an “Execute workflow” button is for testing, not for running — a <em>sub-workflow · manual test</em> workflow is still a sub-workflow (purple frame).",
+        "subWorkflow": "Purple frame = <strong>sub-workflow</strong>: it never runs on its own, its only trigger is <code>When Executed by Another Workflow</code>. If it has no incoming arrow, nothing calls it anymore.",
+        "self": "A workflow that calls <em>itself</em> as a sub-workflow has no arrow looping back to its box: the target is drawn separately, in <strong>dotted purple “itself, as a sub-workflow”</strong>. It's the same workflow, restarted by the first one — often a branch that processes a list and calls the workflow back row by row (the arrow label then reads <tag>loop (n)</tag>).",
+        "archived": "<strong>Hide archived</strong> (on by default) — a workflow archived in n8n is hidden from the n8n list and no longer runs, but its JSON still contains its calls: without this filter, it clutters the diagram with dead links. It stays visible if it's <em>called</em> by a live workflow, because that's then a real problem to fix. Watch out for <strong>namesakes</strong>: when an archived and a live workflow share a name, the displayed name is completed with the instance or the n8n id.",
+        "entryPoints": "Dotted green pill upstream = <strong>what starts the workflow</strong> that doesn't come from the map: the public URL when it's callable (webhook, form, chat), otherwise <em>scheduled</em>, the third-party app (Telegram, Gmail…), <em>a workflow's error</em> or <em>started by hand</em>. One pill per trigger: a workflow that is both webhook and form has two, there's nothing to pick between. A workflow called by a parent has none — that's already an arrow. These pills don't count as links: a workflow that only has those stays “isolated”. <strong>Entry points</strong> toggle to hide them.",
+        "outOfScope": "Dotted orange frame = <strong>out-of-scope target</strong>: a called workflow that isn't (or no longer) synced, or that lives on another instance. It's often the sign of a broken call — worth checking.",
+        "isolated": "<strong>Hide isolated</strong> (on by default) hides workflows with no link at all. Uncheck it to get the full inventory."
+      },
+      "limits": {
+        "title": "Limitations",
+        "expression": "A <code>workflowId</code> built by an expression can't be resolved: that link has to be added by hand.",
+        "webhook": "Webhook calls are matched by path, but only if the URL targets an instance the platform knows. A call to another n8n installation is shown with its <strong>full URL</strong>, as an out-of-scope target. Two known instances exposing the same path can still be confused.",
+        "disabled": "Disabled nodes are ignored.",
+        "scope": "The instance selector at the top of the app restricts the map to a single instance; links leaving it then show as out of scope."
+      }
+    }
+  },
+  "findings": {
+    "detail": {
+      "reanalyseFailed": "Analysis not rerun — {error}",
+      "loadFailed": "Findings not loaded",
+      "retry": "Retry",
+      "emptyLoadFailed": "Findings not loaded: see the message above.",
+      "emptyNone": "No findings — run an analysis.",
+      "emptyFiltered": "All of this workflow's findings are hidden by the filters.",
+      "renameNodes": "Rename nodes (AI suggestions)",
+      "documentZones": "Document areas (AI sticky notes)",
+      "hidden": "{count, plural, one {# finding hidden by the filters} other {# findings hidden by the filters}}"
+    },
+    "page": {
+      "runPartial": "Analysis: {ok}/4 modules — {error}",
+      "runDone": "Analysis complete",
+      "massPartial": "Check complete on {total} workflows — {failed} analyses failed (e.g. {example})",
+      "massDone": "Check complete on {total} workflows",
+      "runAllHint": "All checks on every workflow shown",
+      "runAllProgress": "Checking… {done}/{total}",
+      "runAll": "Check all ({count})",
+      "refresh": "Refresh",
+      "severity": "Severity",
+      "moduleFilter": "Module with findings",
+      "env": "Env",
+      "unknownEnv": "unknown",
+      "onlyWithFindings": "Only with findings",
+      "title": "Analysis coverage",
+      "searchPlaceholder": "Search a workflow…",
+      "openInN8n": "Open in n8n",
+      "neverAnalysed": "never analyzed",
+      "moduleCount": "{module} · {count, plural, one {# finding} other {# findings}}",
+      "modulesOk": "{count, plural, one {# module OK} other {# modules OK}}",
+      "runHint": "All checks, AI included",
+      "run": "Check",
+      "columns": {
+        "workflow": "Workflow",
+        "instance": "Instance",
+        "env": "Env",
+        "findings": "Findings",
+        "modules": "Modules run",
+        "lastCheck": "Last analysis"
+      }
+    }
+  },
+  "findingIgnores": {
+    "removed": "Rule deleted — run an analysis to see the finding again",
+    "title": "Ignored findings",
+    "refresh": "Refresh",
+    "module": "Module",
+    "empty": "No rules",
+    "familyHint": "The same business workflow in all its declared environments",
+    "family": "{family} — all envs",
+    "global": "all workflows",
+    "confirmTitle": "Stop ignoring?",
+    "confirmDescription": "The finding will reappear at the workflow's next analysis.",
+    "reactivate": "Reactivate",
+    "cancel": "Cancel",
+    "stopIgnoring": "Stop ignoring",
+    "columns": {
+      "module": "Module",
+      "rule": "Rule",
+      "message": "Remark",
+      "scope": "Scope",
+      "node": "Node",
+      "reason": "Reason",
+      "since": "Since"
+    }
+  },
+  "testRuns": {
+    "filterWorkflow": "Filter by workflow",
+    "emptyTitle": "No tests run yet.",
+    "emptyHint": "Open a workflow → <b>Test</b> tab to trigger its webhook with a payload.",
+    "payload": "Payload",
+    "result": "Result",
+    "columns": {
+      "workflow": "Workflow",
+      "instance": "Instance",
+      "mode": "Mode",
+      "status": "Status",
+      "started": "Started"
+    }
+  }
+}

@@ -16,6 +16,7 @@ import {
   Tooltip,
   message,
 } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { BellOutlined, DeleteOutlined, EditOutlined, SendOutlined } from '@ant-design/icons';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
@@ -47,10 +48,8 @@ interface ChannelForm {
   onModelLifecycle: boolean;
 }
 
-const TYPE_LABELS: Record<Channel['type'], string> = {
-  slack: 'Slack (incoming webhook)',
-  webhook: 'Webhook (POST JSON)',
-};
+// Libellé : `misc.notificationChannels.types.<type>`.
+const TYPES: Channel['type'][] = ['slack', 'webhook'];
 
 /**
  * Canaux d'alerte : où partent les « nouveau problème » et « problème revenu ».
@@ -58,6 +57,8 @@ const TYPE_LABELS: Record<Channel['type'], string> = {
  * reste vide en édition et ne remplace l'existante que s'il est ressaisi.
  */
 export default function NotificationChannelsPage() {
+  const t = useTranslations('misc.notificationChannels');
+  const tc = useTranslations('common');
   const [rows, setRows] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Channel | null | 'new'>(null);
@@ -103,7 +104,7 @@ export default function NotificationChannelsPage() {
       const payload = { ...values, url: values.url?.trim() || undefined };
       if (editing === 'new') await apiPost('/notification-channels', payload);
       else if (editing) await apiPatch(`/notification-channels/${editing.id}`, payload);
-      message.success('Canal enregistré');
+      message.success(t('toast.saved'));
       setEditing(null);
       load();
     } catch (error) {
@@ -117,7 +118,7 @@ export default function NotificationChannelsPage() {
     setTesting(channel.id);
     try {
       await apiPost(`/notification-channels/${channel.id}/test`);
-      message.success(`Message d'essai envoyé sur « ${channel.name} »`);
+      message.success(t('toast.tested', { name: channel.name }));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -128,7 +129,7 @@ export default function NotificationChannelsPage() {
   const remove = async (channel: Channel) => {
     try {
       await apiDelete(`/notification-channels/${channel.id}`);
-      message.success('Canal supprimé');
+      message.success(t('toast.deleted'));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -137,59 +138,56 @@ export default function NotificationChannelsPage() {
 
   return (
     <Card
-      title="Canaux d'alerte"
+      title={t('title')}
       extra={
         <Button type="primary" icon={<BellOutlined />} onClick={() => open('new')}>
-          Ajouter un canal
+          {t('add')}
         </Button>
       }
     >
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="Quand un problème apparaît (nouveau groupe d'erreurs) ou revient après avoir été traité, chaque canal actif reçoit une alerte. Les imports d'historique n'alertent jamais."
-      />
+      <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('intro')} />
       <Table dataSource={rows} rowKey="id" loading={loading} size="small" pagination={false}>
-        <Table.Column dataIndex="name" title="Nom" />
+        <Table.Column dataIndex="name" title={t('fields.name')} />
         <Table.Column
           dataIndex="type"
-          title="Type"
-          render={(type: Channel['type']) => <Tag>{TYPE_LABELS[type]}</Tag>}
+          title={t('fields.type')}
+          render={(type: Channel['type']) => <Tag>{t(`types.${type}`)}</Tag>}
         />
         <Table.Column
           dataIndex="urlHint"
           title="URL"
           render={(hint: string) => (
-            <Tooltip title="L'URL complète n'est jamais renvoyée (secret)">
+            <Tooltip title={t('urlHidden')}>
               <code>{hint}</code>
             </Tooltip>
           )}
         />
         <Table.Column<Channel>
-          title="Alertes"
+          title={t('fields.alerts')}
           render={(_, record) => (
             <Space size={4}>
-              {record.onNewGroup && <Tag color="blue">nouveau problème</Tag>}
-              {record.onRegression && <Tag color="volcano">rechute</Tag>}
-              {record.onPerfDrift && <Tag color="orange">dérive de durée</Tag>}
-              {record.onBudget && <Tag color="gold">budget IA</Tag>}
-              {record.onRelayBroken && <Tag color="red">surveillance muette</Tag>}
-              {record.onModelLifecycle && <Tag color="purple">modèle déprécié</Tag>}
+              {record.onNewGroup && <Tag color="blue">{t('tags.newGroup')}</Tag>}
+              {record.onRegression && <Tag color="volcano">{t('tags.regression')}</Tag>}
+              {record.onPerfDrift && <Tag color="orange">{t('tags.perfDrift')}</Tag>}
+              {record.onBudget && <Tag color="gold">{t('tags.budget')}</Tag>}
+              {record.onRelayBroken && <Tag color="red">{t('tags.relayBroken')}</Tag>}
+              {record.onModelLifecycle && <Tag color="purple">{t('tags.modelLifecycle')}</Tag>}
             </Space>
           )}
         />
         <Table.Column<Channel>
           dataIndex="enabled"
-          title="Actif"
-          render={(enabled: boolean) => (enabled ? <Tag color="green">actif</Tag> : <Tag>coupé</Tag>)}
+          title={t('fields.enabled')}
+          render={(enabled: boolean) =>
+            enabled ? <Tag color="green">{t('tags.on')}</Tag> : <Tag>{t('tags.off')}</Tag>
+          }
         />
         <Table.Column<Channel>
           title=""
           width={150}
           render={(_, record) => (
             <Space>
-              <Tooltip title="Envoyer un message d'essai">
+              <Tooltip title={t('sendTest')}>
                 <Button
                   size="small"
                   icon={<SendOutlined />}
@@ -197,8 +195,13 @@ export default function NotificationChannelsPage() {
                   onClick={() => test(record)}
                 />
               </Tooltip>
-              <Button size="small" icon={<EditOutlined />} onClick={() => open(record)} />
-              <Popconfirm title="Supprimer ce canal ?" onConfirm={() => remove(record)}>
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => open(record)}
+                aria-label={tc('edit')}
+              />
+              <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record)}>
                 <Button size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
             </Space>
@@ -207,62 +210,62 @@ export default function NotificationChannelsPage() {
       </Table>
 
       <Modal
-        title={editing === 'new' ? 'Nouveau canal' : 'Modifier le canal'}
+        title={editing === 'new' ? t('modal.new') : t('modal.edit')}
         open={editing !== null}
         onOk={save}
         confirmLoading={saving}
         onCancel={() => setEditing(null)}
-        okText="Enregistrer"
+        okText={tc('save')}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Nom" rules={[{ required: true, message: 'Un nom' }]}>
+          <Form.Item
+            name="name"
+            label={t('fields.name')}
+            rules={[{ required: true, message: t('modal.nameRequired') }]}
+          >
             <Input placeholder="Slack #ops" />
           </Form.Item>
-          <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-            <Select options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} />
+          <Form.Item name="type" label={t('fields.type')} rules={[{ required: true }]}>
+            <Select options={TYPES.map((value) => ({ value, label: t(`types.${value}`) }))} />
           </Form.Item>
           <Form.Item
             name="url"
             label="URL"
-            rules={editing === 'new' ? [{ required: true, message: "L'URL du webhook" }] : []}
-            extra={
-              editing !== 'new'
-                ? 'Laisser vide pour conserver l’URL actuelle (elle n’est jamais réaffichée).'
-                : 'Slack : Incoming Webhook (https://hooks.slack.com/…). Webhook : n’importe quelle URL qui accepte un POST JSON.'
-            }
+            rules={editing === 'new' ? [{ required: true, message: t('modal.urlRequired') }] : []}
+            extra={editing !== 'new' ? t('modal.urlKeep') : t('modal.urlHelp')}
           >
             <Input placeholder="https://hooks.slack.com/services/…" />
           </Form.Item>
           <Space size="large">
-            <Form.Item name="onNewGroup" label="Nouveau problème" valuePropName="checked">
+            <Form.Item name="onNewGroup" label={t('modal.onNewGroup')} valuePropName="checked">
               <Switch />
             </Form.Item>
-            <Form.Item name="onRegression" label="Rechute" valuePropName="checked">
+            <Form.Item name="onRegression" label={t('modal.onRegression')} valuePropName="checked">
               <Switch />
             </Form.Item>
-            <Form.Item name="onPerfDrift" label="Dérive de durée" valuePropName="checked">
+            <Form.Item name="onPerfDrift" label={t('modal.onPerfDrift')} valuePropName="checked">
               <Switch />
             </Form.Item>
-            <Form.Item name="onBudget" label="Budget IA dépassé" valuePropName="checked">
+            <Form.Item name="onBudget" label={t('modal.onBudget')} valuePropName="checked">
               <Switch />
             </Form.Item>
             <Form.Item
               name="onRelayBroken"
-              label="Surveillance muette"
+              label={t('modal.onRelayBroken')}
               valuePropName="checked"
-              tooltip="Le push vers la sonde Uptime Kuma échoue : plus rien ne signalerait l'arrêt de ce monitor."
+              tooltip={t('modal.onRelayBrokenHelp')}
             >
               <Switch />
             </Form.Item>
             <Form.Item
               name="onModelLifecycle"
-              label="Modèle déprécié ou retiré"
-              tooltip="Un modèle appelé par un workflow du parc n'est plus servi par son provider."
+              label={t('modal.onModelLifecycle')}
+              tooltip={t('modal.onModelLifecycleHelp')}
               valuePropName="checked"
             >
               <Switch />
             </Form.Item>
-            <Form.Item name="enabled" label="Actif" valuePropName="checked">
+            <Form.Item name="enabled" label={t('fields.enabled')} valuePropName="checked">
               <Switch />
             </Form.Item>
           </Space>

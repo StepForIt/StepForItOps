@@ -11,6 +11,7 @@ import {
   previewDeepReplace,
   remapSubWorkflowRefs,
   withEnvSuffix,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
@@ -183,11 +184,10 @@ export class GroupDuplicatorService {
       );
       if (doubles.length > 0) {
         throw new BadRequestException(
-          `${doubles.length} copie(s) portent déjà le nom cible (${doubles
-            .map((member) => withEnvSuffix(member.name, targetEnv, envs))
-            .join(
-              ', ',
-            )}) : dupliquer en créerait une seconde. Coche « dupliquer quand même » pour passer outre.`,
+          msg('env.groupDoubles', {
+            count: doubles.length,
+            names: doubles.map((member) => withEnvSuffix(member.name, targetEnv, envs)).join(', '),
+          }),
         );
       }
     }
@@ -247,12 +247,12 @@ export class GroupDuplicatorService {
       });
       targetGroupId = target.id;
     } catch (error) {
-      this.logger.warn(`Groupe cible "${targetGroupName}" KO : ${(error as Error).message}`);
+      this.logger.warn(`Target group "${targetGroupName}" failed: ${(error as Error).message}`);
     }
 
     const rewiredTotal = copies.reduce((sum, copy) => sum + copy.rewired, 0);
     this.logger.log(
-      `Groupe "${group.name}" dupliqué vers ${targetEnv} : ${copies.length} copies, ${rewiredTotal} référence(s) interne(s) re-câblée(s)`,
+      `Group "${group.name}" duplicated to ${targetEnv}: ${copies.length} copies, ${rewiredTotal} internal reference(s) rewired`,
     );
     return {
       groupId: group.id,
@@ -274,8 +274,8 @@ export class GroupDuplicatorService {
         },
       },
     });
-    if (!group) throw new NotFoundException(`Groupe ${groupId} inconnu`);
-    if (group.workflows.length === 0) throw new BadRequestException('Le groupe ne contient aucun workflow');
+    if (!group) throw new NotFoundException(msg('env.groupUnknown', { id: groupId }));
+    if (group.workflows.length === 0) throw new BadRequestException(msg('env.groupEmpty'));
     return group;
   }
 }

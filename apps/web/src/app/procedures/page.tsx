@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { DeleteButton, List } from '@refinedev/antd';
+import { useTranslations } from 'next-intl';
 import { useTable } from '../../lib/list-memory/use-list-memory';
 import { App, Button, Form, Input, InputRef, Modal, Select, Space, Typography } from 'antd';
 import { CopyOutlined, EyeOutlined, PlayCircleOutlined } from '@ant-design/icons';
@@ -12,6 +13,8 @@ import { apiPost } from '../../lib/api';
 import { EnvDefinition, useEnvs, useEnvOptions } from '../../lib/envs';
 
 export default function ProceduresPage() {
+  const t = useTranslations('misc.procedures');
+  const tc = useTranslations('common');
   const recorder = useReleaseRecorder();
   const { tableProps, tableQuery } = useTable<Procedure>({
     resource: 'release-procedures',
@@ -31,27 +34,27 @@ export default function ProceduresPage() {
 
   return (
     <List
-      title="Procédures"
+      title={t('title')}
       headerButtons={
         <Button type="primary" danger={!recording} disabled={recording} onClick={() => setNaming(true)}>
-          {recording ? 'Enregistrement en cours' : '● Enregistrer'}
+          {recording ? t('recordingInProgress') : t('record')}
         </Button>
       }
     >
       <Table {...tableProps} rowKey="id" pagination={false}>
-        <Table.Column<Procedure> dataIndex="name" title="Nom" />
+        <Table.Column<Procedure> dataIndex="name" title={t('name')} />
         <Table.Column<Procedure>
-          title="Étapes"
+          title={t('steps')}
           render={(_, row) => {
             const manual = row.steps.filter((step) => step.kind === 'manual').length;
-            return `${row.steps.length}${manual ? ` · ${manual} manuelles` : ''}`;
+            return manual ? t('stepsWithManual', { count: row.steps.length, manual }) : row.steps.length;
           }}
         />
         <Table.Column<Procedure>
-          title="Enregistrée"
+          title={t('recorded')}
           render={(_, row) =>
             row.status === 'recording' ? (
-              <Typography.Text type="danger">en cours</Typography.Text>
+              <Typography.Text type="danger">{t('inProgress')}</Typography.Text>
             ) : row.sourceEnv && row.targetEnv ? (
               `${row.sourceEnv.toUpperCase()} → ${row.targetEnv.toUpperCase()}`
             ) : (
@@ -69,22 +72,22 @@ export default function ProceduresPage() {
                 disabled={recording || row.status === 'recording' || row.steps.length === 0}
                 onClick={() => setReplaying(row)}
               >
-                Rejouer
+                {t('replay')}
               </Button>
               <Button
                 size="small"
                 icon={<CopyOutlined />}
                 disabled={row.status === 'recording' || !row.sourceEnv || !row.targetEnv}
                 onClick={() => setCopying(row)}
-                aria-label="Dupliquer vers…"
-                title="Dupliquer vers…"
+                aria-label={t('duplicateTo')}
+                title={t('duplicateTo')}
               />
               <Button
                 size="small"
                 icon={<EyeOutlined />}
                 disabled={recording}
                 onClick={() => recorder.open(row.id)}
-                aria-label="Voir"
+                aria-label={tc('see')}
               />
               <DeleteButton
                 size="small"
@@ -111,6 +114,7 @@ export default function ProceduresPage() {
 }
 
 function StartModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations('misc.procedures');
   const recorder = useReleaseRecorder();
   const [form] = Form.useForm<{ name: string }>();
   const [loading, setLoading] = useState(false);
@@ -131,8 +135,8 @@ function StartModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Modal
       open={open}
-      title="Enregistrer une procédure"
-      okText="Démarrer"
+      title={t('start.title')}
+      okText={t('start.ok')}
       onOk={form.submit}
       onCancel={onClose}
       confirmLoading={loading}
@@ -140,8 +144,12 @@ function StartModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       destroyOnClose
     >
       <Form form={form} layout="vertical" onFinish={submit}>
-        <Form.Item name="name" label="Nom" rules={[{ required: true, message: 'Donne-lui un nom' }]}>
-          <Input ref={input} placeholder="Release de septembre" onPressEnter={form.submit} />
+        <Form.Item
+          name="name"
+          label={t('name')}
+          rules={[{ required: true, message: t('start.nameRequired') }]}
+        >
+          <Input ref={input} placeholder={t('start.placeholder')} onPressEnter={form.submit} />
         </Form.Item>
       </Form>
     </Modal>
@@ -166,6 +174,7 @@ function defaultHop(procedure: Procedure, envs: EnvDefinition[]): { source?: str
 
 /** Rejouer, par défaut, un cran plus loin (cf. `defaultHop`). */
 function ReplayModal({ procedure, onClose }: { procedure: Procedure | null; onClose: () => void }) {
+  const t = useTranslations('misc.procedures');
   const recorder = useReleaseRecorder();
   const { envs } = useEnvs();
   const options = useEnvOptions();
@@ -188,17 +197,15 @@ function ReplayModal({ procedure, onClose }: { procedure: Procedure | null; onCl
   return (
     <Modal
       open={procedure !== null}
-      title={procedure ? `Rejouer « ${procedure.name} »` : ''}
-      okText="Ouvrir"
+      title={procedure ? t('replayModal.title', { name: procedure.name }) : ''}
+      okText={t('replayModal.ok')}
       okButtonProps={{ disabled: !source || !target || source === target }}
       onOk={ok}
       onCancel={onClose}
       destroyOnClose
     >
       {procedure && (!procedure.sourceEnv || !procedure.targetEnv) ? (
-        <Typography.Text type="warning">
-          Aucune promotion enregistrée : les envs ne seront pas décalés.
-        </Typography.Text>
+        <Typography.Text type="warning">{t('replayModal.noHop')}</Typography.Text>
       ) : null}
       <Space style={{ marginTop: 8 }}>
         <Select
@@ -206,7 +213,7 @@ function ReplayModal({ procedure, onClose }: { procedure: Procedure | null; onCl
           value={source}
           onChange={setSource}
           options={options}
-          aria-label="Depuis"
+          aria-label={t('from')}
         />
         →
         <Select
@@ -214,7 +221,7 @@ function ReplayModal({ procedure, onClose }: { procedure: Procedure | null; onCl
           value={target}
           onChange={setTarget}
           options={options}
-          aria-label="Vers"
+          aria-label={t('to')}
         />
       </Space>
     </Modal>
@@ -231,6 +238,7 @@ function DuplicateModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useTranslations('misc.procedures');
   const { message } = App.useApp();
   const { envs } = useEnvs();
   const options = useEnvOptions();
@@ -259,7 +267,7 @@ function DuplicateModal({
         targetEnv: target,
         name: name.trim() || undefined,
       });
-      message.success(`« ${copy.name} » créée`);
+      message.success(t('duplicateModal.created', { name: copy.name }));
       onDone();
     } catch (error) {
       message.error((error as Error).message);
@@ -271,8 +279,8 @@ function DuplicateModal({
   return (
     <Modal
       open={procedure !== null}
-      title={procedure ? `Dupliquer « ${procedure.name} »` : ''}
-      okText="Dupliquer"
+      title={procedure ? t('duplicateModal.title', { name: procedure.name }) : ''}
+      okText={t('duplicateModal.ok')}
       okButtonProps={{ disabled: !source || !target || source === target || same }}
       confirmLoading={loading}
       onOk={ok}
@@ -286,7 +294,7 @@ function DuplicateModal({
             value={source}
             onChange={setSource}
             options={options}
-            aria-label="Depuis"
+            aria-label={t('from')}
           />
           →
           <Select
@@ -294,16 +302,16 @@ function DuplicateModal({
             value={target}
             onChange={setTarget}
             options={options}
-            aria-label="Vers"
+            aria-label={t('to')}
           />
         </Space>
         <Input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder={procedure && hop ? `${procedure.name} (${hop})` : 'Nom'}
-          aria-label="Nom"
+          placeholder={procedure && hop ? `${procedure.name} (${hop})` : t('name')}
+          aria-label={t('name')}
         />
-        {same ? <Typography.Text type="secondary">Même saut que l&apos;originale</Typography.Text> : null}
+        {same ? <Typography.Text type="secondary">{t('duplicateModal.same')}</Typography.Text> : null}
       </Space>
     </Modal>
   );

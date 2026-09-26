@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Checkbox, Divider, Popover, Space, Tooltip } from 'antd';
 import { ArrowDownOutlined, ArrowUpOutlined, SettingOutlined } from '@ant-design/icons';
 
@@ -30,6 +31,7 @@ export function ColumnsMenu({
   onResetColumns: () => void;
   onResetView: () => void;
 }) {
+  const t = useTranslations('shell.columnsMenu');
   const visibleCount = items.filter((item) => item.visible).length;
   const content = (
     <div style={{ minWidth: 220 }}>
@@ -48,7 +50,7 @@ export function ColumnsMenu({
             size="small"
             type="text"
             icon={<ArrowUpOutlined />}
-            aria-label={`Monter ${item.label}`}
+            aria-label={t('moveUp', { label: item.label })}
             disabled={index === 0}
             onClick={() => onMove(item.id, -1)}
           />
@@ -56,7 +58,7 @@ export function ColumnsMenu({
             size="small"
             type="text"
             icon={<ArrowDownOutlined />}
-            aria-label={`Descendre ${item.label}`}
+            aria-label={t('moveDown', { label: item.label })}
             disabled={index === items.length - 1}
             onClick={() => onMove(item.id, 1)}
           />
@@ -65,19 +67,19 @@ export function ColumnsMenu({
       <Divider style={{ margin: '8px 0' }} />
       <Space direction="vertical" size={0}>
         <Button type="link" size="small" style={{ padding: 0 }} onClick={onResetColumns}>
-          Colonnes par défaut
+          {t('resetColumns')}
         </Button>
-        <Tooltip title="Filtres, tri, page, colonnes et largeurs de cette page">
+        <Tooltip title={t('resetViewHint')}>
           <Button type="link" size="small" style={{ padding: 0 }} onClick={onResetView}>
-            Réinitialiser la vue
+            {t('resetView')}
           </Button>
         </Tooltip>
       </Space>
     </div>
   );
   return (
-    <Popover trigger="click" placement="bottomRight" title="Colonnes" content={content}>
-      <Button size="small" type="text" icon={<SettingOutlined />} aria-label="Colonnes" />
+    <Popover trigger="click" placement="bottomRight" title={t('title')} content={content}>
+      <Button size="small" type="text" icon={<SettingOutlined />} aria-label={t('title')} />
     </Popover>
   );
 }

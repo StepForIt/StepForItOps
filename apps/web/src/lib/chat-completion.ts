@@ -13,6 +13,29 @@ export interface CompletionSources {
 }
 
 /**
+ * Les demandes courantes de la maison, par clé : leur texte vit dans
+ * `chat.commonPhrases` et se résout au rendu, dans la langue affichée.
+ */
+export const COMMON_PHRASE_KEYS = [
+  'explain',
+  'fragility',
+  'annotate',
+  'retryTimeout',
+  'whyFailing',
+  'rename',
+  'emptyResponse',
+  'errorHandling',
+] as const;
+
+/**
+ * Ajoute le catalogue (déjà traduit) après les phrases servies par l'API :
+ * l'historique de l'équipe garde la priorité, le dédoublonnage garde le premier.
+ */
+export function withCommonPhrases(sources: CompletionSources, common: string[]): CompletionSources {
+  return { ...sources, phrases: [...new Set([...sources.phrases, ...common])] };
+}
+
+/**
  * En dessous, tout ressemble au début de tout : la ligne complèterait au premier
  * caractère et la suggestion sauterait d'une phrase à l'autre à chaque frappe.
  */

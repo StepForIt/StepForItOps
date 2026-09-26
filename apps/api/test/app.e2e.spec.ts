@@ -148,6 +148,23 @@ describe('API (bout en bout)', () => {
       // chercher une panne là où il y a une faute de frappe.
       expect(response.status).toBe(400);
     });
+
+    it('répond dans la langue de l’appelant, sinon dans celle de la plateforme', async () => {
+      await makeInstance();
+      const message = async (headers: Record<string, string>) => {
+        const response = await request(app.getHttpServer()).get('/workflows?_sort=nexistePas').set(headers);
+        return response.body.message as string;
+      };
+
+      expect(await message({ 'x-locale': 'en' })).toMatch(/^Invalid request/);
+      expect(await message({ 'x-locale': 'fr', 'accept-language': 'en' })).toMatch(/^Requête invalide/);
+      expect(await message({ 'accept-language': 'en-GB,fr;q=0.5' })).toMatch(/^Invalid request/);
+      expect(await message({})).toMatch(/^Requête invalide/);
+
+      await request(app.getHttpServer()).put('/settings/platform').send({ defaultLocale: 'en' }).expect(200);
+      expect(await message({})).toMatch(/^Invalid request/);
+      await request(app.getHttpServer()).put('/settings/platform').send({ defaultLocale: 'fr' }).expect(200);
+    });
   });
 
   describe('un workflow', () => {

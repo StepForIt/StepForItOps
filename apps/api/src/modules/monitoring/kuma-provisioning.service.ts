@@ -1,8 +1,9 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { MONITOR_ADMIN_PORT, MonitorAdminPort, ProbeIntervalUpdate } from '@nwm/core';
+import { MONITOR_ADMIN_PORT, MonitorAdminPort, ProbeIntervalUpdate, msg } from '@nwm/core';
 import { Monitor } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { callKuma } from './kuma-errors';
 import { DEFAULT_ERROR_WATCH_INTERVAL_SECONDS, probeIntervalSeconds } from './probe-interval';
 
@@ -35,6 +36,7 @@ export class KumaProvisioningService {
     private readonly prisma: PrismaService,
     @Inject(MONITOR_ADMIN_PORT) private readonly kumaAdmin: MonitorAdminPort,
     private readonly settings: PlatformSettingsService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   async status(): Promise<{ configured: boolean }> {
@@ -43,9 +45,7 @@ export class KumaProvisioningService {
 
   private async requireConfigured(): Promise<void> {
     if (!(await this.kumaAdmin.isConfigured())) {
-      throw new BadRequestException(
-        'Uptime Kuma non configuré : renseigner les réglages Kuma (page Monitors) ou KUMA_URL/KUMA_USERNAME/KUMA_PASSWORD dans le .env',
-      );
+      throw new BadRequestException(msg('ops.kumaNotConfigured'));
     }
   }
 
@@ -53,15 +53,15 @@ export class KumaProvisioningService {
   async provisionMonitor(monitorId: string): Promise<Monitor> {
     await this.requireConfigured();
     const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
-    if (!monitor) throw new NotFoundException(`Monitor ${monitorId} introuvable`);
+    if (!monitor) throw new NotFoundException(msg('ops.monitorNotFound', { id: monitorId }));
     if (monitor.kumaPushUrl && (await this.probeExists(monitor))) return monitor;
 
     // L'intervalle doit suivre la cadence de push du monitor, sinon Kuma alerte sur des beats
     // qui ne sont simplement pas encore dus (cf. probe-interval.ts).
-    const probe = await callKuma('création de la sonde push', () =>
+    const probe = await callKuma(msg('ops.kumaActionCreatePushProbe'), () =>
       this.kumaAdmin.createPushProbe(`[n8n-ops] ${monitor.name}`, probeIntervalSeconds(monitor)),
     );
-    this.logger.log(`Sonde Kuma #${probe.externalId} créée pour "${monitor.name}"`);
+    this.logger.log(`Kuma probe #${probe.externalId} created for "${monitor.name}"`);
     return this.prisma.monitor.update({
       where: { id: monitor.id },
       data: {
@@ -81,7 +81,7 @@ export class KumaProvisioningService {
   private async probeExists(monitor: Monitor): Promise<boolean> {
     const externalId = (monitor.config as ProvisioningConfig | null)?.kumaMonitorId;
     if (!externalId) return false;
-    const probes = await callKuma('lecture des sondes', () => this.kumaAdmin.listProbes());
+    const probes = await callKuma(msg('ops.kumaActionReadProbes'), () => this.kumaAdmin.listProbes());
     return probes.some((probe) => probe.externalId === externalId);
   }
 
@@ -92,7 +92,7 @@ export class KumaProvisioningService {
   async provisionInstance(instanceId: string): Promise<InstanceProvisionResult> {
     await this.requireConfigured();
     const instance = await this.prisma.instance.findUnique({ where: { id: instanceId } });
-    if (!instance) throw new NotFoundException(`Instance ${instanceId} introuvable`);
+    if (!instance) throw new NotFoundException(msg('ops.instanceNotFound', { id: instanceId }));
 
     const workflows = await this.prisma.workflow.findMany({
       where: { instanceId, active: true, ...(await this.settings.workflowFilter()) },
@@ -121,7 +121,7 @@ export class KumaProvisioningService {
       });
     }
     this.logger.log(
-      `Instance "${instance.name}" : ${result.created.length} sondes créées, ${result.skipped.length} déjà couvertes`,
+      `Instance "${instance.name}": ${result.created.length} probes created, ${result.skipped.length} already covered`,
     );
     return result;
   }
@@ -141,13 +141,13 @@ export class KumaProvisioningService {
     }
     const monitor = await this.prisma.monitor.create({
       data: {
-        name: `${instanceName} — erreurs d'exécution`,
+        name: this.platformLocale.run(() => msg('ops.errorWatchMonitorName', { instance: instanceName })),
         kind: 'error-watch',
         config: { instanceId, intervalSeconds: DEFAULT_ERROR_WATCH_INTERVAL_SECONDS },
       },
     });
     const provisioned = await this.provisionMonitor(monitor.id);
-    this.logger.log(`Monitor error-watch créé pour l'instance "${instanceName}"`);
+    this.logger.log(`error-watch monitor created for instance "${instanceName}"`);
     return { monitorId: monitor.id, pushUrl: provisioned.kumaPushUrl ?? '', created: true };
   }
 
@@ -159,7 +159,7 @@ export class KumaProvisioningService {
   async syncProbeIntervals(monitorId?: string): Promise<ProbeIntervalSyncResult> {
     await this.requireConfigured();
     const monitors = await this.prisma.monitor.findMany({ where: monitorId ? { id: monitorId } : {} });
-    const probes = await callKuma('lecture des sondes', () => this.kumaAdmin.listProbes());
+    const probes = await callKuma(msg('ops.kumaActionReadProbes'), () => this.kumaAdmin.listProbes());
     const byExternalId = new Map(probes.map((p) => [p.externalId, p]));
 
     const result: ProbeIntervalSyncResult = { updated: [], unchanged: 0, skipped: [] };
@@ -168,16 +168,19 @@ export class KumaProvisioningService {
     for (const monitor of monitors) {
       const config = (monitor.config ?? {}) as ProvisioningConfig;
       if (config.importedFromKuma) {
-        result.skipped.push({ name: monitor.name, reason: 'sonde importée, réglée dans Kuma' });
+        result.skipped.push({ name: monitor.name, reason: msg('ops.kumaSkipImported') });
         continue;
       }
       if (config.kumaMonitorId === undefined) {
-        result.skipped.push({ name: monitor.name, reason: 'pas de sonde Kuma' });
+        result.skipped.push({ name: monitor.name, reason: msg('ops.kumaSkipNoProbe') });
         continue;
       }
       const probe = byExternalId.get(config.kumaMonitorId);
       if (!probe) {
-        result.skipped.push({ name: monitor.name, reason: `sonde #${config.kumaMonitorId} absente de Kuma` });
+        result.skipped.push({
+          name: monitor.name,
+          reason: msg('ops.kumaSkipProbeMissing', { id: String(config.kumaMonitorId) }),
+        });
         continue;
       }
       const toSeconds = probeIntervalSeconds(monitor);
@@ -194,9 +197,9 @@ export class KumaProvisioningService {
       });
     }
 
-    await callKuma('mise à jour des intervalles', () => this.kumaAdmin.setProbeIntervals(updates));
+    await callKuma(msg('ops.kumaActionUpdateIntervals'), () => this.kumaAdmin.setProbeIntervals(updates));
     if (result.updated.length > 0) {
-      this.logger.log(`Intervalles Kuma réalignés : ${result.updated.map((u) => u.name).join(', ')}`);
+      this.logger.log(`Kuma intervals realigned: ${result.updated.map((u) => u.name).join(', ')}`);
     }
     return result;
   }
@@ -207,7 +210,7 @@ export class KumaProvisioningService {
    */
   async deleteWithProbe(monitorId: string): Promise<Monitor> {
     const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
-    if (!monitor) throw new NotFoundException(`Monitor ${monitorId} introuvable`);
+    if (!monitor) throw new NotFoundException(msg('ops.monitorNotFound', { id: monitorId }));
 
     const config = monitor.config as { kumaMonitorId?: number; importedFromKuma?: boolean } | null;
     const kumaMonitorId = config?.kumaMonitorId;
@@ -215,7 +218,7 @@ export class KumaProvisioningService {
       try {
         await this.kumaAdmin.deleteProbe(kumaMonitorId);
       } catch (error) {
-        this.logger.warn(`Suppression sonde Kuma #${kumaMonitorId} KO : ${(error as Error).message}`);
+        this.logger.warn(`Kuma probe #${kumaMonitorId} deletion failed: ${(error as Error).message}`);
       }
     }
     return this.prisma.monitor.delete({ where: { id: monitorId } });

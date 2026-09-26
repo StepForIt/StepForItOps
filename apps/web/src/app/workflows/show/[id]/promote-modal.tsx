@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Checkbox, Descriptions, Modal, Select, Space, Tag, message } from 'antd';
 import { ArrowRightOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../../../lib/api';
 import { PromoteVersionCard, PromoteVersionGate, ReleaseLevel } from './promote-version-card';
 import { PromoteChainCard, PromoteChainGate } from './promote-chain-card';
 import { useInstanceScope } from '../../../../lib/instance-scope';
 import { useEnvLabel, useEnvOptions } from '../../../../lib/envs';
 import { useEnabledModules } from '../../../../lib/enabled-modules';
+import { useRuleLabel } from '../../../../lib/finding-rules';
 import { RemoteTableView } from '../../../../components/remote-schema-tables';
 import { PromoteChecks } from './promote-checks';
 import { buildPromoteChecks } from './promote-check-list';
@@ -129,7 +131,6 @@ interface PromoteResult {
   publicationError?: string;
 }
 
-const DIFF_LABEL = { added: 'ajouté', removed: 'supprimé', modified: 'modifié', renamed: 'renommé' } as const;
 const DIFF_COLOR = { added: 'green', removed: 'red', modified: 'orange', renamed: 'blue' } as const;
 
 /** Les exemplaires qui recevront le numéro : source, étapes traversées, cible. */
@@ -174,6 +175,10 @@ export function PromoteModal({
   /** La chaîne « publier comme la source » rendue par la promotion. */
   onPublication?: (run: PublishRunView) => void;
 }) {
+  const t = useTranslations('workflowShow.promote');
+  const tChecks = useTranslations('workflowShow.promoteCheckList');
+  const tRun = useTranslations('workflowShow.publishRun');
+  const ruleLabel = useRuleLabel();
   const { instanceName } = useInstanceScope();
   const envOptions = useEnvOptions();
   const envLabel = useEnvLabel();
@@ -242,14 +247,14 @@ export function PromoteModal({
           }),
         );
         // Un re-clic renvoie souvent le même aperçu : sans ce toast, il semble mort.
-        if (announce) message.success('Aperçu actualisé');
+        if (announce) message.success(t('previewRefreshed'));
       } catch (error) {
         message.error((error as Error).message);
       } finally {
         setBusy(null);
       }
     },
-    [workflowId, sourceInstanceId, targetInstanceId, targetEnv, cascade, remoteAvailable, moveClashing],
+    [workflowId, sourceInstanceId, targetInstanceId, targetEnv, cascade, remoteAvailable, moveClashing, t],
   );
 
   // Tout changement de cible invalide l'aperçu (on ne promeut que ce qu'on vient de
@@ -293,15 +298,16 @@ export function PromoteModal({
       });
       const also =
         result.cascaded.length > 0
-          ? ` — ${result.cascaded.length} sous-workflow(s) créé(s) au passage : ${result.cascaded
-              .map((sub) => sub.targetName)
-              .join(', ')}`
+          ? t('result.cascaded', {
+              count: result.cascaded.length,
+              names: result.cascaded.map((sub) => sub.targetName).join(', '),
+            })
           : '';
       const traversed =
         result.through && result.through.length > 0
-          ? ` — passé par ${result.through.map((step) => step.env.toUpperCase()).join(', ')}`
+          ? t('result.traversed', { envs: result.through.map((step) => step.env.toUpperCase()).join(', ') })
           : '';
-      const version = result.version ? ` en ${result.version}` : '';
+      const version = result.version ? t('result.version', { version: result.version }) : '';
       // Le numéro vit à deux endroits : la colonne de la plateforme et le NOM côté
       // n8n. Taire le second faisait annoncer « posé en 1.3.0 » à côté d'un n8n
       // resté en « (1.2.2) », sans rien pour le voir hors des logs du conteneur.
@@ -310,23 +316,35 @@ export function PromoteModal({
       const renamed = renames.filter((rename) => rename.status === 'renamed');
       const named =
         renamed.length > 0
-          ? ` — nom n8n mis à jour (${renamed.map((rename) => `« ${rename.renamed} »`).join(', ')})`
+          ? t('result.renamed', {
+              names: renamed.map((rename) => t('quoted', { name: rename.renamed })).join(', '),
+            })
           : renames.length > 0 && renames.every((rename) => rename.status === 'no-marker')
-            ? ' — nom n8n inchangé : aucun marqueur de version (1.2.3) dans le nom'
+            ? t('result.noMarker')
             : '';
       const freed =
         result.moved && result.moved.length > 0
-          ? ` — URL libérée : ${result.moved.map((m) => `« ${m.workflowName} » passé en /${m.to}`).join(', ')}`
+          ? t('result.freed', {
+              moves: result.moved
+                .map((m) => t('result.moved', { name: m.workflowName, to: m.to }))
+                .join(', '),
+            })
           : '';
+      const rest = `${traversed}${also}${named}${freed}`;
       message.success(
-        result.mode === 'create'
-          ? `« ${result.targetName} » créé sur l'instance cible${version} (inactif, ${result.replacements} remplacements)${traversed}${also}${named}${freed}`
-          : `« ${result.targetName} » mis à jour sur l'instance cible${version} (${result.replacements} remplacements)${traversed}${also}${named}${freed}`,
+        t(result.mode === 'create' ? 'result.created' : 'result.updated', {
+          name: result.targetName,
+          version,
+          count: result.replacements,
+          rest,
+        }),
         result.cascaded.length > 0 || traversed || named || freed ? 8 : undefined,
       );
       if (result.callees && result.callees.published.length > 0) {
         message.info(
-          `Sous-workflows publiés : ${result.callees.published.map((n) => `« ${n} »`).join(', ')}`,
+          t('result.calleesPublished', {
+            names: result.callees.published.map((n) => t('quoted', { name: n })).join(', '),
+          }),
           8,
         );
       }
@@ -335,25 +353,29 @@ export function PromoteModal({
       if (!result.publication) {
         const manual = new Map((result.callees?.manual ?? []).map((callee) => [callee.name, callee.reason]));
         for (const [name, reason] of manual) {
-          message.warning(`« ${name} » reste à publier dans n8n : ${reason}`, 12);
+          message.warning(t('result.manualCallee', { name, reason }), 12);
         }
       }
       // Un renommage raté ne défait pas la promotion — mais il se dit, et il dit
       // ce que n8n a refusé : sinon les deux numéros divergent en silence.
       for (const rename of failed) {
         message.error(
-          `« ${rename.name} » devait devenir « ${rename.renamed} » dans n8n : ${rename.error ?? 'refus de n8n'}. ` +
-            `La version est posée dans la plateforme, le nom est à corriger à la main.`,
+          t('result.renameFailed', {
+            name: rename.name,
+            renamed: rename.renamed,
+            error: rename.error ?? t('result.n8nRefusal'),
+          }),
           12,
         );
       }
       if (result.publication) {
-        if (result.publication.status === 'paused') message.error(publishRunSummary(result.publication), 12);
-        else message.success(publishRunSummary(result.publication), 8);
+        if (result.publication.status === 'paused')
+          message.error(publishRunSummary(result.publication, tRun), 12);
+        else message.success(publishRunSummary(result.publication, tRun), 8);
         onPublication?.(result.publication);
       }
       if (result.publicationError) {
-        message.error(`Publication à faire à la main : ${result.publicationError}`, 12);
+        message.error(t('result.publicationError', { error: result.publicationError }), 12);
       }
       onClose();
     } catch (error) {
@@ -365,13 +387,13 @@ export function PromoteModal({
 
   return (
     <Modal
-      title="Promouvoir"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       footer={
         <Space>
           <Button loading={busy === 'preview'} disabled={!targetInstanceId} onClick={() => loadPreview(true)}>
-            Actualiser l&apos;aperçu
+            {t('refreshPreview')}
           </Button>
           <Button
             type="primary"
@@ -385,7 +407,7 @@ export function PromoteModal({
             }
             onClick={apply}
           >
-            {preview?.mode === 'update' ? 'Écraser sur la cible' : 'Promouvoir'}
+            {preview?.mode === 'update' ? t('overwrite') : t('promote')}
           </Button>
         </Space>
       }
@@ -394,62 +416,67 @@ export function PromoteModal({
         <div>
           {sourceInstanceId && (
             <>
-              <Tag color="geekblue" style={{ marginRight: 4 }}>
+              <Tag color="blue" style={{ marginRight: 4 }}>
                 {instanceName(sourceInstanceId)}
               </Tag>
               <ArrowRightOutlined style={{ marginRight: 8, color: '#999' }} />
             </>
           )}
           <Select
-            placeholder="Instance cible"
+            placeholder={t('targetInstance')}
             style={{ width: 240, marginRight: 8 }}
             value={targetInstanceId}
             onChange={setTargetInstanceId}
             options={instances.map((row) => ({
               value: row.id,
-              label: row.id === sourceInstanceId ? `${row.name} (même instance)` : row.name,
+              label: row.id === sourceInstanceId ? t('sameInstance', { name: row.name }) : row.name,
             }))}
           />
           <Select
             allowClear={!onSameInstance}
             status={onSameInstance && !targetEnv ? 'warning' : undefined}
-            placeholder={onSameInstance ? 'Env cible (obligatoire)' : 'Env cible (optionnel)'}
+            placeholder={onSameInstance ? t('envRequired') : t('envOptional')}
             style={{ width: 230 }}
             value={targetEnv}
             // '' = l'option « Aucun » : plus visible que la croix d'allowClear.
             onChange={(value) => setTargetEnv(value || undefined)}
             options={[
               // Sur la même instance, « aucun env » viserait le workflow lui-même.
-              ...(onSameInstance ? [] : [{ value: '', label: 'Aucun — copie telle quelle' }]),
+              ...(onSameInstance ? [] : [{ value: '', label: t('noEnv') }]),
               ...envOptions,
             ]}
           />
         </div>
         {preview && missingSubs.length > 0 && (
           <Checkbox checked={cascade} onChange={(e) => setCascade(e.target.checked)}>
-            Créer aussi sur la cible les sous-workflows qui y manquent : {missingSubs.join(', ')}
+            {t('cascade', { names: missingSubs.join(', ') })}
           </Checkbox>
         )}
         {preview && (
           <Checkbox checked={publishLikeSource} onChange={(e) => setPublishLikeSource(e.target.checked)}>
-            Publier comme la source (sous-workflows d’abord)
+            {t('publishLikeSource')}
           </Checkbox>
         )}
         {preview && (
           <Descriptions size="small" column={1} bordered>
-            <Descriptions.Item label="Cible">
-              « {preview.targetName} »
-              {!onSameInstance && <span style={{ color: '#999' }}> sur {preview.targetInstanceName}</span>}{' '}
+            <Descriptions.Item label={t('target')}>
+              {t('quoted', { name: preview.targetName })}
+              {!onSameInstance && (
+                <span style={{ color: '#999' }}>
+                  {' '}
+                  {t('onInstance', { instance: preview.targetInstanceName })}
+                </span>
+              )}{' '}
               {preview.mode === 'create' ? (
-                <Tag color="green">sera créé (inactif)</Tag>
+                <Tag color="green">{t('willCreate')}</Tag>
               ) : (
-                <Tag color="orange">sera remplacé</Tag>
+                <Tag color="orange">{t('willReplace')}</Tag>
               )}
-              {preview.targetActive && <Tag color="red">ACTIF</Tag>}
-              {preview.targetArchived && <Tag color="red">ARCHIVÉ</Tag>}
+              {preview.targetActive && <Tag color="red">{t('active')}</Tag>}
+              {preview.targetArchived && <Tag color="red">{t('archived')}</Tag>}
             </Descriptions.Item>
             {preview.replacements > 0 && (
-              <Descriptions.Item label={`Données ${targetEnv ? envLabel(targetEnv) : ''}`}>
+              <Descriptions.Item label={t('data', { env: targetEnv ? envLabel(targetEnv) : '' })}>
                 {preview.switched && preview.switched.length > 0 ? (
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {preview.switched.map((row) => (
@@ -459,33 +486,31 @@ export function PromoteModal({
                     ))}
                   </ul>
                 ) : (
-                  `${preview.replacements} base(s)/table(s) remplacée(s) par leur équivalent ${targetEnv ? envLabel(targetEnv) : ''}`
+                  t('replacedCount', {
+                    count: preview.replacements,
+                    env: targetEnv ? envLabel(targetEnv) : '',
+                  })
                 )}
               </Descriptions.Item>
             )}
             {preview.diff && (
-              <Descriptions.Item label="Nœuds vs la cible">
+              <Descriptions.Item label={t('nodesVsTarget')}>
                 {preview.diff.hasChanges ? (
                   <>
-                    {[
-                      [preview.diff.counts.added, 'ajouté(s)'],
-                      [preview.diff.counts.removed, 'supprimé(s)'],
-                      [preview.diff.counts.modified, 'modifié(s)'],
-                      [preview.diff.counts.renamed, 'renommé(s)'],
-                    ]
-                      .filter(([n]) => n)
-                      .map(([n, l]) => `${n} ${l}`)
+                    {(['added', 'removed', 'modified', 'renamed'] as const)
+                      .filter((change) => preview.diff?.counts[change])
+                      .map((change) => t(`diffCount.${change}`, { count: preview.diff?.counts[change] ?? 0 }))
                       .join(' · ')}
                     {preview.diff.nodes.length > 0 && (
                       <Button type="link" size="small" onClick={() => setShowDiff(!showDiff)}>
-                        {showDiff ? 'masquer' : 'lesquels ?'}
+                        {showDiff ? t('hide') : t('which')}
                       </Button>
                     )}
                     {showDiff && (
                       <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
                         {preview.diff.nodes.map((node) => (
                           <li key={`${node.change}:${node.name}`}>
-                            <Tag color={DIFF_COLOR[node.change]}>{DIFF_LABEL[node.change]}</Tag>
+                            <Tag color={DIFF_COLOR[node.change]}>{t(`diff.${node.change}`)}</Tag>
                             {node.renamedFrom ? `${node.renamedFrom} → ${node.name}` : node.name}
                           </li>
                         ))}
@@ -493,7 +518,7 @@ export function PromoteModal({
                     )}
                   </>
                 ) : (
-                  'identiques — rien ne change'
+                  t('identical')
                 )}
               </Descriptions.Item>
             )}
@@ -516,19 +541,21 @@ export function PromoteModal({
             touched={versionTouched(preview, through, targetEnv)}
           />
         )}
-        {preview && <PromoteChecks checks={buildPromoteChecks(preview, remoteAvailable)} />}
+        {preview && (
+          <PromoteChecks checks={buildPromoteChecks(preview, remoteAvailable, tChecks, ruleLabel)} />
+        )}
         {preview && preview.blockers.length > 0 && (
           <Alert
             type="error"
             showIcon
-            message={`Promotion bloquée : ${preview.blockers.join(' ; ')}`}
+            message={t('blocked', { blockers: preview.blockers.join(' ; ') })}
             description={
               preview.forceable ? (
                 <Checkbox checked={force} onChange={(e) => setForce(e.target.checked)}>
-                  Forcer quand même, en connaissance de cause
+                  {t('force')}
                 </Checkbox>
               ) : (
-                'Ce blocage ne se force pas : n8n refuse d’écrire sur un workflow archivé.'
+                t('notForceable')
               )
             }
           />
@@ -538,25 +565,21 @@ export function PromoteModal({
             <Alert
               type={(preview.callees?.manual.length ?? 0) > 0 ? 'warning' : 'info'}
               showIcon
-              message="Sous-workflows en brouillon sur la cible"
+              message={t('calleesTitle')}
               description={
                 <Space direction="vertical" size={4}>
-                  <span>
-                    n8n refuse d’activer un workflow tant que ses sous-workflows ne sont pas publiés.
-                  </span>
+                  <span>{t('calleesExplain')}</span>
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {(preview.callees?.publish ?? []).map((c) => (
-                      <li key={`p-${c.id}`}>« {c.name} » : sera publié</li>
+                      <li key={`p-${c.id}`}>{t('willPublish', { name: c.name })}</li>
                     ))}
                     {(preview.callees?.manual ?? []).map((c) => (
-                      <li key={`m-${c.id}`}>
-                        « {c.name} » : à publier à la main — {c.reason}
-                      </li>
+                      <li key={`m-${c.id}`}>{t('manual', { name: c.name, reason: c.reason })}</li>
                     ))}
                   </ul>
                   {(preview.callees?.publish.length ?? 0) > 0 && (
                     <Checkbox checked={publishCallees} onChange={(e) => setPublishCallees(e.target.checked)}>
-                      Publier ces sous-workflows avant la promotion
+                      {t('publishCallees')}
                     </Checkbox>
                   )}
                 </Space>
@@ -567,28 +590,26 @@ export function PromoteModal({
           <Alert
             type="warning"
             showIcon
-            message="URL déjà servie sur la cible"
+            message={t('clashTitle')}
             description={
               <Space direction="vertical" size={4}>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
                   {(preview.entryClashes ?? []).map((c) => (
                     <li key={`${c.node}-${c.holderName}-${c.holderNode}`}>
-                      « {c.node} » : <code>/{c.url}</code> est tenu par « {c.holderName} »
-                      {c.holderActive ? ' (actif)' : ' (inactif)'}
-                      {c.move ? (
-                        <>
-                          {' '}
-                          → <code>/{c.move}</code>
-                        </>
-                      ) : (
-                        ' — à libérer dans n8n'
-                      )}
+                      {t.rich(c.move ? 'clashMove' : 'clashFree', {
+                        node: c.node,
+                        url: c.url,
+                        holder: c.holderName,
+                        state: c.holderActive ? t('holderActive') : t('holderInactive'),
+                        move: c.move ?? '',
+                        code: (chunks) => <code>{chunks}</code>,
+                      })}
                     </li>
                   ))}
                 </ul>
                 {(preview.entryClashes ?? []).some((c) => c.move) && (
                   <Checkbox checked={moveClashing} onChange={(e) => setMoveClashing(e.target.checked)}>
-                    Libérer ces URLs pendant la promotion
+                    {t('moveClashing')}
                   </Checkbox>
                 )}
               </Space>
@@ -600,17 +621,21 @@ export function PromoteModal({
             <Alert
               type="info"
               showIcon
-              message="URL des webhooks"
+              message={t('webhooksTitle')}
               description={
                 <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
                   {preview.webhookPaths.preserved.map((p) => (
                     <li key={`p-${p.node}`}>
-                      « {p.node} » : URL inchangée (<code>/{p.to}</code>)
+                      {t.rich('preserved', {
+                        node: p.node,
+                        to: p.to,
+                        code: (chunks) => <code>{chunks}</code>,
+                      })}
                     </li>
                   ))}
                   {preview.webhookPaths.changes.map((c) => (
                     <li key={`c-${c.node}`}>
-                      « {c.node} » : nouvelle URL <code>/{c.to}</code>
+                      {t.rich('changed', { node: c.node, to: c.to, code: (chunks) => <code>{chunks}</code> })}
                     </li>
                   ))}
                 </ul>

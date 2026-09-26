@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const NOTIFIER_MANIFEST: ModuleManifest = {
   id: 'notifier',
-  name: 'Alertes',
-  description: 'Alertes vers Slack ou un webhook',
+  get name() {
+    return msg('ops.moduleNotifierName');
+  },
+  get description() {
+    return msg('ops.moduleNotifierDescription');
+  },
 };

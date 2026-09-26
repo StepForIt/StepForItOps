@@ -1,0 +1,179 @@
+/*
+ * Le tableau de bord en écran de marque. Couleurs lues dans les variables posées par
+ * `layout.tsx` depuis `lib/brand/` ; rien d'écrit en dur ici hors transparences.
+ */
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 28px 32px;
+  border-radius: 18px;
+  background: radial-gradient(120% 140% at 85% 0%, #0b3a6b 0%, var(--brand-nuit) 55%);
+  color: white;
+  margin-bottom: 20px;
+}
+.dash-motif {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 60%;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.dash-hero-main,
+.dash-hero-figures {
+  position: relative;
+}
+.dash-hero-kicker {
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: rgba(232, 238, 242, 0.7);
+  margin-bottom: 6px;
+}
+.dash-hero-title {
+  font-family: var(--font-display), var(--font-text), sans-serif;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+.dash-hero-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.dash-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background 0.15s;
+}
+.dash-signal:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+}
+.dash-signal::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--signal-color);
+  box-shadow: 0 0 10px var(--signal-color);
+}
+.dash-signal-corail {
+  --signal-color: var(--dot-red);
+}
+.dash-signal-ambre {
+  --signal-color: var(--brand-ambre);
+}
+.dash-hero-figures {
+  display: flex;
+  gap: 36px;
+  flex-wrap: wrap;
+}
+.dash-figure {
+  display: block;
+  color: inherit;
+}
+.dash-figure:hover {
+  color: inherit;
+}
+.dash-figure-value {
+  font-family: var(--font-display), var(--font-text), sans-serif;
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.dash-figure-roi {
+  color: var(--dot-green);
+}
+.dash-figure-craie {
+  color: white;
+}
+.dash-figure-label {
+  margin-top: 6px;
+  font-size: 13px;
+  color: rgba(232, 238, 242, 0.7);
+}
+
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.dash-kpi {
+  display: block;
+  background: white;
+  border: 1px solid var(--brand-hairline);
+  border-top: 3px solid var(--kpi-color);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--brand-nuit);
+  transition: box-shadow 0.15s;
+}
+a.dash-kpi:hover {
+  color: var(--brand-nuit);
+  box-shadow: 0 8px 24px rgba(6, 24, 45, 0.08);
+}
+.dash-kpi-lagon {
+  --kpi-color: var(--brand-lagon);
+}
+.dash-kpi-corail {
+  --kpi-color: var(--dot-red);
+}
+.dash-kpi-ambre {
+  --kpi-color: var(--brand-ambre);
+}
+.dash-kpi-roi {
+  --kpi-color: var(--dot-green);
+}
+.dash-kpi-marine {
+  --kpi-color: var(--dot-blue);
+}
+.dash-kpi-label {
+  font-size: 13px;
+  color: rgba(6, 24, 45, 0.6);
+}
+.dash-kpi-value {
+  font-family: var(--font-display), var(--font-text), sans-serif;
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+.dash-kpi-hint {
+  font-size: 12px;
+  color: rgba(6, 24, 45, 0.55);
+  margin-top: 2px;
+}
+
+@media (max-width: 767px) {
+  .dash-hero {
+    padding: 22px 20px;
+  }
+  .dash-hero-title {
+    font-size: 28px;
+  }
+  .dash-figure-value {
+    font-size: 34px;
+  }
+  .dash-motif {
+    width: 100%;
+    opacity: 0.3;
+  }
+}

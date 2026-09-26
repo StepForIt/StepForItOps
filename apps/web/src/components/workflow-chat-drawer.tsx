@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Drawer, Modal } from 'antd';
+import { useTranslations } from 'next-intl';
 import { WorkflowChatPanel } from './workflow-chat-panel';
 
 interface ChatTarget {
@@ -36,6 +37,7 @@ const WorkflowChatContext = React.createContext<ChatContextValue | null>(null);
  * complet — avant même de lire la réponse.
  */
 export function WorkflowChatProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('chat.drawer');
   const [target, setTarget] = React.useState<ChatTarget | null>(null);
   const [modal, modalHolder] = Modal.useModal();
   // Une ref et non un état : ce drapeau ne change rien à l'affichage, il n'est
@@ -57,14 +59,14 @@ export function WorkflowChatProvider({ children }: { children: React.ReactNode }
   const requestClose = React.useCallback(() => {
     if (!dirty.current) return close();
     modal.confirm({
-      title: 'Abandonner le message en cours ?',
-      content: 'Le texte saisi et les pièces jointes non envoyées seront perdus.',
-      okText: 'Abandonner',
+      title: t('discard.title'),
+      content: t('discard.content'),
+      okText: t('discard.ok'),
       okButtonProps: { danger: true },
-      cancelText: 'Continuer à écrire',
+      cancelText: t('discard.cancel'),
       onOk: close,
     });
-  }, [close, modal]);
+  }, [close, modal, t]);
 
   const value = React.useMemo<ChatContextValue>(
     () => ({
@@ -90,7 +92,7 @@ export function WorkflowChatProvider({ children }: { children: React.ReactNode }
         // page derrière. La croix et Échap restent les sorties, elles passent
         // par la confirmation.
         maskClosable={false}
-        title={target?.workflowName ? `Assistant IA — ${target.workflowName}` : 'Assistant IA'}
+        title={target?.workflowName ? t('titleWithName', { name: target.workflowName }) : t('title')}
         placement="right"
         // Largeur en CSS et non par un breakpoint JS : sur un écran étroit le tiroir
         // prend tout, sans dépendre d'un hook qui se trompe au premier rendu.

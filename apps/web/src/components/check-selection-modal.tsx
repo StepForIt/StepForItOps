@@ -19,6 +19,7 @@ import {
   message,
 } from 'antd';
 import { DeleteOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 
 export type CheckModuleId = 'verifier' | 'js-checker' | 'optimizer' | 'field-checker' | 'remote-schema';
@@ -115,6 +116,8 @@ interface Props {
  * pour toute l'instance, et le palier « groupe » n'était en pratique jamais atteint.
  */
 export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved }: Props) {
+  const t = useTranslations('chat.checks');
+  const tCommon = useTranslations('common');
   const catalog = useCheckCatalog();
   const { resolved, reload } = useResolvedChecks(workflowId);
   const [disabled, setDisabled] = useState<string[]>([]);
@@ -155,7 +158,7 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
 
   if (!catalog || !resolved) {
     return (
-      <Modal open={open} onCancel={onClose} footer={null} title="Contrôles à jouer">
+      <Modal open={open} onCancel={onClose} footer={null} title={t('title')}>
         <Spin />
       </Modal>
     );
@@ -210,8 +213,11 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
   };
 
   const scopeOptions = [
-    { value: 'auto', label: 'Portée : décidée automatiquement' },
-    ...resolved.targets.map((target) => ({ value: target.scope, label: `Enregistrer pour ${target.label}` })),
+    { value: 'auto', label: t('scopeAuto') },
+    ...resolved.targets.map((target) => ({
+      value: target.scope,
+      label: t('saveFor', { target: target.label }),
+    })),
   ];
 
   const removeProfile = async (id: string) => {
@@ -234,16 +240,16 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
         open={open}
         onCancel={onClose}
         width={720}
-        title="Contrôles à jouer"
+        title={t('title')}
         footer={[
           <Button key="reset" onClick={() => setDisabled([])}>
-            Tout cocher
+            {t('checkAll')}
           </Button>,
           <Button key="cancel" onClick={onClose}>
-            Annuler
+            {tCommon('cancel')}
           </Button>,
           <Button key="run" type="primary" onClick={runNow}>
-            Lancer la vérification ({activeCount})
+            {t('run', { count: activeCount })}
           </Button>,
         ]}
       >
@@ -252,10 +258,10 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
             <Space direction="vertical" size={4}>
               {resolved.source && (
                 <Typography.Text type="secondary">
-                  Configuration héritée de : {resolved.source.label}
+                  {t('inheritedFrom', { source: resolved.source.label })}
                 </Typography.Text>
               )}
-              <Tooltip title="Le périmètre le plus précis l’emporte.">
+              <Tooltip title={t('scopeTooltip')}>
                 <Select
                   size="small"
                   style={{ minWidth: 320 }}
@@ -269,8 +275,8 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
               value={mode}
               onChange={(value) => setMode(value as 'simple' | 'advanced')}
               options={[
-                { label: 'Simple', value: 'simple' },
-                { label: 'Avancé', value: 'advanced' },
+                { label: t('mode.simple'), value: 'simple' },
+                { label: t('mode.advanced'), value: 'advanced' },
               ]}
             />
           </Space>
@@ -291,9 +297,9 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
                         <strong>{group.label}</strong>
                       </Tooltip>
                       {group.costly && (
-                        <Tooltip title="Contrôle coûteux (appel IA ou lecture des exécutions n8n)">
+                        <Tooltip title={t('costlyTooltip')}>
                           <Tag color="gold" icon={<ThunderboltOutlined />} style={{ marginInlineEnd: 0 }}>
-                            coûteux
+                            {t('costly')}
                           </Tag>
                         </Tooltip>
                       )}
@@ -346,28 +352,31 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
               if (!saved) loadSaved();
             }}
           >
-            {showSaved ? 'Masquer' : 'Voir'} les configurations enregistrées
+            {showSaved ? t('saved.hide') : t('saved.show')}
           </Typography.Link>
           {showSaved && (
             <Space direction="vertical" style={{ width: '100%' }}>
               {(saved ?? []).length === 0 && (
-                <Typography.Text type="secondary">Aucune configuration enregistrée.</Typography.Text>
+                <Typography.Text type="secondary">{t('saved.none')}</Typography.Text>
               )}
               {(saved ?? []).map((profile) => (
                 <Space key={profile.id} style={{ justifyContent: 'space-between', width: '100%' }}>
                   <Typography.Text>
-                    {profile.label} — {catalog.checks.length - profile.disabled.length} contrôles actifs
+                    {t('saved.row', {
+                      label: profile.label,
+                      count: catalog.checks.length - profile.disabled.length,
+                    })}
                   </Typography.Text>
                   <Popconfirm
-                    title={`Retirer « ${profile.label} » ?`}
-                    description="Ce périmètre repassera sur la configuration héritée : les contrôles décochés ici se rejoueront."
-                    okText="Retirer"
+                    title={t('saved.removeConfirm', { label: profile.label })}
+                    description={t('saved.removeDescription')}
+                    okText={t('saved.remove')}
                     okButtonProps={{ danger: true }}
-                    cancelText="Annuler"
+                    cancelText={tCommon('cancel')}
                     onConfirm={() => removeProfile(profile.id)}
                   >
                     <Button size="small" danger type="text" icon={<DeleteOutlined />}>
-                      Retirer
+                      {t('saved.remove')}
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -379,9 +388,9 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
 
       <Modal
         open={Boolean(ask)}
-        title="Appliquer cette sélection à…"
-        okText="Enregistrer"
-        cancelText="Juste pour cette fois"
+        title={t('ask.title')}
+        okText={tCommon('save')}
+        cancelText={t('ask.justOnce')}
         onCancel={() => setAsk(null)}
         onOk={async () => {
           const pending = ask;
@@ -401,7 +410,7 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
                   {target.label}
                   {ask?.decision.suggested === target.scope && (
                     <Tag color="blue" style={{ marginInlineStart: 8 }}>
-                      suggéré
+                      {t('ask.suggested')}
                     </Tag>
                   )}
                 </Radio>

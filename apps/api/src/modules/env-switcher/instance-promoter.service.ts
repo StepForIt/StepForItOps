@@ -16,6 +16,7 @@ import {
   WorkflowDiff,
   adoptTargetLocators,
   canonicalLocatorNode,
+  msg,
   promotionReadiness,
   alignWebhookPaths,
   compareSemver,
@@ -420,9 +421,7 @@ export class InstancePromoterService {
     // saut d'étape à celui qui voulait seulement forcer un test rouge.
     if (prepared.chainBlocker) throw new BadRequestException(prepared.chainBlocker);
     if (prepared.blockers.length > 0 && !input.force) {
-      throw new BadRequestException(
-        `Promotion bloquée : ${prepared.blockers.join(' ; ')}. Repasse les gates au vert (ou force en connaissance de cause).`,
-      );
+      throw new BadRequestException(msg('env.promoteBlocked', { blockers: prepared.blockers.join(' ; ') }));
     }
 
     // Version arrêtée AVANT la première écriture : chaque étape resynchronise les
@@ -481,7 +480,7 @@ export class InstancePromoterService {
       for (const item of legPrepared.cascade) {
         const child = await this.push(item.workflowId, { ...legInput, cascade: false }, true);
         if (!child) {
-          this.logger.log(`« ${item.targetName} » existe déjà sur la cible : laissé tel quel`);
+          this.logger.log(`"${item.targetName}" already exists on the target: left as is`);
           continue;
         }
         // Le sous-workflow créé au passage n'hérite PAS de la version de son
@@ -529,7 +528,7 @@ export class InstancePromoterService {
     try {
       return { publication: await this.publisher.start(workflowId, legs) };
     } catch (error) {
-      this.logger.warn(`Publication comme la source impossible : ${(error as Error).message}`);
+      this.logger.warn(`Publishing like the source failed: ${(error as Error).message}`);
       return { publicationError: (error as Error).message };
     }
   }
@@ -543,7 +542,7 @@ export class InstancePromoterService {
     const manual = input.version?.trim();
     if (!manual) return gate.next;
     if (!parseSemver(manual)) {
-      throw new BadRequestException(`« ${manual} » n'est pas une version sémantique (attendu : 1.2.3).`);
+      throw new BadRequestException(msg('env.notSemver', { version: manual }));
     }
     return manual;
   }
@@ -611,12 +610,12 @@ export class InstancePromoterService {
       await this.n8n.updateWorkflow(config, row.externalId, { ...live, name: renamed });
       const fresh = await this.n8n.getWorkflow(config, row.externalId);
       await this.sync.upsertWorkflow(row.instanceId, fresh);
-      this.logger.log(`« ${row.name} » renommé « ${renamed} » dans n8n`);
+      this.logger.log(`"${row.name}" renamed "${renamed}" in n8n`);
       return { name: row.name, renamed, status: 'renamed' };
     } catch (error) {
       const message = (error as Error).message;
       this.logger.warn(
-        `Renommage KO sur « ${row.name} » (${message}) : la version ${version} est posée, le nom dans n8n reste à jour à la main.`,
+        `Rename failed on "${row.name}" (${message}): version ${version} is set, the name in n8n must be updated by hand.`,
       );
       return { name: row.name, renamed, status: 'failed', error: message };
     }
@@ -650,7 +649,7 @@ export class InstancePromoterService {
     const remote = prepared.gates.remoteSchema;
     if (remote && !remote.ok && !input.force) {
       throw new BadRequestException(
-        `Promotion de « ${prepared.targetName} » bloquée : ${remoteSchemaBlocker(remote)}`,
+        msg('env.promoteRemoteBlocked', { name: prepared.targetName, reason: remoteSchemaBlocker(remote) }),
       );
     }
 
@@ -692,7 +691,7 @@ export class InstancePromoterService {
 
     if (targetN8nId && input.targetEnv) {
       await ensureEnvTags(this.n8n, targetConfig, targetN8nId, prepared.sourceTags, input.targetEnv).catch(
-        (error) => this.logger.warn(`Tags KO sur « ${targetName} » : ${(error as Error).message}`),
+        (error) => this.logger.warn(`Tags failed on "${targetName}": ${(error as Error).message}`),
       );
     }
 
@@ -705,7 +704,7 @@ export class InstancePromoterService {
     }
 
     this.logger.log(
-      `« ${prepared.sourceName} » promu vers ${prepared.targetInstanceName} : « ${targetName} » #${targetN8nId} (${mode}, ${prepared.replacements} remplacements)`,
+      `"${prepared.sourceName}" promoted to ${prepared.targetInstanceName}: "${targetName}" #${targetN8nId} (${mode}, ${prepared.replacements} replacements)`,
     );
     return {
       mode,
@@ -786,7 +785,7 @@ export class InstancePromoterService {
     for (const callee of plan.publish) {
       const localId = await this.localIdOf(input.targetInstanceId, callee.id);
       if (localId && !(await this.locks.canWrite(localId))) {
-        result.manual.push({ name: callee.name, reason: 'verrouillé : à publier à la main' });
+        result.manual.push({ name: callee.name, reason: msg('env.calleeLocked') });
         continue;
       }
       try {
@@ -796,11 +795,11 @@ export class InstancePromoterService {
           await this.n8n.getWorkflow(targetConfig, callee.id),
         );
         result.published.push(callee.name);
-        this.logger.log(`Sous-workflow « ${callee.name} » publié avant la promotion`);
+        this.logger.log(`Sub-workflow "${callee.name}" published before the promotion`);
       } catch (error) {
         result.manual.push({
           name: callee.name,
-          reason: `n8n a refusé de le publier : ${(error as Error).message}`,
+          reason: msg('env.calleeRefused', { error: (error as Error).message }),
         });
       }
     }
@@ -830,7 +829,7 @@ export class InstancePromoterService {
         await this.n8n.updateWorkflow(targetConfig, holderId, { ...live, nodes });
       } catch (error) {
         throw new BadRequestException(
-          `Impossible de libérer l'URL tenue par « ${own[0].holderName} » : ${(error as Error).message}. Rien n'a été promu.`,
+          msg('env.freeUrlFailed', { holder: own[0].holderName, error: (error as Error).message }),
         );
       }
       await this.sync.upsertWorkflow(
@@ -844,7 +843,7 @@ export class InstancePromoterService {
           from: clash.url,
           to: clash.move!,
         });
-        this.logger.log(`« ${clash.holderName} » / ${clash.holderNode} : /${clash.url} → /${clash.move}`);
+        this.logger.log(`"${clash.holderName}" / ${clash.holderNode}: /${clash.url} → /${clash.move}`);
       }
     }
     return moved;
@@ -979,9 +978,7 @@ export class InstancePromoterService {
     try {
       live = await this.n8n.getWorkflow(config, externalId);
     } catch (error) {
-      throw new BadRequestException(
-        `Impossible de relire « ${name} » dans n8n (${(error as Error).message}) : promotion abandonnée plutôt que de pousser un état périmé.`,
-      );
+      throw new BadRequestException(msg('env.rereadFailed', { name, error: (error as Error).message }));
     }
     await this.sync.upsertWorkflow(instanceId, live);
     return live;
@@ -1014,7 +1011,10 @@ export class InstancePromoterService {
       missing,
       unverified: report.tables
         .filter((table) => table.status === 'unverified')
-        .map((table) => ({ table: table.label ?? table.key, reason: table.reason ?? 'non lue' })),
+        .map((table) => ({
+          table: table.label ?? table.key,
+          reason: table.reason ?? msg('env.tableUnread'),
+        })),
       tables: report.tables,
     };
   }
@@ -1031,9 +1031,7 @@ export class InstancePromoterService {
     // cohabitent sous des noms suffixés, c'est le nom qui les apparie comme entre instances.
     const sameInstance = input.targetInstanceId === workflow.instanceId;
     if (sameInstance && !input.targetEnv) {
-      throw new BadRequestException(
-        'Même instance sans env cible : le workflow s’écraserait lui-même. Choisis l’env vers lequel pousser.',
-      );
+      throw new BadRequestException(msg('env.sameInstanceNoEnv'));
     }
     const target = await this.prisma.instance.findUniqueOrThrow({
       where: { id: input.targetInstanceId },
@@ -1066,7 +1064,7 @@ export class InstancePromoterService {
     const expectedName = input.targetEnv ? withEnvSuffix(sourceName, input.targetEnv, envs) : sourceName;
     if (sameInstance && expectedName === sourceName) {
       throw new BadRequestException(
-        `« ${sourceName} » est déjà l’exemplaire ${input.targetEnv} : pousser ici l’écraserait avec lui-même.`,
+        msg('env.alreadyThatExemplar', { name: sourceName, env: input.targetEnv }),
       );
     }
 
@@ -1222,41 +1220,46 @@ export class InstancePromoterService {
 
     const hardBlockers: string[] = [];
     if (existing?.isArchived) {
-      hardBlockers.push(
-        `« ${targetName} » existe sur ${target.name} mais y est ARCHIVÉ : n8n refuse toute modification d'un workflow archivé. Désarchive-le dans n8n (ou renomme-le) avant de promouvoir.`,
-      );
+      hardBlockers.push(msg('env.targetArchived', { name: targetName, instance: target.name }));
     }
     const blockers: string[] = [...hardBlockers];
-    if (!gates.findings.ok) blockers.push(`${gates.findings.errors} finding(s) de sévérité error`);
-    if (gates.tests && !gates.tests.ok) blockers.push(`${gates.tests.failed} test(s) en échec`);
+    if (!gates.findings.ok) blockers.push(msg('env.gateFindings', { count: gates.findings.errors }));
+    if (gates.tests && !gates.tests.ok) blockers.push(msg('env.gateTests', { count: gates.tests.failed }));
     if (archivedSubs.length > 0) {
       blockers.push(
-        `${archivedSubs.length} sous-workflow(s) archivé(s) sur la cible : ${archivedSubs
-          .map((sub) => sub.targetName ?? sub.sourceName ?? sub.sourceN8nId)
-          .join(', ')} — désarchive-les dans n8n, un archivé ne s'exécute plus`,
+        msg('env.gateArchivedSubs', {
+          count: archivedSubs.length,
+          names: archivedSubs.map((sub) => sub.targetName ?? sub.sourceName ?? sub.sourceN8nId).join(', '),
+        }),
       );
     }
     if (uncovered.length > 0) {
       blockers.push(
-        input.cascade
-          ? `${uncovered.length} sous-workflow(s) inconnu(s) de la plateforme (resynchronise l'instance source) : ${uncovered.join(', ')}`
-          : `${uncovered.length} sous-workflow(s) sans contrepartie sur la cible : ${uncovered.join(', ')}`,
+        msg(input.cascade ? 'env.gateUnknownSubs' : 'env.gateUncoveredSubs', {
+          count: uncovered.length,
+          names: uncovered.join(', '),
+        }),
       );
     }
     if (gates.remoteSchema && !gates.remoteSchema.ok) blockers.push(remoteSchemaBlocker(gates.remoteSchema));
     for (const clash of entryClashes) {
       if (!clash.holderActive || (clash.move !== null && input.moveClashing !== false)) continue;
       blockers.push(
-        `« ${clash.node} » : /${clash.url} est déjà servi par « ${clash.holderName} » (actif)` +
-          (clash.move
-            ? ` — coche « libérer l'URL » pour le passer en /${clash.move}`
-            : " — libère l'URL dans n8n"),
+        msg('env.gateEntryClash', {
+          node: clash.node,
+          url: clash.url,
+          holder: clash.holderName,
+          hasMove: Boolean(clash.move),
+          move: clash.move ?? '',
+        }),
       );
     }
     if (!gates.version.ok) {
       blockers.push(
-        `la cible porte ${gates.version.targetVersion} et la source ${gates.version.sourceVersion ?? 'aucune version'} : ` +
-          "la cible a reçu quelque chose que la source n'a pas — vérifie que tu n'écrases pas un correctif fait directement là-bas",
+        msg('env.gateVersionAhead', {
+          target: gates.version.targetVersion,
+          source: gates.version.sourceVersion ?? msg('env.noVersion'),
+        }),
       );
     }
 
@@ -1395,17 +1398,14 @@ export class InstancePromoterService {
       release.state === 'clean' && release.version
         ? {
             level: 'none' as const,
-            reason: `« ${context.sourceName} » n'a pas bougé depuis sa mise en service en ${release.version} : la promotion reporte ce numéro, elle ne publie rien de neuf.`,
+            reason: msg('env.versionReprise', { name: context.sourceName, version: release.version }),
             source: 'rules' as const,
           }
         : null;
     const proposal: { level: ReleaseLevel; reason: string; source: 'ai' | 'rules' | 'human' } = input.bump
       ? {
           level: input.bump,
-          reason:
-            input.bump === 'none'
-              ? 'Reprise choisie à la main : le numéro de la source est reporté tel quel.'
-              : 'Niveau choisi à la main.',
+          reason: input.bump === 'none' ? msg('env.versionManualReprise') : msg('env.versionManualLevel'),
           source: 'human',
         }
       : (reprise ??
@@ -1497,19 +1497,16 @@ function chainSkipRefusal(gate: PromoteChainGate, input: PromoteInput): string |
   const skipped = gate.skipped.map((env) => env.toUpperCase()).join(', ');
   const route = [gate.from, ...gate.skipped, gate.to].filter(Boolean).join(' → ');
   if (gate.mode === 'block') {
-    return (
-      `La chaîne d'environnements est en mode bloquant et cette promotion saute ${skipped} : ` +
-      `passe par ${route}, ou coche « passer par les envs intermédiaires ».`
-    );
+    return msg('env.chainBlockRefusal', { skipped, route });
   }
   if (input.confirmSkip) return null;
-  return (
-    `Cette promotion saute ${skipped} (chaîne déclarée : ${gate.chain.map((env) => env.toUpperCase()).join(' → ')}). ` +
-    'Confirme le saut explicitement, ou fais-la passer par les envs intermédiaires.'
-  );
+  return msg('env.chainWarnRefusal', {
+    skipped,
+    chain: gate.chain.map((env) => env.toUpperCase()).join(' → '),
+  });
 }
 
 function remoteSchemaBlocker(gate: PromoteRemoteSchemaGate): string {
   const nodes = [...new Set(gate.missing.map((item) => item.nodeName).filter(Boolean))];
-  return `${gate.missing.length} colonne(s) ou table(s) absente(s) sur la cible (${nodes.join(', ')}) — crée-les avant de promouvoir`;
+  return msg('env.remoteSchemaBlocker', { count: gate.missing.length, nodes: nodes.join(', ') });
 }

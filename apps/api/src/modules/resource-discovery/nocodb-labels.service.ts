@@ -145,7 +145,7 @@ export class NocoDbLabelsService {
         }
       } catch (error) {
         result.failed.push({ credentialId, reason: (error as Error).message });
-        this.logger.warn(`Bases NocoDB illisibles (${credentialId}) : ${(error as Error).message}`);
+        this.logger.warn(`Unreadable NocoDB bases (${credentialId}): ${(error as Error).message}`);
         continue;
       }
 
@@ -168,7 +168,7 @@ export class NocoDbLabelsService {
           }
         } catch (error) {
           result.failed.push({ credentialId, projectId, reason: (error as Error).message });
-          this.logger.warn(`Tables NocoDB illisibles (${projectId}) : ${(error as Error).message}`);
+          this.logger.warn(`Unreadable NocoDB tables (${projectId}): ${(error as Error).message}`);
         }
       }
     }

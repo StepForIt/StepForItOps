@@ -7,6 +7,7 @@
  * L'alternative (épingler le nœud d'appel) ne fait partir aucun appel du tout :
  * plus sûr, mais on ne voit pas ce qu'on aurait envoyé. Les deux sont utiles.
  */
+import { msg } from '../../i18n';
 import { N8nWorkflow } from './workflow.types';
 
 export const STUB_PREFIX = '[BOUCHON]';
@@ -29,21 +30,23 @@ export function stubWorkflowName(subWorkflowName: string): string {
  * marqueur évite qu'un résultat de test soit pris pour un vrai.
  */
 export function buildStubWorkflow(subWorkflowName: string): N8nWorkflow {
+  const triggerName = msg('platform.stubTriggerNode');
+  const echoName = msg('platform.stubEchoNode');
   return {
     name: stubWorkflowName(subWorkflowName),
     active: false,
     nodes: [
       {
-        name: 'Appel reçu',
+        name: triggerName,
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         typeVersion: 1,
         position: [0, 0],
         parameters: {},
-        notes: `Bouchon de « ${subWorkflowName} » : posé par la plateforme pour un test. Rien n'est exécuté ici.`,
+        notes: msg('platform.stubNotes', { subWorkflowName }),
         notesInFlow: true,
       },
       {
-        name: 'Renvoyer l’entrée',
+        name: echoName,
         type: 'n8n-nodes-base.set',
         typeVersion: 3.4,
         position: [220, 0],
@@ -55,7 +58,7 @@ export function buildStubWorkflow(subWorkflowName: string): N8nWorkflow {
       },
     ],
     connections: {
-      'Appel reçu': { main: [[{ node: 'Renvoyer l’entrée', type: 'main', index: 0 }]] },
+      [triggerName]: { main: [[{ node: echoName, type: 'main', index: 0 }]] },
     },
     settings: {},
   } as N8nWorkflow;

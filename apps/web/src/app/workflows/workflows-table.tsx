@@ -5,6 +5,7 @@ import { getDefaultSortOrder } from '@refinedev/antd';
 import { CrudFilters } from '@refinedev/core';
 import Link from 'next/link';
 import { Space, Tag, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { WorkflowActions } from './workflow-actions';
 import { WorkflowNameCell } from './workflow-name-cell';
@@ -33,6 +34,10 @@ export function WorkflowsTable({
   /** Cases à cocher des actions groupées, tenues par la page. */
   selection: WorkflowSelection;
 }) {
+  const t = useTranslations('workflowsList.shared');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const date = (value: string | null) => formatDate(value, locale);
   const { enabled } = useEnabledModules();
   const showGroups = !enabled || enabled.includes('workflow-groups');
   const envColor = useEnvColor();
@@ -57,7 +62,7 @@ export function WorkflowsTable({
     >
       <Table.Column<WorkflowRow>
         dataIndex="name"
-        title="Nom"
+        title={tCommon('columns.name')}
         sorter
         defaultSortOrder={getDefaultSortOrder('name', sorters)}
         render={(_, record) => <WorkflowNameCell workflow={record} />}
@@ -65,33 +70,35 @@ export function WorkflowsTable({
       {showInstance && (
         <Table.Column
           dataIndex="instanceId"
-          title="Instance"
-          render={(id: string) => <Tag color="geekblue">{instanceName(id)}</Tag>}
+          title={tCommon('columns.instance')}
+          render={(id: string) => <Tag color="blue">{instanceName(id)}</Tag>}
         />
       )}
       <Table.Column
         dataIndex="env"
-        title="Env"
+        title={tCommon('columns.env')}
         render={(env: WorkflowRow['env']) => (env ? <Tag color={envColor(env)}>{env}</Tag> : <Tag>?</Tag>)}
       />
       <Table.Column
         dataIndex="divergence"
-        title="Écart prod"
+        title={t('columns.divergence')}
         render={(divergence: WorkflowRow['divergence'], row: WorkflowRow) => (
           <DivergenceTag workflowId={row.id} divergence={divergence} />
         )}
       />
       <Table.Column
         dataIndex="active"
-        title="Actif"
+        title={t('columns.active')}
         sorter
         defaultSortOrder={getDefaultSortOrder('active', sorters)}
-        render={(active: boolean) => (active ? <Tag color="green">actif</Tag> : <Tag>inactif</Tag>)}
+        render={(active: boolean) =>
+          active ? <Tag color="green">{t('active')}</Tag> : <Tag>{t('inactive')}</Tag>
+        }
       />
       {showGroups && (
         <Table.Column
           dataIndex="groups"
-          title="Groupe"
+          title={t('columns.group')}
           render={(groups: WorkflowRow['groups']) =>
             !groups || groups.length === 0 ? (
               <Typography.Text type="secondary">—</Typography.Text>
@@ -109,17 +116,15 @@ export function WorkflowsTable({
       )}
       <Table.Column
         dataIndex="tags"
-        title="Tags"
-        render={(tags: string[]) => tags?.map((t) => <Tag key={t}>{t}</Tag>)}
+        title={t('columns.tags')}
+        render={(tags: string[]) => tags?.map((tag) => <Tag key={tag}>{tag}</Tag>)}
       />
       <Table.Column
         dataIndex="monitorCount"
-        title="Monitoring"
+        title={t('columns.monitoring')}
         render={(count: number) =>
           count > 0 ? (
-            <Tag color="green">
-              {count} sonde{count > 1 ? 's' : ''}
-            </Tag>
+            <Tag color="green">{t('probes', { count })}</Tag>
           ) : (
             <Typography.Text type="secondary">—</Typography.Text>
           )
@@ -127,20 +132,21 @@ export function WorkflowsTable({
       />
       <Table.Column
         dataIndex="upstreamUpdatedAt"
-        title="Modifié (n8n)"
+        title={t('columns.upstreamUpdated')}
         sorter
         defaultSortOrder={getDefaultSortOrder('upstreamUpdatedAt', sorters)}
-        render={formatDate}
+        render={date}
       />
       <Table.Column
         dataIndex="updatedAt"
-        title="Synchronisé"
+        title={t('columns.synced')}
         sorter
         defaultSortOrder={getDefaultSortOrder('updatedAt', sorters)}
-        render={formatDate}
+        render={date}
       />
       <Table.Column<WorkflowRow>
-        title="Actions"
+        key="actions"
+        title={tCommon('columns.actions')}
         className="row-actions"
         render={(_, record) => <WorkflowActions workflow={record} onChange={refetch} />}
       />

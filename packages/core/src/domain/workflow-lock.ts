@@ -1,3 +1,5 @@
+import { msg } from '../i18n';
+
 /**
  * Verrou d'un exemplaire de workflow : tant qu'il est posé, aucune écriture de la
  * plateforme ne le modifie, sauf forçage NOMMÉ et JUSTIFIÉ.
@@ -38,8 +40,8 @@ export interface LockVerdict {
 
 export function lockReasonError(reason: string): string | null {
   const trimmed = reason.trim();
-  if (trimmed.length < REASON_MIN) return `Raison obligatoire (${REASON_MIN} caractères au moins).`;
-  if (trimmed.length > REASON_MAX) return `Raison trop longue (${REASON_MAX} caractères au plus).`;
+  if (trimmed.length < REASON_MIN) return msg('env.lockReasonTooShort', { min: REASON_MIN });
+  if (trimmed.length > REASON_MAX) return msg('env.lockReasonTooLong', { max: REASON_MAX });
   return null;
 }
 
@@ -80,8 +82,6 @@ export function lockVerdict(locked: LockedWorkflow[], override: LockOverride | n
 }
 
 export function lockRefusalMessage(blocking: LockedWorkflow[]): string {
-  const names = blocking.map((workflow) => `« ${workflow.name} »`).join(', ');
-  return blocking.length > 1
-    ? `${names} sont verrouillés : forcer demande une raison.`
-    : `${names} est verrouillé : forcer demande une raison.`;
+  const names = blocking.map((workflow) => msg('env.quoted', { name: workflow.name })).join(', ');
+  return msg('env.lockRefusal', { count: blocking.length, names });
 }

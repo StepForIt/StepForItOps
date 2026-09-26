@@ -5,7 +5,7 @@
  * (`ProviderEndpoint`) et dit aussi cloud ou auto-hébergé (cf. `isNocoDbCloud`).
  */
 
-import { ProbeHttpRequest } from '@nwm/core';
+import { ProbeHttpRequest, msg } from '@nwm/core';
 
 /** Requête exécutée par le nœud HTTP Request du workflow temporaire. */
 export type DiscoveryRequest = ProbeHttpRequest;
@@ -108,7 +108,7 @@ export const DISCOVERY_PROVIDERS: ProviderDiscovery[] = [
             const name =
               asArray(prop(db, 'title'))
                 .map((t) => String(prop(t, 'plain_text') ?? ''))
-                .join('') || 'sans titre';
+                .join('') || msg('platform.untitled');
             return { id: String(prop(db, 'id') ?? ''), name, suggestedKey: `db_${slug(name)}` };
           }),
       },

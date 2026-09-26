@@ -129,14 +129,14 @@ export class TaskClassifierService {
         effort: 'low',
         maxTokens: 400,
         system:
-          "Tu nommes la TÂCHE d'un prompt, rien d'autre. Tu ne juges jamais le modèle employé, tu ne parles jamais de coût. Dans le doute : unknown.",
+          'You name the TASK of a prompt, nothing else. You never judge the model used, you never talk about cost. When in doubt: unknown.',
         prompt: [
-          `Étiquettes possibles : ${LLM_TASKS.join(', ')}.`,
-          'Prompt :',
+          `Possible labels: ${LLM_TASKS.join(', ')}.`,
+          'Prompt:',
           '---',
           excerpt,
           '---',
-          'Réponds en JSON : {"task":"…","confidence":0..1,"evidence":"la phrase du prompt qui tranche"}',
+          'Answer in JSON: {"task":"…","confidence":0..1,"evidence":"the sentence of the prompt that settles it, copied verbatim"}',
         ].join('\n'),
       });
       const start = answer.indexOf('{');
@@ -153,7 +153,7 @@ export class TaskClassifierService {
         evidence: (parsed.evidence ?? '').slice(0, 300),
       };
     } catch (error) {
-      this.logger.warn(`Classification de tâche KO : ${(error as Error).message}`);
+      this.logger.warn(`Task classification failed: ${(error as Error).message}`);
       return null;
     }
   }
@@ -188,7 +188,7 @@ export class TaskClassifierService {
     } catch (error) {
       // Pas de données d'exécution lisibles : on retombe sur le gabarit, et
       // s'il est muet la classification n'a pas lieu. Elle ne devine pas.
-      this.logger.warn(`Prompts non échantillonnés : ${(error as Error).message}`);
+      this.logger.warn(`Prompts not sampled: ${(error as Error).message}`);
     }
     return found;
   }

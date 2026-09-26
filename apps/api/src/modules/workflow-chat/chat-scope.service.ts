@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { N8nWorkflow, SCOPE_MAX_DEPTH, SCOPE_MAX_MEMBERS, ScopeMember, subWorkflowCalls } from '@nwm/core';
+import {
+  N8nWorkflow,
+  SCOPE_MAX_DEPTH,
+  SCOPE_MAX_MEMBERS,
+  ScopeMember,
+  msg,
+  subWorkflowCalls,
+} from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 /** Un membre du périmètre, avec ce qu'il faut pour l'ÉCRIRE et non seulement le nommer. */
@@ -61,7 +68,7 @@ export class ChatScopeService {
           const entry: ChatScopeMember = {
             ...found,
             depth,
-            calledBy: call.nodes.map((node) => `« ${member.name} » → ${node}`),
+            calledBy: call.nodes.map((node) => `"${member.name}" → ${node}`),
           };
           members.push(entry);
           next.push({ member: entry, raw: found.raw });
@@ -136,9 +143,9 @@ export class ChatScopeService {
     missingUpstreamAt: Date | null;
   }): Omit<ChatScopeMember, 'depth' | 'calledBy'> & { raw: N8nWorkflow } {
     const reason = row.missingUpstreamAt
-      ? 'n8n ne connaît plus ce workflow : rien ne peut y être écrit.'
+      ? msg('chat.proposalWorkflowMissing')
       : row.archivedUpstream
-        ? 'archivé côté n8n : toute écriture est refusée tant qu’il ne l’est plus.'
+        ? msg('chat.scopeArchived')
         : undefined;
     return {
       workflowId: row.id,

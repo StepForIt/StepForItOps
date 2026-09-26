@@ -12,6 +12,7 @@
 import { N8nWorkflow } from './workflow.types';
 import { isStickyNote } from './workflow-graph';
 import { activeParameters } from './inert-params';
+import { msg } from '../../i18n/translate';
 
 export interface PlaceholderFinding {
   severity: 'warning';
@@ -121,15 +122,12 @@ export function runPlaceholderChecks(workflow: N8nWorkflow): PlaceholderFinding[
       findings.push({
         severity: 'warning',
         code: 'param-placeholder',
-        message: `"${node.name}" garde une valeur d'exemple (${hit.excerpt})`,
+        message: msg('checks.paramPlaceholder', { node: node.name, excerpt: hit.excerpt }),
         nodeName: node.name,
         data: {
           path: hit.path,
           excerpt: hit.excerpt,
-          suggestion:
-            `Renseigner ${hit.path.replace(/^\$\./, '')} avec la vraie valeur : ` +
-            'le nœud a l’air configuré, mais l’appel partira sur une valeur d’exemple ' +
-            'et n’échouera qu’à la première exécution réelle.',
+          suggestion: msg('checks.paramPlaceholderFix', { path: hit.path.replace(/^\$\./, '') }),
         },
       });
     }

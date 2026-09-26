@@ -6,6 +6,7 @@ import {
   SnapshotDiff,
   compareSnapshots,
   extractExecutionSnapshot,
+  msg,
 } from '@nwm/core';
 import { TestCase } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -82,22 +83,18 @@ export class TestCasesService {
     const { workflow, raw } = await this.workflows.getRaw(workflowId);
     const webhook = findWebhookPath(raw);
     if (!webhook) {
-      throw new BadRequestException(
-        'Ce workflow n’expose pas de webhook : rien à rejouer. Les cas de test demandent un déclencheur webhook.',
-      );
+      throw new BadRequestException(msg('platform.testCaseNoWebhook'));
     }
     const config = await this.instances.getConfig(workflow.instanceId);
     const execution = await this.n8n.getExecution(config, executionId, { includeData: true });
     const snapshot = extractExecutionSnapshot(execution.data, webhook.node);
     if (!snapshot.lastNode || snapshot.items.length === 0) {
-      throw new BadRequestException(
-        'Exécution sans données exploitables (purgée par n8n, ou sans sortie) : choisis-en une autre.',
-      );
+      throw new BadRequestException(msg('platform.testCaseNoData'));
     }
     return this.prisma.testCase.create({
       data: {
         workflowId,
-        name: (name?.trim() || `Comme l'exécution ${executionId}`).slice(0, NAME_MAX),
+        name: (name?.trim() || msg('platform.testCaseDefaultName', { executionId })).slice(0, NAME_MAX),
         payload: (snapshot.webhookPayload ?? undefined) as object | undefined,
         expected: snapshot.items as unknown as object,
         sourceExecutionId: executionId,
@@ -113,17 +110,12 @@ export class TestCasesService {
   /** Rejoue UN cas : webhook → attend la nouvelle exécution → compare au snapshot. */
   async run(id: string): Promise<TestCaseRunResult> {
     const testCase = await this.prisma.testCase.findUnique({ where: { id } });
-    if (!testCase) throw new NotFoundException(`Cas de test ${id} introuvable`);
+    if (!testCase) throw new NotFoundException(msg('platform.testCaseNotFound', { id }));
     await this.refresh.refresh(testCase.workflowId);
     const { workflow, raw } = await this.workflows.getRaw(testCase.workflowId);
     const webhook = findWebhookPath(raw);
     if (!webhook) {
-      return this.conclude(
-        testCase,
-        'error',
-        [],
-        'Le workflow n’a plus de nœud webhook : il n’y a plus rien à rejouer.',
-      );
+      return this.conclude(testCase, 'error', [], msg('platform.testCaseWebhookGone'));
     }
     const config = await this.instances.getConfig(workflow.instanceId);
 
@@ -144,7 +136,7 @@ export class TestCasesService {
           testCase,
           'error',
           [],
-          `Webhook non enregistré dans n8n : le workflow doit être ACTIF pour répondre sur /webhook/${webhook.path}. (${webhookError})`,
+          msg('platform.testCaseWebhookNotRegistered', { path: webhook.path, error: webhookError }),
         );
       }
     }
@@ -152,16 +144,19 @@ export class TestCasesService {
     const execution = await this.waitForNewExecution(config, workflow.externalId, before);
     if (!execution) {
       const cause = webhookError
-        ? `Le webhook a répondu en erreur : ${webhookError}`
-        : `Le webhook a répondu, mais aucune exécution n'est apparue en ${Math.round(RUN_TIMEOUT_MS / 1000)} s (exécution trop longue, ou non sauvegardée par n8n).`;
-      return this.conclude(testCase, 'error', [], `Aucune exécution déclenchée. ${cause}`);
+        ? msg('platform.testCaseWebhookError', { error: webhookError })
+        : msg('platform.testCaseNoExecution', { seconds: Math.round(RUN_TIMEOUT_MS / 1000) });
+      return this.conclude(testCase, 'error', [], msg('platform.testCaseNothingTriggered', { cause }));
     }
     if (!execution.done) {
       return this.conclude(
         testCase,
         'error',
         [],
-        `L'exécution ${execution.id} tournait encore après ${Math.round(RUN_TIMEOUT_MS / 1000)} s : rien à comparer. Relance quand elle sera terminée.`,
+        msg('platform.testCaseStillRunning', {
+          executionId: execution.id,
+          seconds: Math.round(RUN_TIMEOUT_MS / 1000),
+        }),
         execution.id,
       );
     }
@@ -169,7 +164,7 @@ export class TestCasesService {
     const snapshot = extractExecutionSnapshot(detailed.data, webhook.node);
     const comparison = compareSnapshots(testCase.expected, snapshot.items);
     // Le nœud comparé est nommé : « ça a fail » sans dire OÙ oblige à rouvrir n8n.
-    const where = snapshot.lastNode ? ` (sortie du nœud « ${snapshot.lastNode} »)` : '';
+    const where = snapshot.lastNode ? msg('platform.testCaseOutputOf', { node: snapshot.lastNode }) : '';
     return this.conclude(
       testCase,
       comparison.match ? 'passed' : 'failed',

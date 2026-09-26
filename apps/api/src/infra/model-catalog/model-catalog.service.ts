@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ModelCatalog } from '@prisma/client';
 import {
-  DEFAULT_TASK_PROFILES,
+  defaultTaskProfiles,
   LlmTokenUsage,
   ModelCatalogEntry,
   ModelTier,
@@ -9,6 +9,7 @@ import {
   asTier,
   computeCostUsd,
   matchModelPrice,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { MODEL_CATALOG_SEED } from './model-catalog.seed';
@@ -90,7 +91,7 @@ export class ModelCatalogService {
       skipDuplicates: true,
     });
     await this.prisma.modelTaskProfile.createMany({
-      data: DEFAULT_TASK_PROFILES.map((profile) => ({
+      data: defaultTaskProfiles().map((profile) => ({
         task: profile.task,
         minTier: profile.minTier,
         rationale: profile.rationale,
@@ -164,14 +165,14 @@ function validate(input: ModelCatalogInput) {
   const pattern = (input.pattern ?? '').trim();
   const inputPerMTok = Number(input.inputPerMTok);
   const outputPerMTok = Number(input.outputPerMTok);
-  if (!pattern) throw new BadRequestException('Le motif de modèle est requis');
+  if (!pattern) throw new BadRequestException(msg('analysis.modelPatternRequired'));
   if (
     !Number.isFinite(inputPerMTok) ||
     inputPerMTok < 0 ||
     !Number.isFinite(outputPerMTok) ||
     outputPerMTok < 0
   ) {
-    throw new BadRequestException('Tarifs invalides : USD par million de tokens, positifs');
+    throw new BadRequestException(msg('analysis.modelPricesInvalid'));
   }
   return {
     pattern,

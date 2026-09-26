@@ -10,6 +10,7 @@
  * ce que fait chacun.
  */
 import { CheckFinding } from '../check-finding';
+import { msg } from '../../i18n/translate';
 import {
   FlatModule,
   MakeBlueprint,
@@ -44,7 +45,7 @@ export function findMakeNamingIssues(blueprint: unknown): CheckFinding[] {
   const findings: CheckFinding[] = unnamedModules(blueprint).map(({ module }) => ({
     severity: 'warning',
     code: 'default-name',
-    message: `Le module #${module.id} (${moduleLabel(module)}) n'a pas de nom : nomme-le d'après ce qu'il fait`,
+    message: msg('analysis.makeUnnamedModule', { id: module.id, label: moduleLabel(module) }),
     nodeName: moduleLabel(module),
     data: { moduleId: module.id },
   }));
@@ -63,7 +64,7 @@ export function findMakeNamingIssues(blueprint: unknown): CheckFinding[] {
     findings.push({
       severity: 'info',
       code: 'duplicate-nodes',
-      message: `Modules identiques (type + réglages) : ${names.join(', ')} — factorisables ?`,
+      message: msg('analysis.makeDuplicateModules', { names: names.join(', ') }),
       data: { names, moduleIds: modules.map((module) => module.id) },
     });
   }
@@ -77,7 +78,7 @@ export function findMakeNamingIssues(blueprint: unknown): CheckFinding[] {
  */
 export function renameModules(blueprint: unknown, renames: ModuleRename[]): MakeBlueprint {
   if (!isMakeBlueprint(blueprint)) {
-    throw new Error("Contenu illisible comme blueprint Make (aucun 'flow') : rien n'est renommé.");
+    throw new Error(msg('analysis.makeRenameUnreadable'));
   }
   const copy = structuredClone(blueprint);
   const byId = new Map(flattenModules(copy).map((flat) => [flat.module.id, flat.module]));
@@ -85,11 +86,11 @@ export function renameModules(blueprint: unknown, renames: ModuleRename[]): Make
     .filter((rename) => !byId.has(rename.moduleId))
     .map((rename) => `#${rename.moduleId}`);
   if (unknown.length > 0) {
-    throw new Error(`Modules introuvables dans le scénario : ${unknown.join(', ')}`);
+    throw new Error(msg('analysis.makeRenameUnknownModules', { ids: unknown.join(', ') }));
   }
   for (const { moduleId, newName } of renames) {
     const name = newName.trim();
-    if (!name) throw new Error(`Nom vide pour le module #${moduleId}`);
+    if (!name) throw new Error(msg('analysis.makeRenameEmptyName', { id: moduleId }));
     const module = byId.get(moduleId)!;
     module.metadata = { ...module.metadata, designer: { ...module.metadata?.designer, name } };
   }

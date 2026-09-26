@@ -8,6 +8,7 @@ import {
   insertPosition,
   MacroAction,
   manualGesture,
+  msg,
   rebaseSteps,
   reorderSteps,
   stepLabel,
@@ -128,7 +129,7 @@ export class ReleaseProceduresService {
 
   async get(id: string): Promise<ProcedureRow> {
     const procedure = await this.prisma.releaseProcedure.findUnique({ where: { id }, include: WITH_STEPS });
-    if (!procedure) throw new NotFoundException('Procédure introuvable');
+    if (!procedure) throw new NotFoundException(msg('release.procedureNotFound'));
     return toRow(procedure);
   }
 
@@ -144,7 +145,7 @@ export class ReleaseProceduresService {
   /** Un enregistrement par personne : en démarrer un clôt celui qui tournait encore. */
   async start(name: string, user: string): Promise<ProcedureRow> {
     const trimmed = name?.trim();
-    if (!trimmed) throw new BadRequestException('Nom obligatoire');
+    if (!trimmed) throw new BadRequestException(msg('release.nameRequired'));
     await this.prisma.releaseProcedure.updateMany({
       where: { status: 'recording', recordedBy: user },
       data: { status: 'ready' },
@@ -167,7 +168,7 @@ export class ReleaseProceduresService {
   }
 
   async rename(id: string, name: string): Promise<ProcedureRow> {
-    if (!name?.trim()) throw new BadRequestException('Nom obligatoire');
+    if (!name?.trim()) throw new BadRequestException(msg('release.nameRequired'));
     await this.get(id);
     const procedure = await this.prisma.releaseProcedure.update({
       where: { id },
@@ -189,21 +190,20 @@ export class ReleaseProceduresService {
    */
   async duplicate(id: string, input: DuplicateInput, user: string): Promise<ProcedureRow> {
     const procedure = await this.get(id);
-    if (procedure.status === 'recording')
-      throw new BadRequestException('Enregistrement en cours : arrête-le avant');
+    if (procedure.status === 'recording') throw new BadRequestException(msg('release.recordingInProgress'));
     if (!procedure.sourceEnv || !procedure.targetEnv) {
-      throw new BadRequestException('Aucune promotion enregistrée : rien à décaler');
+      throw new BadRequestException(msg('release.noHopRecorded'));
     }
     const to = { source: input.sourceEnv, target: input.targetEnv };
     if (!to.source || !to.target || to.source === to.target) {
-      throw new BadRequestException('Choisis deux envs différents');
+      throw new BadRequestException(msg('release.pickTwoEnvs'));
     }
     const envIds = await this.settings.declaredEnvIds();
     const unknown = [to.source, to.target].find((env) => !envIds.includes(env));
-    if (unknown) throw new BadRequestException(`Env ${unknown.toUpperCase()} non déclaré`);
+    if (unknown) throw new BadRequestException(msg('release.envNotDeclared', { env: unknown.toUpperCase() }));
     const recorded = { source: procedure.sourceEnv, target: procedure.targetEnv };
     if (recorded.source === to.source && recorded.target === to.target) {
-      throw new BadRequestException("Même saut que l'originale");
+      throw new BadRequestException(msg('release.sameHop'));
     }
 
     const hop = `${to.source.toUpperCase()} → ${to.target.toUpperCase()}`;
@@ -266,7 +266,7 @@ export class ReleaseProceduresService {
   /** Étape à valider par un humain ; sans position, elle part à la fin — là où en est l'enregistrement. */
   async addManual(id: string, input: InsertInput & { label: string }): Promise<ProcedureStepRow> {
     const label = input.label?.trim();
-    if (!label) throw new BadRequestException("Dis ce qu'il y a à faire");
+    if (!label) throw new BadRequestException(msg('release.sayWhatToDo'));
     const procedure = await this.get(id);
     const position = insertPosition(input.position, procedure.steps.length, input.frozen);
     return this.insertStep(id, position, { kind: 'manual', label, note: cleanNote(input.note) });
@@ -286,12 +286,12 @@ export class ReleaseProceduresService {
   /** La note se pose sur toute étape ; le libellé d'une étape automatique, lui, se déduit du geste. */
   async updateStep(id: string, stepId: string, patch: StepPatch): Promise<ProcedureStepRow> {
     const step = await this.prisma.releaseProcedureStep.findFirst({ where: { id: stepId, procedureId: id } });
-    if (!step) throw new NotFoundException('Étape introuvable');
+    if (!step) throw new NotFoundException(msg('release.stepNotFound'));
     const data: Prisma.ReleaseProcedureStepUpdateInput = {};
     if (patch.label !== undefined) {
-      if (step.kind !== 'manual') throw new BadRequestException("Le libellé d'un geste se déduit du geste");
+      if (step.kind !== 'manual') throw new BadRequestException(msg('release.gestureLabelDerived'));
       const label = patch.label.trim();
-      if (!label) throw new BadRequestException("Dis ce qu'il y a à faire");
+      if (!label) throw new BadRequestException(msg('release.sayWhatToDo'));
       data.label = label;
     }
     if (patch.note !== undefined) data.note = cleanNote(patch.note);
@@ -314,9 +314,9 @@ export class ReleaseProceduresService {
   ): Promise<ProcedureStepRow> {
     const procedure = await this.get(id);
     const index = procedure.steps.findIndex((step) => step.id === stepId);
-    if (index === -1) throw new NotFoundException('Étape introuvable');
-    if (procedure.steps[index].kind !== 'auto') throw new BadRequestException("Ce n'est pas un geste");
-    if (index < (input.frozen ?? 0)) throw new BadRequestException('Les étapes déjà jouées ne bougent plus');
+    if (index === -1) throw new NotFoundException(msg('release.stepNotFound'));
+    if (procedure.steps[index].kind !== 'auto') throw new BadRequestException(msg('release.notAGesture'));
+    if (index < (input.frozen ?? 0)) throw new BadRequestException(msg('release.frozenSteps'));
     const result = manualGesture(input, await this.settings.declaredEnvIds());
     if (!result.ok) throw new BadRequestException(result.reason);
 
@@ -358,7 +358,7 @@ export class ReleaseProceduresService {
 
   async removeStep(id: string, stepId: string): Promise<{ id: string }> {
     const step = await this.prisma.releaseProcedureStep.findFirst({ where: { id: stepId, procedureId: id } });
-    if (!step) throw new NotFoundException('Étape introuvable');
+    if (!step) throw new NotFoundException(msg('release.stepNotFound'));
     await this.prisma.$transaction([
       this.prisma.releaseProcedureStep.delete({ where: { id: stepId } }),
       this.prisma.releaseProcedureStep.updateMany({
@@ -381,7 +381,7 @@ export class ReleaseProceduresService {
         workflowFamilyKey(workflow.name, envIds) === familyKey &&
         detectWorkflowEnv(workflow.name, workflow.tags, envIds) === env,
     );
-    if (!match) throw new NotFoundException(`Aucun exemplaire ${env.toUpperCase()} de ce workflow`);
+    if (!match) throw new NotFoundException(msg('release.noExemplar', { env: env.toUpperCase() }));
     return { workflowId: match.id, active: match.active };
   }
 

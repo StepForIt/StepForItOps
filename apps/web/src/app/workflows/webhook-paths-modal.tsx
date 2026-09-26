@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Alert, Button, Modal, Select, Space, Tag, Typography, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { apiGet, apiPost } from '../../lib/api';
 
@@ -31,6 +32,8 @@ interface Instance {
  * que n8n n'attribue qu'à un seul workflow. Le gardien de l'URL n'est jamais touché.
  */
 export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations('workflowsList.webhookPaths');
+  const tCommon = useTranslations('common');
   const [instances, setInstances] = React.useState<Instance[]>([]);
   const [instanceId, setInstanceId] = React.useState<string | null>(null);
   const [fixes, setFixes] = React.useState<PathFix[] | null>(null);
@@ -78,9 +81,9 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
         results: Array<{ workflowName: string; applied: boolean; error?: string }>;
       }>(`/env-switcher/webhook-paths/${instanceId}`, { workflowIds: selected });
       const done = result.results.filter((r) => r.applied);
-      message.success(`${done.length} path(s) corrigé(s)`);
+      message.success(t('fixed', { count: done.length }));
       for (const failed of result.results.filter((r) => !r.applied)) {
-        message.error(`« ${failed.workflowName} » : ${failed.error}`, 8);
+        message.error(t('failed', { name: failed.workflowName, error: failed.error ?? '' }), 8);
       }
       await analyse(instanceId);
     } catch (e) {
@@ -92,13 +95,13 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
 
   return (
     <Modal
-      title="Points d’entrée partagés"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={900}
       footer={[
         <Button key="close" onClick={onClose}>
-          Fermer
+          {tCommon('close')}
         </Button>,
         <Button
           key="apply"
@@ -107,19 +110,17 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
           disabled={selected.length === 0}
           onClick={apply}
         >
-          Corriger {selected.length} path(s)
+          {t('fix', { count: selected.length })}
         </Button>,
       ]}
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        <Typography.Text type="secondary">
-          Une copie qui partage le path de son original ne reçoit rien. La prod garde son URL.
-        </Typography.Text>
+        <Typography.Text type="secondary">{t('intro')}</Typography.Text>
 
         <Space>
           <Select
             style={{ width: 360 }}
-            placeholder="Choisir une instance"
+            placeholder={t('chooseInstance')}
             value={instanceId}
             onChange={(value: string) => {
               setInstanceId(value);
@@ -133,14 +134,14 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
             loading={loading}
             onClick={() => analyse(instanceId!)}
           >
-            Analyser
+            {t('analyse')}
           </Button>
         </Space>
 
-        {error && <Alert type="error" showIcon message="Analyse impossible" description={error} />}
+        {error && <Alert type="error" showIcon message={t('analyseError')} description={error} />}
 
         {fixes && fixes.length === 0 && standoffs.length === 0 && (
-          <Typography.Text type="secondary">Aucun path partagé sur cette instance.</Typography.Text>
+          <Typography.Text type="secondary">{t('none')}</Typography.Text>
         )}
 
         {fixes && fixes.length > 0 && (
@@ -155,7 +156,7 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
             }}
             columns={[
               {
-                title: 'Copie',
+                title: t('columns.copy'),
                 dataIndex: 'workflowName',
                 render: (name: string, row: PathFix) => (
                   <>
@@ -163,9 +164,10 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
                   </>
                 ),
               },
-              { title: 'Nœud', dataIndex: 'node' },
+              { title: tCommon('columns.node'), dataIndex: 'node' },
               {
-                title: 'Path',
+                key: 'path',
+                title: t('columns.path'),
                 render: (_: unknown, row: PathFix) => (
                   <Typography.Text>
                     <Typography.Text delete type="secondary">
@@ -176,7 +178,7 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
                 ),
               },
               {
-                title: 'Garde l’URL',
+                title: t('columns.keeper'),
                 dataIndex: 'keeper',
                 render: (keeper: string) => <Typography.Text type="secondary">{keeper}</Typography.Text>,
               },
@@ -188,7 +190,7 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
           <Alert
             type="warning"
             showIcon
-            message={`${standoffs.length} conflit(s) à régler à la main`}
+            message={t('conflicts', { count: standoffs.length })}
             description={
               <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
                 {standoffs.map((standoff, index) => (

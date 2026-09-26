@@ -42,10 +42,10 @@ export interface SampleResult {
 }
 
 /** 850 ms / 2,3 s / 1 min 12 s : les durées se lisent, elles ne se comptent pas. */
-export function formatMs(ms: number | null): string {
+export function formatMs(ms: number | null, locale: string): string {
   if (ms === null) return '—';
   if (ms < 1000) return `${Math.round(ms)} ms`;
-  if (ms < 60_000) return `${(ms / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} s`;
+  if (ms < 60_000) return `${(ms / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} s`;
   const minutes = Math.floor(ms / 60_000);
   const seconds = Math.round((ms % 60_000) / 1000);
   return seconds > 0 ? `${minutes} min ${seconds} s` : `${minutes} min`;

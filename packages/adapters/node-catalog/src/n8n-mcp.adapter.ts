@@ -4,7 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { CatalogNodeType, CatalogRevision, NodeCatalogPort, NodeProperty, toLongNodeType } from '@nwm/core';
+import {
+  CatalogNodeType,
+  CatalogRevision,
+  NodeCatalogPort,
+  NodeProperty,
+  msg,
+  toLongNodeType,
+} from '@nwm/core';
 
 /**
  * Catalogue des types de nœuds, alimenté par le projet n8n-mcp.
@@ -94,7 +101,7 @@ export class N8nMcpCatalogAdapter implements NodeCatalogPort {
    */
   async revision(): Promise<CatalogRevision> {
     const blob = await getJson<{ sha?: string }>(CONTENTS_URL, METADATA_TIMEOUT_MS);
-    if (!blob.sha) throw new Error(`Aucun sha rendu pour ${DB_PATH}`);
+    if (!blob.sha) throw new Error(msg('platform.catalogNoSha', { path: DB_PATH }));
     // La version de n8n décrite est annoncée par la release, jamais par le blob.
     // Renseignement de confort : son absence n'empêche pas la synchronisation.
     const n8nVersion = await getJson<{ tag_name?: string }>(RELEASE_URL, METADATA_TIMEOUT_MS)
@@ -123,7 +130,7 @@ async function download(file: string): Promise<void> {
     signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
   });
   if (!response.ok || !response.body) {
-    throw new Error(`Téléchargement du catalogue → ${response.status}`);
+    throw new Error(msg('platform.catalogDownloadFailed', { status: response.status }));
   }
   // En flux vers le disque, et non en mémoire : 100 Mo d'un coup dans le tas de
   // l'api, c'est le conteneur web qui s'est déjà fait tuer pour moins que ça.
@@ -144,10 +151,7 @@ async function read(file: string, includeCommunity: boolean): Promise<CatalogNod
   try {
     ({ DatabaseSync } = (await import('node:sqlite')) as never);
   } catch {
-    throw new Error(
-      'Lecture du catalogue impossible : `node:sqlite` demande Node 22 ou plus. ' +
-        "L'image de l'api doit être bâtie sur node:22-alpine.",
-    );
+    throw new Error(msg('platform.catalogSqliteMissing'));
   }
 
   const db = new DatabaseSync(file, { readOnly: true });

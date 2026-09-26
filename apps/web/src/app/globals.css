@@ -32,3 +32,23 @@
 .app-sider > .ant-btn {
   display: none;
 }
+
+/*
+ * Les titres dans la police de la charte (Familjen Grotesk, posée par `layout.tsx`) ;
+ * l'interface reste en Inter, par le thème. Deux polices, deux rôles. Le sélecteur
+ * `h3.ant-typography` et non `h3` seul : le style d'antd pose la police sur la classe,
+ * et un sélecteur d'élément perdait.
+ */
+h1.ant-typography,
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography,
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-page-header-heading-title,
+.ant-card-head-title,
+.ant-statistic-content {
+  font-family: var(--font-display), var(--font-text), system-ui, sans-serif;
+}

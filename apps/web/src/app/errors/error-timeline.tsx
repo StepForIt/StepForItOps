@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { Empty } from 'antd';
+import { useTranslations } from 'next-intl';
 import { OTHERS_COLOR } from './error-chart-colors';
 import type { ErrorStats } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 const WIDTH = 900;
 const HEIGHT = 220;
@@ -22,8 +24,9 @@ interface Props {
  * Fait main en SVG — deux graphes ne justifient pas une lib de charts.
  */
 export function ErrorTimeline({ stats, colors, selected, onSelectDay }: Props) {
+  const t = useTranslations('health.errors');
   if (stats.total === 0) {
-    return <Empty description="Aucune erreur sur la période" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    return <Empty description={t('emptyPeriod')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   const plotWidth = WIDTH - PAD.left - PAD.right;
@@ -35,11 +38,11 @@ export function ErrorTimeline({ stats, colors, selected, onSelectDay }: Props) {
   const labelEvery = Math.ceil(stats.buckets.length / 12);
 
   return (
-    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" role="img" aria-label="Erreurs par jour">
+    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" role="img" aria-label={t('timeline.ariaLabel')}>
       {[0, yMax / 2, yMax].map((tick) => (
         <g key={tick}>
-          <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(tick)} y2={y(tick)} stroke="#f0f0f0" />
-          <text x={PAD.left - 6} y={y(tick) + 4} textAnchor="end" fontSize={11} fill="#8c8c8c">
+          <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(tick)} y2={y(tick)} stroke={BRAND.craie} />
+          <text x={PAD.left - 6} y={y(tick) + 4} textAnchor="end" fontSize={11} fill={BRAND.slate}>
             {Math.round(tick)}
           </text>
         </g>
@@ -61,7 +64,7 @@ export function ErrorTimeline({ stats, colors, selected, onSelectDay }: Props) {
               y={PAD.top}
               width={slot}
               height={plotHeight}
-              fill={isSelected ? '#e6f4ff' : 'transparent'}
+              fill={isSelected ? BRAND.primarySoft : 'transparent'}
             />
             {Object.entries(bucket.byWorkflow)
               .sort((a, b) => b[1] - a[1])
@@ -79,7 +82,7 @@ export function ErrorTimeline({ stats, colors, selected, onSelectDay }: Props) {
                     fill={colors.get(key) ?? OTHERS_COLOR}
                     opacity={selected && !isSelected ? 0.35 : 1}
                   >
-                    <title>{`${bucket.date} — ${count} erreur(s)`}</title>
+                    <title>{t('timeline.barTitle', { date: bucket.date, count })}</title>
                   </rect>
                 );
               })}
@@ -89,7 +92,7 @@ export function ErrorTimeline({ stats, colors, selected, onSelectDay }: Props) {
                 y={HEIGHT - 8}
                 textAnchor="middle"
                 fontSize={11}
-                fill="#8c8c8c"
+                fill={BRAND.slate}
               >
                 {bucket.date.slice(5)}
               </text>

@@ -6,8 +6,9 @@ import { getDefaultSortOrder } from '@refinedev/antd';
 import { useTable } from '../../lib/list-memory/use-list-memory';
 import { CrudFilters } from '@refinedev/core';
 import { Tag, Tooltip, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
-import { VersionActions, VersionHandlers, frDate } from './version-actions';
+import { VersionActions, VersionHandlers, formatDateTime } from './version-actions';
 import { VersionHistoryTable } from './history-table';
 
 interface LatestVersion {
@@ -42,6 +43,9 @@ export function LatestVersionsTable({
   instanceName: (id?: string) => string;
   handlers: VersionHandlers;
 }) {
+  const c = useTranslations('inventory.versions.columns');
+  const tt = useTranslations('inventory.versions.table');
+  const locale = useLocale();
   const { tableProps, sorters } = useTable<LatestVersion>({
     resource: 'versions/latest',
     filters: { permanent: filters },
@@ -62,7 +66,7 @@ export function LatestVersionsTable({
     >
       <Table.Column<LatestVersion>
         dataIndex={['workflow', 'name']}
-        title="Workflow"
+        title={c('workflow')}
         sorter
         defaultSortOrder={getDefaultSortOrder('workflow.name', sorters)}
         render={(name: string, record) => (
@@ -71,45 +75,55 @@ export function LatestVersionsTable({
       />
       {!scope && (
         <Table.Column<LatestVersion>
-          title="Instance"
-          render={(_, record) => <Tag color="geekblue">{instanceName(record.workflow?.instanceId)}</Tag>}
+          title={c('instance')}
+          render={(_, record) => <Tag color="blue">{instanceName(record.workflow?.instanceId)}</Tag>}
         />
       )}
-      <Table.Column dataIndex="hash" title="Hash" render={(h: string) => <code>{h.slice(0, 10)}</code>} />
+      <Table.Column
+        dataIndex="hash"
+        title={c('hash')}
+        render={(h: string) => <code>{h.slice(0, 10)}</code>}
+      />
       <Table.Column
         dataIndex="origin"
-        title="Origine"
+        title={c('origin')}
         sorter
         defaultSortOrder={getDefaultSortOrder('origin', sorters)}
         render={(o: string) => <Tag>{o}</Tag>}
       />
       <Table.Column
         dataIndex="createdAt"
-        title="Dernière version"
+        title={c('lastVersion')}
         sorter
         defaultSortOrder={getDefaultSortOrder('createdAt', sorters)}
-        render={(d: string) => frDate(d)}
+        render={(d: string) => formatDateTime(d, locale)}
       />
       <Table.Column<LatestVersion>
         dataIndex="versionCount"
-        title="Versions"
+        title={c('versions')}
         sorter
         defaultSortOrder={getDefaultSortOrder('versionCount', sorters)}
         render={(count: number, record) => (
-          <Tooltip title={record.previousAt ? `Précédente : ${frDate(record.previousAt)}` : undefined}>
+          <Tooltip
+            title={
+              record.previousAt
+                ? tt('previous', { date: formatDateTime(record.previousAt, locale) })
+                : undefined
+            }
+          >
             <Typography.Text>{count}</Typography.Text>
           </Tooltip>
         )}
       />
       <Table.Column<LatestVersion>
         dataIndex="exportedAt"
-        title="Exporté"
+        title={c('exported')}
         sorter
         defaultSortOrder={getDefaultSortOrder('exportedAt', sorters)}
         render={(d: string | null, record) =>
           d ? (
             <Tooltip title={record.exportedTo?.join(', ')}>
-              <Typography.Text>{frDate(d)}</Typography.Text>
+              <Typography.Text>{formatDateTime(d, locale)}</Typography.Text>
             </Tooltip>
           ) : (
             <Typography.Text type="secondary">—</Typography.Text>
@@ -117,7 +131,7 @@ export function LatestVersionsTable({
         }
       />
       <Table.Column<LatestVersion>
-        title="Actions"
+        title={c('actions')}
         className="row-actions"
         render={(_, record) => <VersionActions versionId={record.id} handlers={handlers} />}
       />

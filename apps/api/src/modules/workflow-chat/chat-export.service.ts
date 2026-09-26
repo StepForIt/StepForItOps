@@ -5,6 +5,7 @@ import {
   chatExportFilename,
   chatSessionToMarkdown,
   chatSessionsToMarkdown,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -40,7 +41,7 @@ export class ChatExportService {
         },
       },
     });
-    if (!session) throw new NotFoundException(`Conversation ${sessionId} introuvable`);
+    if (!session) throw new NotFoundException(msg('chat.sessionNotFound', { id: sessionId }));
     const proposals = await this.proposalsOf(session.id);
     return {
       title: session.title,
@@ -63,7 +64,7 @@ export class ChatExportService {
       where: { id: workflowId },
       include: { instance: { select: { name: true } } },
     });
-    if (!workflow) throw new NotFoundException(`Workflow ${workflowId} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('chat.workflowNotFound', { id: workflowId }));
     return { name: workflow.name, instanceName: workflow.instance.name };
   }
 
@@ -72,7 +73,7 @@ export class ChatExportService {
       where: { id: sessionId },
       select: { workflowId: true, title: true },
     });
-    if (!session) throw new NotFoundException(`Conversation ${sessionId} introuvable`);
+    if (!session) throw new NotFoundException(msg('chat.sessionNotFound', { id: sessionId }));
     const workflow = await this.workflowOf(session.workflowId);
     return {
       filename: chatExportFilename(`${workflow.name} ${session.title}`),

@@ -4,32 +4,38 @@ import React from 'react';
 import Link from 'next/link';
 import { Space, Tag, Tooltip } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { WorkflowRow } from './workflow-row';
 import { LockIcon } from '../../components/workflow-lock';
 
 /** Nom du workflow, son état d'archivage et le lien vers n8n — même rendu en vue plate et groupée. */
 export function WorkflowNameCell({ workflow }: { workflow: WorkflowRow }) {
+  const t = useTranslations('workflowsList.nameCell');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   return (
     <Space size={4} wrap>
       <Link href={`/workflows/show/${workflow.id}`}>{workflow.name}</Link>
       <LockIcon workflowId={workflow.id} />
       {workflow.archivedUpstream ? (
-        <Tooltip title="Archivé dans n8n : l'API publique ne le renvoie plus dans la liste, la plateforme le retrouve à l'unité à chaque synchro">
-          <Tag color="default">archivé dans n8n</Tag>
+        <Tooltip title={t('archivedUpstreamTooltip')}>
+          <Tag color="default">{t('archivedUpstream')}</Tag>
         </Tooltip>
       ) : (
-        workflow.archived && <Tag color="default">archivé</Tag>
+        workflow.archived && <Tag color="default">{t('archived')}</Tag>
       )}
       {workflow.missingInN8n && (
         <Tooltip
-          title={`n8n ne connaît plus ce workflow depuis le ${
-            workflow.missingUpstreamAt ? new Date(workflow.missingUpstreamAt).toLocaleString('fr-FR') : '?'
-          } — supprimé côté n8n. Rien n'a été effacé ici : versions et historique restent consultables.`}
+          title={t('missingTooltip', {
+            date: workflow.missingUpstreamAt
+              ? new Date(workflow.missingUpstreamAt).toLocaleString(locale)
+              : '?',
+          })}
         >
-          <Tag color="volcano">absent de n8n</Tag>
+          <Tag color="volcano">{t('missing')}</Tag>
         </Tooltip>
       )}
-      <Tooltip title="Ouvrir dans n8n">
+      <Tooltip title={tCommon('openInN8n')}>
         <a href={workflow.n8nUrl} target="_blank" rel="noopener noreferrer">
           <ExportOutlined />
         </a>

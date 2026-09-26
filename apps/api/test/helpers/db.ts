@@ -46,7 +46,7 @@ export async function resetDb(): Promise<void> {
   const prisma = testPrisma();
   // `CASCADE` emporte les tables qui référencent celles-ci (Finding, TestCase,
   // WorkflowVersion…). `ResourceMapping` et `PlatformSettings` ne référencent
-  // rien, d'où leur mention : la seconde est un RÉGLAGE, et un test qui affiche
+  // rien, d'où leur mention (comme `NodePackageDoc`) : la seconde est un RÉGLAGE, et un test qui affiche
   // les archivés laisserait sinon la plateforme dans cet état pour les suivants.
   //
   // `ModuleState` est volontairement ABSENTE : le registre en garde un cache en
@@ -54,6 +54,6 @@ export async function resetDb(): Promise<void> {
   // défaut » et le cache « désactivé ». Un test qui désactive un module le
   // réactive donc lui-même, par la même route.
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "Workflow", "Instance", "ResourceMapping", "PlatformSettings", "ReleaseProcedure" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "Workflow", "Instance", "ResourceMapping", "PlatformSettings", "ReleaseProcedure", "NodePackageDoc" RESTART IDENTITY CASCADE',
   );
 }

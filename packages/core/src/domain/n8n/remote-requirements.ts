@@ -16,6 +16,7 @@ import { activeParameters } from './inert-params';
 import { paramLabel, paramString } from './n8n-params';
 import { extractResourceFieldUsages } from './resource-fields';
 import { upstreamKeys } from './upstream-keys';
+import { msg } from '../../i18n/translate';
 
 export type RemoteProvider = 'airtable' | 'nocodb' | 'notion' | 'google-sheets' | 'postgres';
 
@@ -119,8 +120,8 @@ type Located = { locator: RemoteTableLocator } | { reason: string };
 function locate(node: N8nNode, provider: RemoteProvider): Located {
   const p = node.parameters ?? {};
   const credential = credentialOf(node, provider);
-  const dynamic = { reason: 'table désignée par une expression : connue seulement à l’exécution' };
-  const missing = { reason: 'table non renseignée dans le nœud' };
+  const dynamic = { reason: msg('checks.remoteTableDynamic') };
+  const missing = { reason: msg('checks.remoteTableUnset') };
 
   if (provider === 'airtable') {
     const base = paramString(p.base ?? p.application);
@@ -288,10 +289,13 @@ export function requiredRemoteSchema(workflow: N8nWorkflow): RemoteRequirements 
       const received = upstreamKeys(workflow, node.name);
       for (const key of received.keys) add(key.name, extra === 'ignore' ? 'warning' : 'error', key.setNode);
       for (const source of received.unknownSources) {
-        entry.partial.push({ nodeName: node.name, reason: `${source.nodeName} : ${source.reason}` });
+        entry.partial.push({
+          nodeName: node.name,
+          reason: msg('checks.remotePartialSource', { node: source.nodeName, reason: source.reason }),
+        });
       }
     } else if (access === 'write' && usage && !usage.understood && !listed) {
-      entry.partial.push({ nodeName: node.name, reason: 'forme de mapping non reconnue' });
+      entry.partial.push({ nodeName: node.name, reason: msg('checks.remoteMappingUnknown') });
     }
   }
 

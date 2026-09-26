@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { WorkflowEditOperation, applyEditOperations, autoFixOperations } from '@nwm/core';
+import { WorkflowEditOperation, applyEditOperations, autoFixOperations, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { ProposalService } from './proposal.service';
@@ -31,12 +31,12 @@ export class FindingAutoFixService {
   ) {}
 
   async propose(findingIds: string[]): Promise<FindingAutoFixResult> {
-    if (findingIds.length === 0) throw new BadRequestException('Aucun finding à corriger');
+    if (findingIds.length === 0) throw new BadRequestException(msg('chat.findingFixNone'));
     const findings = await this.prisma.finding.findMany({ where: { id: { in: findingIds } } });
-    if (findings.length === 0) throw new NotFoundException('Findings introuvables');
+    if (findings.length === 0) throw new NotFoundException(msg('chat.findingFixNotFound'));
     const workflowId = findings[0]!.workflowId;
     if (findings.some((finding) => finding.workflowId !== workflowId)) {
-      throw new BadRequestException('Les findings doivent appartenir au même workflow');
+      throw new BadRequestException(msg('chat.findingFixSameWorkflow'));
     }
 
     // Recalculé sur n8n tel qu'il est maintenant, correctif après correctif : deux
@@ -58,9 +58,7 @@ export class FindingAutoFixService {
       fixed.push(finding.message);
     }
     if (operations.length === 0) {
-      throw new UnprocessableEntityException(
-        'Le workflow a changé depuis l’analyse : ce correctif ne s’applique plus. Relance la vérification.',
-      );
+      throw new UnprocessableEntityException(msg('chat.autofixStale'));
     }
 
     const { proposal } = await this.proposals.create(workflowId, null, summaryOf(fixed), operations);
@@ -69,7 +67,5 @@ export class FindingAutoFixService {
 }
 
 function summaryOf(messages: string[]): string {
-  return ['Correctif calculé par la règle (sans IA) :', ...messages.map((message) => `- ${message}`)].join(
-    '\n',
-  );
+  return [msg('chat.autofixSummary'), ...messages.map((message) => `- ${message}`)].join('\n');
 }

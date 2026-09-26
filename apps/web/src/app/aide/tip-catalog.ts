@@ -1,5 +1,8 @@
+import React from 'react';
+import { useTranslations } from 'next-intl';
+
 export interface Tip {
-  id: string;
+  id: TipId;
   group: TipGroupId;
   title: string;
   text: string;
@@ -12,199 +15,61 @@ export interface Tip {
   keywords?: string;
 }
 
-export type TipGroupId = 'workflows' | 'quality' | 'assistant' | 'environments' | 'health' | 'history';
+export const TIP_GROUP_IDS = [
+  'workflows',
+  'quality',
+  'assistant',
+  'environments',
+  'health',
+  'history',
+] as const;
+export type TipGroupId = (typeof TIP_GROUP_IDS)[number];
 
-export const TIP_GROUPS: Array<{ id: TipGroupId; label: string }> = [
-  { id: 'workflows', label: 'Workflows' },
-  { id: 'quality', label: 'Qualité' },
-  { id: 'assistant', label: 'Assistant IA' },
-  { id: 'environments', label: 'Environnements' },
-  { id: 'health', label: 'Santé' },
-  { id: 'history', label: 'Versions et ressources' },
-];
+// Les textes vivent dans messages/<langue>/misc.json (aide.tips.<id>, aide.groups.<id>).
+const TIP_DEFS = [
+  { id: 'families', group: 'workflows', href: '/workflows' },
+  { id: 'divergence', group: 'workflows', href: '/workflows' },
+  { id: 'palette', group: 'workflows', href: '#palette' },
+  { id: 'bulk', group: 'workflows', href: '/workflows' },
+  { id: 'list-memory', group: 'workflows', href: '/workflows' },
+  { id: 'checks', group: 'quality', href: '/workflows', module: 'verifier' },
+  { id: 'findings-fix', group: 'quality', href: '/findings', module: 'workflow-chat' },
+  { id: 'ignore', group: 'quality', href: '/finding-ignores' },
+  { id: 'stub', group: 'quality', href: '/workflows', module: 'tester' },
+  { id: 'remote', group: 'quality', href: '/workflows' },
+  { id: 'assistant', group: 'assistant', href: '/workflows', module: 'workflow-chat' },
+  { id: 'error-fix', group: 'assistant', href: '/errors', module: 'workflow-chat' },
+  { id: 'promote', group: 'environments', href: '/workflows', module: 'env-switcher' },
+  { id: 'mapping', group: 'environments', href: '/resource-mappings', module: 'env-switcher' },
+  { id: 'errors', group: 'health', href: '/errors', module: 'monitoring' },
+  { id: 'drift', group: 'health', href: '/performance', module: 'performance' },
+  { id: 'costs', group: 'health', href: '/llm-costs', module: 'ai-cost' },
+  { id: 'restore', group: 'history', href: '/versions', module: 'versioning' },
+  { id: 'resources', group: 'history', href: '/resources', module: 'dep-graph' },
+] as const satisfies ReadonlyArray<{ id: string; group: TipGroupId; href: string; module?: string }>;
 
-export const TIPS: Tip[] = [
-  {
-    id: 'families',
-    group: 'workflows',
-    title: 'Un workflow métier, une ligne',
-    text: '« X - DEV » et « X - PROD » se regroupent en une ligne, dépliable par env.',
-    where: 'Workflows → Par métier',
-    href: '/workflows',
-    keywords: 'groupe famille regrouper environnement dev prod vue',
-  },
-  {
-    id: 'divergence',
-    group: 'workflows',
-    title: 'Voir ce qui diffère de la prod',
-    text: 'Cliquez le tag « à déployer » : le diff avec la prod s’ouvre.',
-    where: 'Workflows → colonne Écart prod',
-    href: '/workflows',
-    keywords: 'ecart difference comparer deployer diff prod',
-  },
-  {
-    id: 'palette',
-    group: 'workflows',
-    title: '⌘K pour tout retrouver',
-    text: 'Un workflow, une page, une instance : tapez quelques lettres.',
-    where: 'Partout · ⌘K ou Ctrl+K',
-    href: '#palette',
-    keywords: 'recherche raccourci clavier commande chercher ctrl k',
-  },
-  {
-    id: 'bulk',
-    group: 'workflows',
-    title: 'Agir sur plusieurs workflows',
-    text: 'Cochez des lignes : analyser, archiver ou promouvoir en une fois.',
-    where: 'Workflows → cases à cocher',
-    href: '/workflows',
-    keywords: 'masse lot groupe selection multiple cocher archiver analyser',
-  },
-  {
-    id: 'list-memory',
-    group: 'workflows',
-    title: 'Les listes se souviennent',
-    text: 'Filtres, tri, page et colonnes sont retenus. ⚙ pour masquer ou réordonner.',
-    where: 'En-tête d’une liste → ⚙',
-    href: '/workflows',
-    keywords: 'colonnes masquer cacher ordre tri filtre memoire largeur reinitialiser vue preferences',
-  },
-  {
-    id: 'checks',
-    group: 'quality',
-    title: 'Choisir ses contrôles',
-    text: 'Décochez une famille de contrôles ; le choix est retenu pour ce workflow.',
-    where: 'Page d’un workflow → Contrôles',
-    href: '/workflows',
-    module: 'verifier',
-    keywords: 'profil verification analyse regles decocher revue ia',
-  },
-  {
-    id: 'findings-fix',
-    group: 'quality',
-    title: 'Corriger d’un clic avec l’IA',
-    text: 'Sur un nœud à problèmes, l’IA propose un correctif relu en diff.',
-    where: 'Findings → Corriger (IA)',
-    href: '/findings',
-    module: 'workflow-chat',
-    keywords: 'correction corriger finding ia automatique proposition',
-  },
-  {
-    id: 'ignore',
-    group: 'quality',
-    title: 'Déclarer un finding normal',
-    text: 'Ignoré une fois, pour tous les envs du workflow.',
-    where: 'Findings → Ignorer',
-    href: '/finding-ignores',
-    keywords: 'ignorer exclure masquer faux positif normal voulu',
-  },
-  {
-    id: 'stub',
-    group: 'quality',
-    title: 'Tester sans rien envoyer',
-    text: 'Mails, messages et appels sortants sont bouchonnés d’office.',
-    where: 'Page d’un workflow → Tester sans rien envoyer',
-    href: '/workflows',
-    module: 'tester',
-    keywords: 'test essai bouchon pin pindata simuler envoi mail',
-  },
-  {
-    id: 'remote',
-    group: 'quality',
-    title: 'Le distant a-t-il vos colonnes ?',
-    text: 'Airtable, Notion, Sheets, NocoDB, Postgres : chaque colonne attendue est vérifiée.',
-    where: 'Page d’un workflow → Vérifier le distant',
-    href: '/workflows',
-    keywords: 'colonne table schema airtable notion sheets nocodb postgres manquante',
-  },
-  {
-    id: 'assistant',
-    group: 'assistant',
-    title: 'Demander une modification',
-    text: 'Décrivez le changement ; l’assistant propose, vous relisez, vous appliquez.',
-    where: 'Page d’un workflow → Assistant IA',
-    href: '/workflows',
-    module: 'workflow-chat',
-    keywords: 'chat ia assistant modifier ajouter noeud claude',
-  },
-  {
-    id: 'error-fix',
-    group: 'assistant',
-    title: 'D’une erreur à son correctif',
-    text: 'L’IA lit le problème et propose un correctif, ou dit que ça se règle hors du workflow.',
-    where: 'Erreurs → Proposer un correctif (IA)',
-    href: '/errors',
-    module: 'workflow-chat',
-    keywords: 'erreur correctif diagnostic credential ia',
-  },
-  {
-    id: 'promote',
-    group: 'environments',
-    title: 'Promouvoir vers la prod',
-    text: 'Tests, findings et colonnes distantes sont vérifiés avant d’écrire ; la version suit.',
-    where: 'Page d’un workflow → Environnements',
-    href: '/workflows',
-    module: 'env-switcher',
-    keywords: 'promotion deployer prod preprod version semver release',
-  },
-  {
-    id: 'mapping',
-    group: 'environments',
-    title: 'Rebrancher les ressources',
-    text: 'Bases, tables et credentials passent de dev à prod, noms affichés compris.',
-    where: 'Mappings env',
-    href: '/resource-mappings',
-    module: 'env-switcher',
-    keywords: 'mapping bascule ressource base table credential dev prod',
-  },
-  {
-    id: 'errors',
-    group: 'health',
-    title: 'Des erreurs regroupées en problèmes',
-    text: 'Même nœud, même message : un seul problème. Traité, il se rouvre s’il revient.',
-    where: 'Erreurs → Problèmes',
-    href: '/errors',
-    module: 'monitoring',
-    keywords: 'erreur probleme groupe rechute traite execution',
-  },
-  {
-    id: 'drift',
-    group: 'health',
-    title: 'Alerte quand un workflow ralentit',
-    text: 'Une durée qui dérive par rapport à la semaine passée déclenche une alerte.',
-    where: 'Performance',
-    href: '/performance',
-    module: 'performance',
-    keywords: 'lent lenteur duree derive performance alerte slack',
-  },
-  {
-    id: 'costs',
-    group: 'health',
-    title: 'Coûts IA par workflow',
-    text: 'Les tokens sont lus dans les exécutions, avec un budget quotidien.',
-    where: 'Coûts IA',
-    href: '/llm-costs',
-    module: 'ai-cost',
-    keywords: 'cout prix token llm budget openai anthropic depense',
-  },
-  {
-    id: 'restore',
-    group: 'history',
-    title: 'Revenir à une version',
-    text: 'Chaque synchro garde une version ; on restaure après avoir vu le diff.',
-    where: 'Versions → Restaurer',
-    href: '/versions',
-    module: 'versioning',
-    keywords: 'version historique restaurer retour arriere snapshot sauvegarde',
-  },
-  {
-    id: 'resources',
-    group: 'history',
-    title: 'Qui utilise cette table ?',
-    text: 'Partez d’une table ou d’une API : les workflows qui la touchent, et ce qu’ils en font.',
-    where: 'Ressources externes',
-    href: '/resources',
-    module: 'dep-graph',
-    keywords: 'table base ressource impact colonne dependance api',
-  },
-];
+export type TipId = (typeof TIP_DEFS)[number]['id'];
+
+type TipField = 'title' | 'text' | 'where' | 'keywords';
+/** Le `t` de `useTranslations('misc.aide')`, réduit aux clés du catalogue. */
+export type TipTranslator = (key: `tips.${TipId}.${TipField}` | `groups.${TipGroupId}`) => string;
+
+export function localizeTips(t: TipTranslator): Tip[] {
+  return TIP_DEFS.map((def) => ({
+    ...def,
+    title: t(`tips.${def.id}.title`),
+    text: t(`tips.${def.id}.text`),
+    where: t(`tips.${def.id}.where`),
+    keywords: t(`tips.${def.id}.keywords`),
+  }));
+}
+
+export function localizeTipGroups(t: TipTranslator): Array<{ id: TipGroupId; label: string }> {
+  return TIP_GROUP_IDS.map((id) => ({ id, label: t(`groups.${id}`) }));
+}
+
+/** Le catalogue dans la langue courante. */
+export function useTips(): { tips: Tip[]; groups: Array<{ id: TipGroupId; label: string }> } {
+  const t = useTranslations('misc.aide');
+  return React.useMemo(() => ({ tips: localizeTips(t), groups: localizeTipGroups(t) }), [t]);
+}

@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { ModelCatalog, ModelCatalogProposal } from '@prisma/client';
-import { LLM_TASKS, LLM_TASK_LABELS } from '@nwm/core';
+import { LLM_TASKS, llmTaskLabel } from '@nwm/core';
 import { ModelCatalogInput, ModelCatalogService } from './model-catalog.service';
 import { ModelCatalogRefreshService, RefreshResult } from './model-catalog-refresh.service';
 
@@ -69,7 +69,7 @@ export class ModelCatalogController {
     const profiles = await this.catalog.taskProfiles();
     return LLM_TASKS.map((task) => ({
       task,
-      label: LLM_TASK_LABELS[task],
+      label: llmTaskLabel(task),
       minTier: profiles[task] ?? 'reasoning',
     }));
   }

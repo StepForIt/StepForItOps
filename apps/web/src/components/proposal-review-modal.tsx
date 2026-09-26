@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Alert, Button, Card, Checkbox, Modal, Popconfirm, Skeleton, Space, Tag, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { DiffCounts, WorkflowDiff, WorkflowDiffView } from './workflow-diff-view';
 import { useWorkflowLocks } from '../lib/workflow-lock/workflow-locks';
@@ -113,26 +114,27 @@ function GateAlerts({
   /** Nommé quand ce n'est pas le workflow de la page : sinon le refus paraît porter sur lui. */
   where?: string;
 }) {
+  const t = useTranslations('chat.review.gate');
   const refused = new Set(
     gate.refusals.map((finding) => `${finding.code}|${finding.nodeName ?? ''}|${finding.message}`),
   );
   const introduced = gate.introduced.filter(
     (finding) => !refused.has(`${finding.code}|${finding.nodeName ?? ''}|${finding.message}`),
   );
-  const suffix = where ? ` — ${where}` : '';
+  const suffix = where ? t('suffix', { where }) : '';
   return (
     <>
       {gate.breaches.length > 0 && (
         <Alert
           type="error"
           showIcon
-          message={`Cette modification casserait le workflow — elle ne sera pas appliquée${suffix}`}
+          message={t('breaches', { suffix })}
           description={
             <Space direction="vertical" size={4} style={{ width: '100%' }}>
               {gate.breaches.map((breach) => (
                 <Typography.Text key={breach.code}>{breach.message}</Typography.Text>
               ))}
-              <Typography.Text type="secondary">Reformule la demande.</Typography.Text>
+              <Typography.Text type="secondary">{t('rephrase')}</Typography.Text>
             </Space>
           }
         />
@@ -142,7 +144,7 @@ function GateAlerts({
         <Alert
           type="error"
           showIcon
-          message={`n8n refusera d'enregistrer ce workflow${suffix}`}
+          message={t('refusals', { suffix })}
           description={
             <Space direction="vertical" size={4} style={{ width: '100%' }}>
               {gate.refusals.map((finding, index) => (
@@ -151,10 +153,10 @@ function GateAlerts({
                   {finding.message}
                 </Typography.Text>
               ))}
-              <Typography.Text type="secondary">Demande la correction dans la conversation.</Typography.Text>
+              <Typography.Text type="secondary">{t('askFix')}</Typography.Text>
               {gate.blockedBy === 'refusal' && pending && (
                 <Checkbox checked={force} onChange={(e) => onForce(e.target.checked)}>
-                  Tenter quand même
+                  {t('tryAnyway')}
                 </Checkbox>
               )}
             </Space>
@@ -166,11 +168,7 @@ function GateAlerts({
         <Alert
           type={gate.blocked ? 'error' : 'warning'}
           showIcon
-          message={
-            (gate.blocked
-              ? 'Cette modification introduit une erreur — elle ne sera pas appliquée'
-              : 'Cette modification introduit des problèmes') + suffix
-          }
+          message={gate.blocked ? t('introducedBlocked', { suffix }) : t('introduced', { suffix })}
           description={
             <Space direction="vertical" size={4} style={{ width: '100%' }}>
               {introduced.map((finding, index) => (
@@ -181,7 +179,7 @@ function GateAlerts({
               ))}
               {gate.blockedBy === 'quality' && pending && (
                 <Checkbox checked={force} onChange={(e) => onForce(e.target.checked)}>
-                  Appliquer quand même
+                  {t('applyAnyway')}
                 </Checkbox>
               )}
             </Space>
@@ -210,6 +208,9 @@ export function ProposalReviewModal({
   onClose: () => void;
   onResolved?: () => void;
 }) {
+  const t = useTranslations('chat.review');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [review, setReview] = React.useState<ProposalReview | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [running, setRunning] = React.useState<'apply' | 'discard' | null>(null);
@@ -280,11 +281,11 @@ export function ProposalReviewModal({
         setDraftOnly(Boolean(result.draftOnly));
         setRestorePoint(result.restorePoint);
         // Le demi-succès se dit en clair : n8n a changé, l'historique non.
-        setDone(result.syncError ?? 'Appliqué.');
+        setDone(result.syncError ?? t('done.applied'));
         setPartial(Boolean(result.syncError));
       } else {
         await apiPost(`/workflow-chat/proposals/${proposalId}/discard`);
-        setDone('Proposition rejetée.');
+        setDone(t('done.discarded'));
       }
       onResolved?.();
     } catch (e) {
@@ -311,17 +312,17 @@ export function ProposalReviewModal({
 
   return (
     <Modal
-      title="Revue de la modification proposée"
+      title={t('title')}
       open={proposalId !== null}
       onCancel={onClose}
       width={860}
       footer={
         <Space>
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{tCommon('close')}</Button>
           {pending && (
             <>
               <Button danger loading={running === 'discard'} onClick={() => run('discard')}>
-                Rejeter
+                {t('discard')}
               </Button>
               <Button
                 type="primary"
@@ -335,7 +336,7 @@ export function ProposalReviewModal({
                 }
                 onClick={() => run('apply')}
               >
-                Appliquer à {platformName(review?.platform)}
+                {t('applyTo', { platform: platformName(review?.platform) })}
               </Button>
             </>
           )}
@@ -352,68 +353,60 @@ export function ProposalReviewModal({
               vide : sans cette ligne, l'écran s'ouvre sur un « avant/après »
               identique et donne à croire que la proposition est vide. */}
           {!diff?.hasChanges && parts.length > 0 && (
-            <Alert type="info" showIcon message={`« ${review.workflowName} » n'est pas modifié`} />
+            <Alert type="info" showIcon message={t('rootUnchanged', { name: review.workflowName })} />
           )}
 
           {!diff?.hasChanges && parts.length === 0 && (
             <Alert
               type="warning"
               showIcon
-              message="Aucune différence"
-              description="Les opérations proposées ne changent rien par rapport à l'état actuel du workflow."
+              message={t('noDifference.title')}
+              description={t('noDifference.description')}
             />
           )}
 
           {/* Une proposition appliquée a elle-même fait bouger le workflow : la dire
               « obsolète » à côté de « déjà appliquée » se contredisait à l'écran. */}
           {review.stale && review.status === 'pending' && (
-            <Alert
-              type="error"
-              showIcon
-              message="Proposition obsolète"
-              description="Le workflow a changé depuis que cette proposition a été formulée. Relance la demande dans le chat pour repartir de l'état actuel."
-            />
+            <Alert type="error" showIcon message={t('stale.title')} description={t('stale.description')} />
           )}
 
           {review.status !== 'pending' && (
             <Alert
               type={review.status === 'applied' ? 'success' : 'warning'}
               showIcon
-              message={review.status === 'applied' ? 'Proposition déjà appliquée' : 'Proposition rejetée'}
+              message={review.status === 'applied' ? t('status.applied') : t('status.discarded')}
               /* Le retour arrière ne vivait que dans le message de succès, le temps de la
                  session : le dégât d'une modification IA se constate souvent le lendemain,
                  dans n8n, et il fallait alors retrouver la bonne ligne de la page Versions. */
               description={
                 review.status !== 'applied' ? undefined : reverted ? (
-                  <Typography.Text>
-                    Workflow restauré dans l&apos;état d&apos;avant cette modification.
-                  </Typography.Text>
+                  <Typography.Text>{t('revert.done')}</Typography.Text>
                 ) : review.revertPoint ? (
                   <Space direction="vertical" size={6} style={{ width: '100%' }}>
                     {review.revertLosesLaterChanges && (
                       <Typography.Text type="warning">
-                        Attention : le workflow a changé dans {platformName(review.platform)} depuis cette
-                        application. Revenir en arrière emporterait aussi ce qui a été fait après.
+                        {t('revert.losesLaterChanges', { platform: platformName(review.platform) })}
                       </Typography.Text>
                     )}
                     <Popconfirm
-                      title="Revenir à l'état d'avant ?"
-                      description={`Le workflow sera réécrit dans ${platformName(review.platform)} avec la version du ${new Date(
-                        review.revertPoint.createdAt,
-                      ).toLocaleString('fr-FR')}. Cette modification sera défaite.`}
-                      okText="Restaurer"
-                      cancelText="Annuler"
+                      title={t('revert.confirmTitle')}
+                      description={t('revert.confirmDescription', {
+                        platform: platformName(review.platform),
+                        date: new Date(review.revertPoint.createdAt).toLocaleString(locale),
+                      })}
+                      okText={t('revert.ok')}
+                      cancelText={tCommon('cancel')}
                       onConfirm={() => restoreVersion(review.revertPoint!.versionId, () => setReverted(true))}
                     >
                       <Button size="small" danger loading={restoring}>
-                        Revenir à l&apos;état d&apos;avant
+                        {t('revert.button')}
                       </Button>
                     </Popconfirm>
                   </Space>
                 ) : !diff?.hasChanges && parts.length > 0 ? undefined : (
                   <Typography.Text type="secondary">
-                    L&apos;état d&apos;avant n&apos;est pas archivé : le retour arrière se fait à la main dans{' '}
-                    {platformName(review.platform)}.
+                    {t('revert.notArchived', { platform: platformName(review.platform) })}
                   </Typography.Text>
                 )
               }
@@ -428,26 +421,20 @@ export function ProposalReviewModal({
             <Alert
               type="warning"
               showIcon
-              message={
-                leftovers.length > 1
-                  ? `${leftovers.length} sous-workflows créés par l'assistant`
-                  : "Sous-workflow créé par l'assistant"
-              }
+              message={t('leftovers.title', { count: leftovers.length })}
               description={
                 <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                  <Typography.Text type="secondary">
-                    Vide et non appelé : supprimer ou garder.
-                  </Typography.Text>
+                  <Typography.Text type="secondary">{t('leftovers.hint')}</Typography.Text>
                   {leftovers.map((leftover) => (
                     <Space key={leftover.workflowId} wrap>
                       <Typography.Link href={leftover.url} target="_blank" rel="noreferrer">
                         {leftover.name}
                       </Typography.Link>
                       <Popconfirm
-                        title="Supprimer ce workflow dans n8n ?"
-                        description={`« ${leftover.name} » sera supprimé dans n8n. Il est vide et personne ne l'appelle ; l'opération est définitive.`}
-                        okText="Supprimer"
-                        cancelText="Annuler"
+                        title={t('leftovers.confirmTitle')}
+                        description={t('leftovers.confirmDescription', { name: leftover.name })}
+                        okText={tCommon('delete')}
+                        cancelText={tCommon('cancel')}
                         onConfirm={async () => {
                           setRemovingLeftover(leftover.workflowId);
                           setError(null);
@@ -463,7 +450,7 @@ export function ProposalReviewModal({
                         }}
                       >
                         <Button size="small" danger loading={removingLeftover === leftover.workflowId}>
-                          Supprimer dans n8n
+                          {t('leftovers.delete')}
                         </Button>
                       </Popconfirm>
                     </Space>
@@ -477,8 +464,8 @@ export function ProposalReviewModal({
             <Alert
               type="warning"
               showIcon
-              message={`Ce workflow est ACTIF sur ${platformName(review.platform)}`}
-              description="La modification part en production dès le prochain déclenchement."
+              message={t('active.title', { platform: platformName(review.platform) })}
+              description={t('active.description')}
             />
           )}
 
@@ -487,18 +474,13 @@ export function ProposalReviewModal({
               <Alert
                 type="warning"
                 showIcon
-                message="Workflow verrouillé"
-                description="Appliquer demandera de forcer le verrou, avec une raison."
+                message={t('locked.title')}
+                description={t('locked.description')}
               />
             )}
 
           {review.writeEffect && pending && (
-            <Alert
-              type="warning"
-              showIcon
-              message="La modification partira en brouillon"
-              description={review.writeEffect}
-            />
+            <Alert type="warning" showIcon message={t('draftWrite')} description={review.writeEffect} />
           )}
 
           <GateAlerts gate={review.gate} pending={Boolean(pending)} force={force} onForce={setForce} />
@@ -511,7 +493,10 @@ export function ProposalReviewModal({
             <Alert
               type="warning"
               showIcon
-              message={`Renommage du workflow : « ${review.diff.nameChange.before} » → « ${review.diff.nameChange.after} »`}
+              message={t('rename', {
+                before: review.diff.nameChange.before,
+                after: review.diff.nameChange.after,
+              })}
             />
           )}
 
@@ -524,7 +509,7 @@ export function ProposalReviewModal({
                 key: 'operations',
                 label: (
                   <Typography.Text type="secondary">
-                    Opérations demandées ({review.operations.length})
+                    {t('operations', { count: review.operations.length })}
                   </Typography.Text>
                 ),
                 children: (
@@ -539,8 +524,10 @@ export function ProposalReviewModal({
           {parts.length > 0 && (
             <>
               <Typography.Text strong>
-                + {parts.length} sous-workflow{parts.length > 1 ? 's' : ''} :{' '}
-                {parts.map((part) => part.workflowName).join(', ')}
+                {t('parts.summary', {
+                  count: parts.length,
+                  names: parts.map((part) => part.workflowName).join(', '),
+                })}
               </Typography.Text>
               {parts.map((part) => (
                 <Card
@@ -549,8 +536,8 @@ export function ProposalReviewModal({
                   title={
                     <Space>
                       <Typography.Text strong>{part.workflowName}</Typography.Text>
-                      {part.workflowActive && <Tag color="red">actif</Tag>}
-                      {part.status === 'applied' && <Tag color="green">déjà écrit</Tag>}
+                      {part.workflowActive && <Tag color="red">{t('parts.active')}</Tag>}
+                      {part.status === 'applied' && <Tag color="green">{t('parts.written')}</Tag>}
                     </Space>
                   }
                 >
@@ -559,8 +546,8 @@ export function ProposalReviewModal({
                       <Alert
                         type="error"
                         showIcon
-                        message="Ce sous-workflow a changé dans n8n depuis la proposition"
-                        description="L'appliquer écraserait ce changement. Relance la demande dans la conversation pour repartir de l'état actuel."
+                        message={t('parts.stale.title')}
+                        description={t('parts.stale.description')}
                       />
                     )}
                     <GateAlerts
@@ -568,7 +555,7 @@ export function ProposalReviewModal({
                       pending={part.status === 'pending' && Boolean(pending)}
                       force={force}
                       onForce={setForce}
-                      where={`« ${part.workflowName} »`}
+                      where={t('parts.where', { name: part.workflowName })}
                     />
                     {part.warnings.map((warning) => (
                       <Alert
@@ -586,7 +573,7 @@ export function ProposalReviewModal({
                           key: `operations-${part.workflowId}`,
                           label: (
                             <Typography.Text type="secondary">
-                              Opérations demandées ({part.operations.length})
+                              {t('operations', { count: part.operations.length })}
                             </Typography.Text>
                           ),
                           children: (
@@ -605,7 +592,7 @@ export function ProposalReviewModal({
 
           {pending && diff?.hasChanges && !review.restorePoint && (
             <Typography.Text type="warning" strong>
-              Aucun point de retour : l&apos;application ne sera pas annulable.
+              {t('noRestorePoint')}
             </Typography.Text>
           )}
         </Space>
@@ -622,7 +609,7 @@ export function ProposalReviewModal({
               <Space direction="vertical" size={6} style={{ width: '100%' }}>
                 {draftOnly && (
                   <Space>
-                    <Typography.Text>Non publié.</Typography.Text>
+                    <Typography.Text>{t('publish.notPublished')}</Typography.Text>
                     <Button
                       size="small"
                       type="primary"
@@ -632,7 +619,7 @@ export function ProposalReviewModal({
                         try {
                           await apiPost(`/workflows/${review.workflowId}/publish`);
                           setDraftOnly(false);
-                          setDone('Workflow publié : la version appliquée est celle qui tourne.');
+                          setDone(t('publish.done'));
                           onResolved?.();
                         } catch (e) {
                           setError((e as Error).message);
@@ -641,7 +628,7 @@ export function ProposalReviewModal({
                         }
                       }}
                     >
-                      Publier maintenant
+                      {t('publish.button')}
                     </Button>
                   </Space>
                 )}
@@ -649,22 +636,23 @@ export function ProposalReviewModal({
                     le chercher dans la page Versions suppose de savoir qu'il existe. */}
                 {restorePoint && (
                   <Popconfirm
-                    title="Revenir à l'état d'avant ?"
-                    description={`Le workflow sera réécrit dans ${platformName(review?.platform)} avec la version du ${new Date(
-                      restorePoint.createdAt,
-                    ).toLocaleString('fr-FR')}. La modification qu'on vient d'appliquer sera perdue.`}
-                    okText="Restaurer"
-                    cancelText="Annuler"
+                    title={t('revert.confirmTitle')}
+                    description={t('revert.confirmDescriptionJustApplied', {
+                      platform: platformName(review?.platform),
+                      date: new Date(restorePoint.createdAt).toLocaleString(locale),
+                    })}
+                    okText={t('revert.ok')}
+                    cancelText={tCommon('cancel')}
                     onConfirm={() =>
                       restoreVersion(restorePoint.versionId, () => {
                         setRestorePoint(null);
                         setDraftOnly(false);
-                        setDone("Workflow restauré dans l'état d'avant l'application.");
+                        setDone(t('revert.doneAfterApply'));
                       })
                     }
                   >
                     <Button size="small" danger loading={restoring}>
-                      Revenir à l&apos;état d&apos;avant
+                      {t('revert.button')}
                     </Button>
                   </Popconfirm>
                 )}

@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Descriptions, Drawer, Skeleton, Space, Tag, Typography } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
 import type { ExecutionErrorRow } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 interface Props {
   /** Ligne cliquée dans le tableau (sert d'affichage immédiat pendant le chargement du détail). */
@@ -20,6 +22,9 @@ export function ErrorDetailDrawer({ row, onClose }: Props) {
   const [detail, setDetail] = useState<ExecutionErrorRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const t = useTranslations('health.errors.detail');
+  const tc = useTranslations('common');
+  const locale = useLocale();
 
   useEffect(() => {
     setDetail(row);
@@ -37,11 +42,11 @@ export function ErrorDetailDrawer({ row, onClose }: Props) {
       open={row !== null}
       onClose={onClose}
       width={720}
-      title={detail ? `Erreur — ${detail.workflowName}` : 'Erreur'}
+      title={detail ? t('title', { name: detail.workflowName }) : t('titleEmpty')}
       extra={
         detail?.n8nUrl && (
           <Button icon={<ExportOutlined />} href={detail.n8nUrl} target="_blank" rel="noreferrer noopener">
-            Ouvrir dans n8n
+            {tc('openInN8n')}
           </Button>
         )
       }
@@ -49,13 +54,13 @@ export function ErrorDetailDrawer({ row, onClose }: Props) {
       {detail && (
         <>
           <Descriptions column={1} size="small" bordered style={{ marginBottom: 16 }}>
-            <Descriptions.Item label="Exécution">#{detail.executionId}</Descriptions.Item>
-            <Descriptions.Item label="Démarrée">
-              {new Date(detail.startedAt).toLocaleString('fr-FR')}
+            <Descriptions.Item label={t('execution')}>#{detail.executionId}</Descriptions.Item>
+            <Descriptions.Item label={t('started')}>
+              {new Date(detail.startedAt).toLocaleString(locale)}
             </Descriptions.Item>
-            <Descriptions.Item label="Durée">{duration(detail)}</Descriptions.Item>
-            <Descriptions.Item label="Déclencheur">{detail.mode ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label="Nœud fautif">
+            <Descriptions.Item label={t('duration')}>{duration(detail)}</Descriptions.Item>
+            <Descriptions.Item label={t('trigger')}>{detail.mode ?? '—'}</Descriptions.Item>
+            <Descriptions.Item label={t('failedNode')}>
               {detail.failedNode ? (
                 <Space direction="vertical" size={2}>
                   <Tag color="red">{detail.failedNode}</Tag>
@@ -73,27 +78,27 @@ export function ErrorDetailDrawer({ row, onClose }: Props) {
 
           {loading && <Skeleton active paragraph={{ rows: 3 }} />}
 
-          {error && <Alert type="error" showIcon message="Détail non récupérable" description={error} />}
+          {error && <Alert type="error" showIcon message={t('detailFailed')} description={error} />}
 
           {!loading && detail.detailState === 'unavailable' && (
-            <Alert type="info" showIcon message="Exécution purgée par n8n." />
+            <Alert type="info" showIcon message={t('purged')} />
           )}
 
           {detail.message && (
             <>
-              <Typography.Title level={5}>Message</Typography.Title>
+              <Typography.Title level={5}>{tc('columns.message')}</Typography.Title>
               <Alert type="error" message={detail.message} style={{ marginBottom: 16 }} />
             </>
           )}
 
           {detail.stack && (
             <>
-              <Typography.Title level={5}>Stack</Typography.Title>
+              <Typography.Title level={5}>{t('stack')}</Typography.Title>
               <pre
                 style={{
                   maxHeight: 320,
                   overflow: 'auto',
-                  background: '#fafafa',
+                  background: BRAND.papier,
                   padding: 12,
                   fontSize: 12,
                 }}

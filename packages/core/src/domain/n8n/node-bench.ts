@@ -13,6 +13,7 @@
  * testé (recopié tel quel, credentials compris) → Respond to Webhook.
  */
 import { randomUUID } from 'crypto';
+import { msg } from '../../i18n';
 import { EnvName } from '../env';
 import { N8nConnections, N8nNode, N8nWorkflow } from './workflow.types';
 import { activeParameters } from './inert-params';
@@ -27,7 +28,9 @@ export const BENCH_PREFIX = '[BANC]';
 /** Tag posé sur le banc : c'est lui qui le sort des listes et des analyses. */
 export const BENCH_TAG = 'n8n-ops:banc-essai';
 /** Nœud d'entrée quand le nœud testé n'a aucun parent dans le workflow d'origine. */
-export const BENCH_INPUT_NAME = 'Entrée du banc';
+export function benchInputName(): string {
+  return msg('platform.benchInputName');
+}
 
 /** Nom du banc — c'est lui qui sert de clé de réutilisation, comme pour les bouchons. */
 export function benchWorkflowName(workflowName: string, nodeName: string): string {
@@ -133,33 +136,33 @@ function needsBinaryInput(node: N8nNode): boolean {
  */
 export function planNodeBench(workflow: N8nWorkflow, nodeName: string): NodeBenchPlan {
   const node = workflow.nodes.find((n) => n.name === nodeName);
-  if (!node) throw new Error(`Nœud « ${nodeName} » absent du workflow`);
+  if (!node) throw new Error(msg('platform.benchNodeMissing', { nodeName }));
 
   const issues: BenchIssue[] = [];
   const names = new Set(workflow.nodes.map((n) => n.name));
 
   if (isStickyNote(node)) {
-    issues.push({ code: 'sticky-note', severity: 'blocking', message: 'Une note n’exécute rien.' });
+    issues.push({ code: 'sticky-note', severity: 'blocking', message: msg('platform.benchIssueSticky') });
   }
   if (isTriggerNode(node)) {
     issues.push({
       code: 'trigger-node',
       severity: 'blocking',
-      message: 'Un déclencheur produit l’entrée : il n’y a rien à alimenter ni à isoler.',
+      message: msg('platform.benchIssueTrigger'),
     });
   }
   if (node.disabled) {
     issues.push({
       code: 'node-disabled',
       severity: 'info',
-      message: 'Nœud désactivé dans le workflow d’origine : le banc l’exécute quand même.',
+      message: msg('platform.benchIssueDisabled'),
     });
   }
   if (needsBinaryInput(node)) {
     issues.push({
       code: 'binary-input',
       severity: 'warning',
-      message: 'Ce nœud attend un fichier en entrée : un échantillon JSON ne le reconstitue pas.',
+      message: msg('platform.benchIssueBinary'),
     });
   }
 
@@ -176,7 +179,7 @@ export function planNodeBench(workflow: N8nWorkflow, nodeName: string): NodeBenc
     issues.push({
       code: 'missing-ref',
       severity: 'warning',
-      message: `L’expression cite « ${ref} », qui n’existe pas dans le workflow : le banc l’ajoutera sous ce nom.`,
+      message: msg('platform.benchIssueMissingRef', { ref }),
     });
   }
 
@@ -190,7 +193,7 @@ export function planNodeBench(workflow: N8nWorkflow, nodeName: string): NodeBenc
   }
   const inputFeeds: InputEdge[] = mainEdges.length
     ? mainEdges
-    : [{ from: BENCH_INPUT_NAME, type: 'main', inputIndex: 0 }];
+    : [{ from: benchInputName(), type: 'main', inputIndex: 0 }];
   for (const edge of inputFeeds) {
     const existing = feeds.get(edge.from);
     feeds.delete(edge.from);
@@ -208,7 +211,7 @@ export function planNodeBench(workflow: N8nWorkflow, nodeName: string): NodeBenc
     issues.push({
       code: 'sub-nodes-run',
       severity: 'warning',
-      message: `Sous-nœuds recopiés et RÉELLEMENT exécutés : ${subNodes.join(', ')}.`,
+      message: msg('platform.benchIssueSubNodes', { nodes: subNodes.join(', ') }),
     });
   }
 
@@ -249,10 +252,7 @@ function feedNode(feed: BenchFeed, items: unknown[], position: [number, number],
         2,
       )};`,
     },
-    notes:
-      feed.role === 'expression'
-        ? 'Simulé : cité par une expression du nœud testé.'
-        : 'Simulé : alimente l’entrée du nœud testé.',
+    notes: feed.role === 'expression' ? msg('platform.benchFeedExpression') : msg('platform.benchFeedInput'),
     notesInFlow: true,
   };
 }
@@ -283,21 +283,26 @@ export function buildNodeBenchWorkflow(options: NodeBenchOptions): N8nWorkflow {
   const plan = planNodeBench(workflow, nodeName);
   if (plan.blocked) {
     throw new Error(
-      `Banc impossible pour « ${nodeName} » : ${plan.issues[0]?.message ?? 'nœud non testable'}`,
+      msg('platform.benchImpossible', {
+        nodeName,
+        reason: plan.issues[0]?.message ?? msg('platform.benchNotTestable'),
+      }),
     );
   }
 
   const source = workflow.nodes.find((n) => n.name === nodeName)!;
+  const startName = msg('platform.benchStartNode');
+  const resultName = msg('platform.benchResultNode');
   const nodes: N8nNode[] = [
     {
       id: newId(),
-      name: 'Lancer le banc',
+      name: startName,
       type: 'n8n-nodes-base.webhook',
       typeVersion: 2,
       webhookId: newId(),
       position: [0, 0],
       parameters: { httpMethod: 'POST', path: webhookPath, responseMode: 'responseNode', options: {} },
-      notes: `Banc d'essai du nœud « ${nodeName} » (workflow « ${workflow.name} »). Posé par la plateforme.`,
+      notes: msg('platform.benchStartNotes', { nodeName, workflowName: workflow.name }),
       notesInFlow: true,
     },
   ];
@@ -305,7 +310,7 @@ export function buildNodeBenchWorkflow(options: NodeBenchOptions): N8nWorkflow {
 
   // Chaînage : chaque simulé passe la main au suivant, pour que TOUS aient
   // tourné quand le nœud testé résout ses `$('...')`.
-  let previous = 'Lancer le banc';
+  let previous = startName;
   plan.feeds.forEach((feed, index) => {
     nodes.push(feedNode(feed, feeds[feed.nodeName] ?? [{}], [220 * (index + 1), 0], newId()));
     link(connections, previous, feed.nodeName);
@@ -347,13 +352,13 @@ export function buildNodeBenchWorkflow(options: NodeBenchOptions): N8nWorkflow {
 
   nodes.push({
     id: newId(),
-    name: 'Rendre le résultat',
+    name: resultName,
     type: 'n8n-nodes-base.respondToWebhook',
     typeVersion: 1.1,
     position: [testedX + 220, 0],
     parameters: { respondWith: 'allIncomingItems', options: {} },
   });
-  link(connections, nodeName, 'Rendre le résultat');
+  link(connections, nodeName, resultName);
 
   // `errorWorkflow` retiré : un essai ne doit alerter personne.
   const settings = { ...(workflow.settings ?? {}) };
@@ -413,7 +418,7 @@ function impactOf(node: N8nNode, subNode: boolean): BenchImpact {
   return {
     nodeName: node.name,
     kind: verdict?.kind,
-    reason: verdict?.reason ?? 'lit ou transforme, sans rien sortir du système',
+    reason: verdict?.reason ?? msg('platform.benchReadOnly'),
     target: describeNodeTarget(node),
     credentials: Object.values(node.credentials ?? {})
       .map((credential) => credential?.name)
@@ -461,14 +466,11 @@ export function evaluateBenchGate(
   );
   if (gateEnv(options.env, options.active) === 'safe') return { blocked: false, reasons };
   if (options.force) {
-    return { blocked: false, reasons: [...reasons, 'Contournement explicite : lancé malgré la production.'] };
+    return { blocked: false, reasons: [...reasons, msg('platform.benchGateForced')] };
   }
   return {
     blocked: true,
-    reasons: [
-      ...reasons,
-      'Workflow de production : bascule les ressources sur un env de dev, ou coche le contournement.',
-    ],
+    reasons: [...reasons, msg('platform.benchGateProduction')],
   };
 }
 
@@ -505,7 +507,7 @@ export function readBenchOutcome(execution: { data?: unknown }, nodeName: string
     const failure = errorMessage(asRecord(asRecord(parseExecutionData(execution))?.resultData)?.error);
     return failure
       ? { status: 'failed', items: [], error: failure }
-      : { status: 'unknown', items: [], error: 'Le nœud n’a pas été exécuté par le banc.' };
+      : { status: 'unknown', items: [], error: msg('platform.benchNotRun') };
   }
 
   const items: Array<Record<string, unknown>> = [];

@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query } from '@nestjs/common';
-import { isAiProvider } from '@nwm/core';
+import { isAiProvider, msg } from '@nwm/core';
 import { AiSettingsInput, AiSettingsService, AiSettingsView } from './ai-settings.service';
 
 /**
@@ -24,7 +24,9 @@ export class AiSettingsController {
   @Post('activate')
   activate(@Body() body: { provider?: string }): Promise<AiSettingsView> {
     if (!isAiProvider(body?.provider)) {
-      throw new BadRequestException(`Fournisseur IA inconnu : ${body?.provider ?? '(absent)'}`);
+      throw new BadRequestException(
+        msg('platform.aiProviderUnknown', { provider: body?.provider ?? msg('platform.aiProviderAbsent') }),
+      );
     }
     return this.settings.activate(body.provider);
   }

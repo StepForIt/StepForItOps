@@ -11,6 +11,8 @@
  * `@nwm/core`, et un nom d'outil brut (`check_workflow`) ne se montre pas.
  */
 
+import { MessageId, msg } from '../i18n';
+
 export interface TurnProgressStep {
   /** Libellé court, prêt à afficher. */
   label: string;
@@ -29,25 +31,26 @@ export interface TurnProgress {
   running: boolean;
 }
 
-/** Ce que chaque outil va chercher, dit en français. */
-const TOOL_LABELS: Record<string, string> = {
-  read_node: 'Relecture d’un nœud',
-  read_workflow: 'Lecture d’un sous-workflow appelé',
-  create_sub_workflow: 'Création du sous-workflow',
-  check_workflow: 'Vérification du brouillon',
-  list_credentials: 'Lecture des credentials disponibles',
-  describe_node_type: 'Lecture du schéma d’un type de nœud',
-  search_node_types: 'Recherche d’un type de nœud',
-  sync_workflow: 'Relecture du workflow depuis n8n',
-  remember: 'Mémorisation d’un fait',
-  list_conversations: 'Relecture des conversations passées',
-  read_conversation: 'Relecture d’une conversation',
-  find_examples: 'Recherche d’exemples dans les autres workflows',
-  read_example_workflow: 'Lecture d’un workflow du parc',
-  search_docs: 'Recherche de la documentation du service',
-  read_docs: 'Lecture de la documentation du service',
-  read_module: 'Relecture d’un module',
-  check_scenario: 'Vérification du brouillon',
+/** Ce que chaque outil va chercher, dit dans la langue de l'écran. */
+const TOOL_LABELS: Record<string, MessageId> = {
+  read_node: 'chat.progressReadNode',
+  read_workflow: 'chat.progressReadWorkflow',
+  create_sub_workflow: 'chat.progressCreateSubWorkflow',
+  check_workflow: 'chat.progressCheckDraft',
+  list_credentials: 'chat.progressListCredentials',
+  describe_node_type: 'chat.progressDescribeNodeType',
+  read_node_docs: 'chat.progressReadNodeDocs',
+  search_node_types: 'chat.progressSearchNodeTypes',
+  sync_workflow: 'chat.progressSyncWorkflow',
+  remember: 'chat.progressRemember',
+  list_conversations: 'chat.progressListConversations',
+  read_conversation: 'chat.progressReadConversation',
+  find_examples: 'chat.progressFindExamples',
+  read_example_workflow: 'chat.progressReadExampleWorkflow',
+  search_docs: 'chat.progressSearchDocs',
+  read_docs: 'chat.progressReadDocs',
+  read_module: 'chat.progressReadModule',
+  check_scenario: 'chat.progressCheckDraft',
 };
 
 /** L'argument qui identifie l'appel — le nœud visé, le type, la requête. */
@@ -74,7 +77,7 @@ function toolSubject(input: Record<string, unknown>): string | undefined {
 /** Étape d'un appel d'outil, telle qu'elle s'affiche pendant qu'il tourne. */
 export function toolProgressStep(name: string, input: Record<string, unknown>): TurnProgressStep {
   return {
-    label: TOOL_LABELS[name] ?? `Outil ${name}`,
+    label: TOOL_LABELS[name] ? msg(TOOL_LABELS[name]) : msg('chat.progressUnknownTool', { name }),
     detail: toolSubject(input),
     done: false,
   };

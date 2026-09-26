@@ -1,3 +1,5 @@
+import { msg } from '../i18n';
+
 /**
  * Plan d'un geste d'environnement appliqué à plusieurs workflows métier d'un coup :
  * pour chaque famille, QUEL exemplaire part et OÙ il va — ou pourquoi elle reste
@@ -69,7 +71,7 @@ export interface BulkSkippedRow extends BulkPlanBase {
 
 export type BulkPlanRow = BulkPlannedRow | BulkSkippedRow;
 
-const label = (env: string | null): string => (env ? env.toUpperCase() : 'sans env');
+const label = (env: string | null): string => (env ? env.toUpperCase() : msg('env.bulkNoEnvLabel'));
 
 /** Un archivé ou un absent de n8n ne part nulle part : on n'y écrit plus. */
 const usable = (member: BulkExemplar): boolean =>
@@ -77,7 +79,7 @@ const usable = (member: BulkExemplar): boolean =>
 
 export function planBulkEnvAction(families: BulkFamily[], request: BulkEnvRequest): BulkPlanRow[] {
   if (request.sourceEnv === request.targetEnv) {
-    throw new Error("Env source et env cible identiques : il n'y a rien à faire.");
+    throw new Error(msg('env.bulkSameEnv'));
   }
   return families.map((family) => planFamily(family, request));
 }
@@ -97,20 +99,21 @@ function planFamily(family: BulkFamily, request: BulkEnvRequest): BulkPlanRow {
   if (sources.length === 0) {
     const declared = inTarget.filter(usable);
     if (request.action === 'mark' && declared.length === 1) {
-      return skip('already-done', `déjà déclaré ${label(request.targetEnv)}`, declared[0].id);
+      return skip(
+        'already-done',
+        msg('env.bulkAlreadyMarked', { env: label(request.targetEnv) }),
+        declared[0].id,
+      );
     }
     return skip(
       'missing',
       request.action === 'mark'
-        ? 'aucun exemplaire sans env à déclarer'
-        : `aucun exemplaire ${label(request.sourceEnv)} utilisable (absent, archivé ou supprimé dans n8n)`,
+        ? msg('env.bulkNoUnmarked')
+        : msg('env.bulkNoUsableSource', { env: label(request.sourceEnv) }),
     );
   }
   if (sources.length > 1) {
-    return skip(
-      'ambiguous',
-      `plusieurs exemplaires ${label(request.sourceEnv)} — lequel part est à choisir sur sa page`,
-    );
+    return skip('ambiguous', msg('env.bulkSeveralSources', { env: label(request.sourceEnv) }));
   }
   const source = sources[0];
   const planned = (targetInstanceId: string, targetExemplarId?: string): BulkPlannedRow => ({
@@ -128,7 +131,7 @@ function planFamily(family: BulkFamily, request: BulkEnvRequest): BulkPlanRow {
     case 'mark':
       // Deux exemplaires déclarés du même env se disputeraient l'appariement par nom.
       if (inTarget.length > 0) {
-        return skip('conflict', `la famille a déjà son exemplaire ${label(request.targetEnv)}`);
+        return skip('conflict', msg('env.bulkTargetExists', { env: label(request.targetEnv) }));
       }
       return planned(source.instanceId);
     case 'duplicate': {
@@ -136,7 +139,7 @@ function planFamily(family: BulkFamily, request: BulkEnvRequest): BulkPlanRow {
       if (sameInstance) {
         return skip(
           'already-done',
-          `une copie ${label(request.targetEnv)} existe déjà sur cette instance`,
+          msg('env.bulkCopyExists', { env: label(request.targetEnv) }),
           sameInstance.id,
         );
       }
@@ -144,10 +147,7 @@ function planFamily(family: BulkFamily, request: BulkEnvRequest): BulkPlanRow {
     }
     case 'promote': {
       if (inTarget.length > 1) {
-        return skip(
-          'ambiguous',
-          `plusieurs exemplaires ${label(request.targetEnv)} — la cible est à choisir sur sa page`,
-        );
+        return skip('ambiguous', msg('env.bulkSeveralTargets', { env: label(request.targetEnv) }));
       }
       const target = inTarget[0];
       if (target) return planned(target.instanceId, target.id);

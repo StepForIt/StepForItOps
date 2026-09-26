@@ -3,11 +3,12 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { List } from '@refinedev/antd';
+import { useTranslations } from 'next-intl';
 import { Button, Empty, Input, Modal, Space, Tag, Typography } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useEnabledModules } from '../../lib/enabled-modules';
 import { useCommandPalette } from '../../components/command-palette';
-import { TIP_GROUPS, TIPS, Tip, TipGroupId } from './tip-catalog';
+import { Tip, TipGroupId, useTips } from './tip-catalog';
 import { groupTips, highlight, matchesTip } from './tip-search';
 import { TipVignette } from './tip-vignette';
 import './aide.css';
@@ -21,6 +22,7 @@ function Marked({ text, query }: { text: string; query: string }) {
 }
 
 function TipCard({ tip, query, off, onOpen }: { tip: Tip; query: string; off: boolean; onOpen: () => void }) {
+  const t = useTranslations('misc.aide.page');
   const [live, setLive] = React.useState(false);
   return (
     <article
@@ -43,7 +45,7 @@ function TipCard({ tip, query, off, onOpen }: { tip: Tip; query: string; off: bo
           <Marked text={tip.text} query={query} />
         </p>
         <div className="hp-card-foot">
-          {off ? <Tag>Module désactivé</Tag> : <Text type="secondary">{tip.where}</Text>}
+          {off ? <Tag>{t('moduleOff')}</Tag> : <Text type="secondary">{tip.where}</Text>}
         </div>
       </div>
     </article>
@@ -51,6 +53,8 @@ function TipCard({ tip, query, off, onOpen }: { tip: Tip; query: string; off: bo
 }
 
 export default function HelpPage() {
+  const t = useTranslations('misc.aide.page');
+  const { tips: TIPS, groups: TIP_GROUPS } = useTips();
   const router = useRouter();
   const params = useSearchParams();
   const palette = useCommandPalette();
@@ -59,7 +63,7 @@ export default function HelpPage() {
   const [group, setGroup] = React.useState<TipGroupId | null>(null);
 
   const isOff = (tip: Tip) => Boolean(enabled && tip.module && !enabled.includes(tip.module));
-  const matching = TIPS.filter((tip) => matchesTip(tip, query));
+  const matching = TIPS.filter((tip) => matchesTip(tip, query, TIP_GROUPS));
   const shown = matching.filter((tip) => !group || tip.group === group);
 
   // L'astuce ouverte vit dans l'URL : la palette ⌘K y mène directement.
@@ -82,20 +86,20 @@ export default function HelpPage() {
   };
 
   return (
-    <List title="Aide" headerButtons={[]}>
+    <List title={t('title')} headerButtons={[]}>
       <div className="hp-root">
         <Space direction="vertical" size={12} style={{ width: '100%', marginBottom: 18 }}>
           <Input.Search
             allowClear
             autoFocus
             size="large"
-            placeholder="Chercher : promouvoir, colonne, erreur…"
+            placeholder={t('searchPlaceholder')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <div>
             <Tag.CheckableTag checked={!group} onChange={() => setGroup(null)}>
-              Tout · {matching.length}
+              {t('all', { count: matching.length })}
             </Tag.CheckableTag>
             {TIP_GROUPS.map((g) => {
               const count = matching.filter((tip) => tip.group === g.id).length;
@@ -106,7 +110,7 @@ export default function HelpPage() {
                   checked={group === g.id}
                   onChange={(checked) => setGroup(checked ? g.id : null)}
                 >
-                  {g.label} · {count}
+                  {t('groupCount', { label: g.label, count })}
                 </Tag.CheckableTag>
               );
             })}
@@ -114,9 +118,9 @@ export default function HelpPage() {
         </Space>
 
         {shown.length === 0 ? (
-          <Empty description={`Aucune astuce pour « ${query} »`} />
+          <Empty description={t('empty', { query })} />
         ) : (
-          groupTips(shown).map((g) => (
+          groupTips(shown, TIP_GROUPS).map((g) => (
             <section key={g.id} className="hp-group">
               <h2>{g.label}</h2>
               <div className="hp-grid">
@@ -145,15 +149,15 @@ export default function HelpPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {openIndex >= 0 && shown.length > 1 && (
                   <>
-                    <Button icon={<LeftOutlined />} onClick={() => step(-1)} aria-label="Astuce précédente" />
+                    <Button icon={<LeftOutlined />} onClick={() => step(-1)} aria-label={t('previous')} />
                     <Text type="secondary">
-                      {openIndex + 1} / {shown.length}
+                      {t('position', { index: openIndex + 1, total: shown.length })}
                     </Text>
-                    <Button icon={<RightOutlined />} onClick={() => step(1)} aria-label="Astuce suivante" />
+                    <Button icon={<RightOutlined />} onClick={() => step(1)} aria-label={t('next')} />
                   </>
                 )}
                 <Button type="primary" style={{ marginLeft: 'auto' }} onClick={() => go(open)}>
-                  {isOff(open) ? 'Activer le module' : 'Essayer'}
+                  {isOff(open) ? t('enableModule') : t('tryIt')}
                 </Button>
               </div>
             )

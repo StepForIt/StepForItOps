@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { Response } from 'express';
 import { WorkflowListFilters, WorkflowWithEnv, WorkflowsService } from './workflows.service';
 import { WorkflowFamiliesService, WorkflowFamilyRow } from './workflow-families.service';
@@ -49,7 +50,7 @@ export class WorkflowsController {
   /** Workflow neuf (vide, inactif) sur une instance n8n : l'assistant le remplit ensuite. */
   @Post()
   create(@Body() body: { instanceId?: string; name?: string }): Promise<WorkflowWithEnv> {
-    if (!body?.instanceId) throw new BadRequestException('instanceId attendu');
+    if (!body?.instanceId) throw new BadRequestException(msg('platform.instanceIdExpected'));
     return this.creation.create(body.instanceId, body.name ?? '');
   }
 
@@ -96,7 +97,7 @@ export class WorkflowsController {
   ): Promise<{ ok: true }> {
     const minutes = body.minutes ?? null;
     if (minutes !== null && (!Number.isFinite(minutes) || minutes < 0)) {
-      throw new BadRequestException('minutes : nombre positif attendu');
+      throw new BadRequestException(msg('platform.minutesExpected'));
     }
     await this.workflows.setTimeSaved(id, minutes);
     return { ok: true };

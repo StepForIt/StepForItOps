@@ -18,6 +18,7 @@ import { WorkflowsService } from '../workflows/workflows.service';
 import { FindingIgnoreService } from '../workflows/finding-ignore.service';
 import { CheckProfilesService } from '../../infra/check-profiles/check-profiles.service';
 import { NodeCatalogService } from '../../infra/node-catalog/node-catalog.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { AiLogicReviewService } from './ai-logic-review.service';
 
 @Injectable()
@@ -30,6 +31,7 @@ export class VerifierService {
     private readonly profiles: CheckProfilesService,
     private readonly nodeCatalog: NodeCatalogService,
     private readonly aiReview: AiLogicReviewService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /**
@@ -38,7 +40,16 @@ export class VerifierService {
    * décoché n'est pas filtré à l'affichage mais jamais joué : la revue IA n'est
    * même pas appelée si tout ce qu'elle produit est décoché.
    */
-  async verify(workflowId: string, withAi: boolean, disabledChecks?: string[]): Promise<Finding[]> {
+  verify(workflowId: string, withAi: boolean, disabledChecks?: string[]): Promise<Finding[]> {
+    // Les findings sont stockés pour tous : dans la langue de la plateforme, pas celle du lanceur.
+    return this.platformLocale.run(() => this.runChecks(workflowId, withAi, disabledChecks));
+  }
+
+  private async runChecks(
+    workflowId: string,
+    withAi: boolean,
+    disabledChecks?: string[],
+  ): Promise<Finding[]> {
     const { workflow: meta, raw } = await this.workflows.getRawAny(workflowId);
     const disabled = await this.profiles.effective(workflowId, disabledChecks);
     const off = new Set(disabled);

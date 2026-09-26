@@ -91,7 +91,7 @@ export class LessonStoreService {
           confirmedBy: draft.confirmedBy ?? twin.row.confirmedBy,
         },
       });
-      this.logger.log(`Leçon réécrite (${occurrences}ᵉ occurrence) : ${content}`);
+      this.logger.log(`Lesson rewritten (occurrence #${occurrences}): ${content}`);
       return { lesson, merged: true };
     }
 
@@ -106,7 +106,7 @@ export class LessonStoreService {
         status: statusAfterOccurrence('candidate', 1, Boolean(draft.confirmedBy)),
       },
     });
-    this.logger.log(`Leçon apprise (${lesson.status}) : ${content}`);
+    this.logger.log(`Lesson learned (${lesson.status}): ${content}`);
     return { lesson, merged: false };
   }
 

@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Alert, Button, Checkbox, Modal, Radio, Select, Space, Tag, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../../../lib/api';
 import { useEnvLabel, useEnvs } from '../../../../lib/envs';
 import { usePromoteDefaults } from './promote-defaults';
 import { SwitchedResource, SwitchedResources } from '../../../../components/switched-resources';
+import { BRAND } from '../../../../lib/brand/colors';
 
 /**
  * Les gestes possibles autour des environnements. Ils ne se distinguent pas par
@@ -80,6 +82,8 @@ export function EnvAssistantModal({
    */
   startCopyTo?: string | null;
 }) {
+  const t = useTranslations('workflowShow.envAssistant');
+  const tCommon = useTranslations('common');
   const { envs } = useEnvs();
   const envLabel = useEnvLabel();
   const promoteDefaults = usePromoteDefaults(workflowId, open);
@@ -139,36 +143,35 @@ export function EnvAssistantModal({
   const choices: Array<{ value: Intent; title: string; detail: React.ReactNode; blocked?: string }> = [
     {
       value: 'switch',
-      title: 'Rebrancher ce workflow sur un autre env',
-      detail: 'Remplace les ids sur place.',
-      blocked: noMapping ? 'aucun mapping déclaré' : undefined,
+      title: t('choices.switchTitle'),
+      detail: t('choices.switchDetail'),
+      blocked: noMapping ? t('choices.switchBlocked') : undefined,
     },
     {
       value: 'copy',
-      title: 'Copier vers un autre env',
-      detail: `Copie inactive « … - ${targetEnv.toUpperCase()} ».`,
+      title: t('choices.copyTitle'),
+      detail: t('choices.copyDetail', { env: targetEnv.toUpperCase() }),
     },
     {
       value: 'mark',
-      title: 'Juste déclarer son env',
-      detail: (
-        <>
-          Tag <code>env:{targetEnv}</code> + suffixe du nom.
-        </>
-      ),
+      title: t('choices.markTitle'),
+      detail: t.rich('choices.markDetail', {
+        env: targetEnv,
+        code: (chunks) => <code>{chunks}</code>,
+      }),
     },
     {
       value: 'group',
-      title: 'Traiter tout le groupe',
-      detail: `Tout le groupe ${(groups ?? []).map((group) => group.name).join(', ')}.`,
-      blocked: (groups ?? []).length === 0 ? 'dans aucun groupe' : undefined,
+      title: t('choices.groupTitle'),
+      detail: t('choices.groupDetail', { names: (groups ?? []).map((group) => group.name).join(', ') }),
+      blocked: (groups ?? []).length === 0 ? t('choices.groupBlocked') : undefined,
     },
     {
       value: 'promote',
       title: promoteDefaults?.targetEnv
-        ? `Promouvoir vers ${envLabel(promoteDefaults.targetEnv)}`
-        : 'Promouvoir ce travail',
-      detail: 'Écrase ou crée le jumeau dans un autre env.',
+        ? t('choices.promoteTitleTo', { env: envLabel(promoteDefaults.targetEnv) })
+        : t('choices.promoteTitle'),
+      detail: t('choices.promoteDetail'),
     },
   ];
 
@@ -183,7 +186,7 @@ export function EnvAssistantModal({
     try {
       if (intent === 'switch') {
         await apiPost(`/env-switcher/apply/${workflowId}`, { targetEnv });
-        message.success(`Rebranché sur ${targetEnv}`);
+        message.success(t('switched', { env: targetEnv }));
       }
       if (intent === 'copy') {
         const result = await apiPost<{
@@ -195,10 +198,10 @@ export function EnvAssistantModal({
           cascade,
           pinNodes: pinEnabled ? pinChecked : [],
         });
-        message.success(`Copie « ${result.newName} » créée.`);
+        message.success(t('copyCreated', { name: result.newName }));
         // Sans pinData, la copie enverrait pour de vrai dès le premier essai.
         if (result.pinsLost.length > 0) {
-          message.error(`Non épinglés : ${result.pinsLost.join(', ')} — ils enverront pour de vrai.`, 10);
+          message.error(t('pinsLost', { names: result.pinsLost.join(', ') }), 10);
         }
         // Un sous-workflow resté sans copie garde l'id d'origine : la copie rappelle l'original.
         const missing = result.subWorkflows.filter(
@@ -206,8 +209,10 @@ export function EnvAssistantModal({
         );
         if (missing.length > 0) {
           message.warning(
-            `Sans copie ${targetEnv.toUpperCase()} : ` +
-              `${missing.map((sub) => sub.targetName ?? sub.sourceName ?? '?').join(', ')} — appelle l'original.`,
+            t('subsMissing', {
+              env: targetEnv.toUpperCase(),
+              names: missing.map((sub) => sub.targetName ?? sub.sourceName ?? '?').join(', '),
+            }),
             8,
           );
         }
@@ -218,7 +223,9 @@ export function EnvAssistantModal({
           rename,
         });
         message.success(
-          `Déclaré env:${targetEnv}${result.newName ? ` et renommé « ${result.newName} »` : ''}`,
+          result.newName
+            ? t('markedRenamed', { env: targetEnv, name: result.newName })
+            : t('marked', { env: targetEnv }),
         );
       }
       onDone();
@@ -234,26 +241,26 @@ export function EnvAssistantModal({
     Exclude<Intent, 'promote'>,
     { label: string; danger?: boolean; disabled?: boolean }
   > = {
-    group: { label: 'Ouvrir la duplication du groupe', disabled: !groupId },
+    group: { label: t('actions.group'), disabled: !groupId },
     switch: {
-      label: `Rebrancher sur ${targetEnv}`,
+      label: t('actions.switch', { env: targetEnv }),
       danger: true,
       disabled: (plan !== null && plan.hits.length === 0) || (active === true && !understood),
     },
-    copy: { label: `Créer la copie ${targetEnv.toUpperCase()}`, disabled: false },
-    mark: { label: `Déclarer env:${targetEnv}`, disabled: alreadyTagged && !rename },
+    copy: { label: t('actions.copy', { env: targetEnv.toUpperCase() }), disabled: false },
+    mark: { label: t('actions.mark', { env: targetEnv }), disabled: alreadyTagged && !rename },
   };
 
   return (
     <Modal
-      title="Environnements"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={620}
       footer={
         intent === null || intent === 'promote' ? null : (
           <Space>
-            <Button onClick={() => setIntent(null)}>Retour</Button>
+            <Button onClick={() => setIntent(null)}>{tCommon('back')}</Button>
             <Button
               type="primary"
               danger={action[intent].danger}
@@ -269,7 +276,7 @@ export function EnvAssistantModal({
     >
       {intent === null ? (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <div>Que veux-tu faire de « {workflowName} » ?</div>
+          <div>{t('question', { name: workflowName ?? '' })}</div>
           <Radio.Group
             style={{ width: '100%' }}
             // La promotion a son propre assistant : ce choix-là passe la main aussitôt.
@@ -290,14 +297,14 @@ export function EnvAssistantModal({
                   <b>{choice.title}</b>
                   <div style={{ color: '#888' }}>{choice.detail}</div>
                   {choice.blocked && (
-                    <div style={{ color: '#cf1322' }}>
-                      Indisponible : {choice.blocked}.{' '}
+                    <div style={{ color: BRAND.danger }}>
+                      {t('unavailable', { reason: choice.blocked })}{' '}
                       {choice.value === 'switch' ? (
-                        <Link href="/resource-mappings/create">Déclarer un mapping</Link>
+                        <Link href="/resource-mappings/create">{t('declareMapping')}</Link>
                       ) : choice.value === 'group' ? (
-                        <Link href="/workflow-groups/create">Créer un groupe</Link>
+                        <Link href="/workflow-groups/create">{t('createGroup')}</Link>
                       ) : (
-                        <Link href="/instances">Ajouter une instance</Link>
+                        <Link href="/instances">{t('addInstance')}</Link>
                       )}
                     </div>
                   )}
@@ -310,7 +317,7 @@ export function EnvAssistantModal({
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           {intent === 'group' ? (
             <div>
-              Quel groupe dupliquer ?
+              {t('whichGroup')}
               <Select
                 value={groupId}
                 onChange={setGroupId}
@@ -320,9 +327,9 @@ export function EnvAssistantModal({
             </div>
           ) : (
             <div>
-              {intent === 'switch' && 'Sur quel env rebrancher ce workflow ?'}
-              {intent === 'copy' && 'Copie dans quel env ?'}
-              {intent === 'mark' && 'Quel est l’env de ce workflow ?'}
+              {intent === 'switch' && t('switchQuestion')}
+              {intent === 'copy' && t('copyQuestion')}
+              {intent === 'mark' && t('markQuestion')}
               <Select
                 value={targetEnv}
                 onChange={setTargetEnv}
@@ -338,17 +345,17 @@ export function EnvAssistantModal({
                 <Alert
                   type="error"
                   showIcon
-                  message={`Actif : bascule immédiate sur ${targetEnv}`}
+                  message={t('activeWarning', { env: targetEnv })}
                   description={
                     <Checkbox checked={understood} onChange={(e) => setUnderstood(e.target.checked)}>
-                      J&apos;ai compris, rebrancher quand même
+                      {t('understood')}
                     </Checkbox>
                   }
                 />
               )}
               {plan &&
                 (plan.hits.length === 0 ? (
-                  <span style={{ color: '#888' }}>Rien à remplacer pour {targetEnv}.</span>
+                  <span style={{ color: '#888' }}>{t('nothingToReplace', { env: targetEnv })}</span>
                 ) : (
                   <SwitchedResources switched={plan.switched} replacements={plan.hits.length} />
                 ))}
@@ -358,14 +365,13 @@ export function EnvAssistantModal({
           {intent === 'copy' && (
             <>
               <Checkbox checked={cascade} onChange={(e) => setCascade(e.target.checked)}>
-                Copier les sous-workflows manquants
+                {t('cascade')}
               </Checkbox>
 
               {pinCandidates.length > 0 && (
                 <div>
                   <Checkbox checked={pinEnabled} onChange={(e) => setPinEnabled(e.target.checked)}>
-                    Bouchonner {pinCandidates.length} nœud{pinCandidates.length > 1 ? 's' : ''} sortant
-                    {pinCandidates.length > 1 ? 's' : ''}
+                    {t('pin', { count: pinCandidates.length })}
                   </Checkbox>
                   {pinEnabled &&
                     pinCandidates.map((candidate) => (
@@ -392,11 +398,14 @@ export function EnvAssistantModal({
           {intent === 'mark' && (
             <>
               <Checkbox checked={rename} onChange={(e) => setRename(e.target.checked)}>
-                Renommer aussi en « {withoutEnvSuffix(workflowName ?? '', envs)} - {targetEnv.toUpperCase()} »
+                {t('rename', {
+                  name: withoutEnvSuffix(workflowName ?? '', envs),
+                  env: targetEnv.toUpperCase(),
+                })}
               </Checkbox>
               {alreadyTagged && (
                 <span>
-                  <Tag>déjà env:{targetEnv}</Tag>
+                  <Tag>{t('alreadyTagged', { env: targetEnv })}</Tag>
                 </span>
               )}
             </>
@@ -406,7 +415,7 @@ export function EnvAssistantModal({
             <Alert
               type="warning"
               showIcon
-              message={`${plan.unmapped.length} ressource(s) sans mapping`}
+              message={t('unmapped', { count: plan.unmapped.length })}
               description={
                 <>
                   <ul style={{ margin: '4px 0 8px', paddingLeft: 18 }}>
@@ -419,7 +428,7 @@ export function EnvAssistantModal({
                     ))}
                   </ul>
                   <Link href="/resource-mappings/create">
-                    <Button size="small">Déclarer un mapping</Button>
+                    <Button size="small">{t('declareMapping')}</Button>
                   </Link>
                 </>
               }

@@ -1,53 +1,68 @@
+import { useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+
 /**
  * Libellés lisibles des règles d'analyse. Le `code` sert de clé aux exclusions
- * (`FindingIgnore`) : il reste tel quel en base et dans l'API, seul l'affichage est traduit.
+ * (`FindingIgnore`) : il reste tel quel en base et dans l'API, seul l'affichage est traduit
+ * (`reviewTools.rules.<code>`).
  */
-const RULE_LABELS: Record<string, string> = {
+const RULE_CODES = [
   // verifier — revue IA
-  'ai-summary': 'Résumé du workflow (IA)',
-  'ai-logic': 'Logique douteuse (IA)',
-  'ai-not-understood': 'Workflow incompris par l’IA',
+  'ai-summary',
+  'ai-logic',
+  'ai-not-understood',
 
   // verifier — contrôles structurels
-  'expression-missing-node': 'Expression vers un nœud inexistant',
-  'expression-not-ancestor': "Expression vers un nœud qui n'aura pas tourné",
-  'expression-disabled-node': 'Expression vers un nœud désactivé',
-  'orphan-node': 'Nœud non connecté',
-  'no-trigger': 'Aucun déclencheur',
+  'expression-missing-node',
+  'expression-not-ancestor',
+  'expression-disabled-node',
+  'orphan-node',
+  'no-trigger',
 
   // verifier — fiabilité
-  'http-no-retry': 'HTTP sans retry',
-  'error-swallowed': 'Erreur avalée silencieusement',
-  'hardcoded-secret': 'Secret en clair',
-  'http-no-timeout': 'HTTP sans timeout',
-  'param-placeholder': 'Valeur d’exemple jamais remplacée',
+  'http-no-retry',
+  'error-swallowed',
+  'hardcoded-secret',
+  'http-no-timeout',
+  'param-placeholder',
 
   // field-checker
-  'field-typo': 'Champ mal orthographié',
-  'field-unknown': 'Champ inconnu des exécutions',
+  'field-typo',
+  'field-unknown',
 
   // js-checker
-  'js-syntax-error': 'Erreur de syntaxe JS',
-  'js-no-return': 'Nœud Code sans return',
-  'js-json-in-all-items': '$json en mode « all items »',
-  'js-all-in-each-item': '$input.all() en mode « each item »',
-  'js-require': 'require() dépendant de l’instance',
-  'js-ai': 'Code à revoir (IA)',
+  'js-syntax-error',
+  'js-no-return',
+  'js-json-in-all-items',
+  'js-all-in-each-item',
+  'js-require',
+  'js-ai',
 
   // optimizer — naming
-  'default-name': 'Nom de nœud par défaut',
-  'duplicate-nodes': 'Nœuds identiques',
+  'default-name',
+  'duplicate-nodes',
 
   // optimizer — sticky notes
-  'sticky-uncovered-nodes': 'Nœuds hors de toute zone',
-  'sticky-empty-zone': 'Zone sans nœud',
-  'sticky-missing-content': 'Zone non documentée',
-  'sticky-oversized': 'Zone trop grande',
-  'sticky-color-clash': 'Zone de la couleur de sa parente',
-  'sticky-overlap': 'Zones qui se chevauchent',
-};
+  'sticky-uncovered-nodes',
+  'sticky-empty-zone',
+  'sticky-missing-content',
+  'sticky-oversized',
+  'sticky-color-clash',
+  'sticky-overlap',
+] as const;
+
+type RuleCode = (typeof RULE_CODES)[number];
+export type RuleT = ReturnType<typeof useTranslations<'reviewTools.rules'>>;
+
+const isKnownRule = (code: string): code is RuleCode => (RULE_CODES as readonly string[]).includes(code);
 
 /** Libellé d'une règle ; à défaut le code brut, pour qu'une nouvelle règle reste lisible. */
-export function ruleLabel(code: string): string {
-  return RULE_LABELS[code] ?? code;
+export function ruleLabel(code: string, t: RuleT): string {
+  return isKnownRule(code) ? t(code) : code;
+}
+
+/** `ruleLabel` lié à la langue courante. */
+export function useRuleLabel(): (code: string) => string {
+  const t = useTranslations('reviewTools.rules');
+  return useCallback((code: string) => ruleLabel(code, t), [t]);
 }

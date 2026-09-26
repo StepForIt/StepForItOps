@@ -1,5 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { AI_PORT, AiPort, AssistantDraftRepairedEvent, CorrectionChange, MAX_LESSON_LENGTH } from '@nwm/core';
+import {
+  AI_PORT,
+  AiPort,
+  AssistantDraftRepairedEvent,
+  CorrectionChange,
+  MAX_LESSON_LENGTH,
+  writeInLanguage,
+} from '@nwm/core';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { LessonStoreService } from './lesson-store.service';
 
 interface DistilledLesson {
@@ -30,6 +38,7 @@ export class LessonDistillService {
   constructor(
     @Inject(AI_PORT) private readonly ai: AiPort,
     private readonly store: LessonStoreService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /** Distille les changements qu'on sait déjà être des erreurs (verdict `lesson`). */
@@ -67,7 +76,7 @@ export class LessonDistillService {
       nodeTypes: input.change.nodeType ? [input.change.nodeType] : [],
       origin: 'human-answer',
       originWorkflowId: input.workflowId,
-      confirmedBy: input.author ?? 'inconnu',
+      confirmedBy: input.author ?? 'unknown',
     });
     return rule;
   }
@@ -88,20 +97,20 @@ export class LessonDistillService {
       ...new Set(event.findings.map((finding) => finding.nodeType).filter(Boolean)),
     ] as string[];
     const observed = [
-      'Contrôles qui ont REFUSÉ le brouillon :',
+      'Checks that REFUSED the draft:',
       ...event.findings.map(
         (finding) =>
-          `- [${finding.code}]${finding.nodeName ? ` sur « ${finding.nodeName} »` : ''}` +
-          `${finding.nodeType ? ` (${finding.nodeType})` : ''} : ${finding.message}`,
+          `- [${finding.code}]${finding.nodeName ? ` on "${finding.nodeName}"` : ''}` +
+          `${finding.nodeType ? ` (${finding.nodeType})` : ''}: ${finding.message}`,
       ),
       '',
-      `Opérations refusées : ${event.refused}`,
-      `Opérations qui sont passées après correction : ${event.accepted}`,
+      `Refused operations: ${event.refused}`,
+      `Operations that passed after the fix: ${event.accepted}`,
     ].join('\n');
 
     const rule = await this.ask(
-      "Un assistant n8n a proposé une modification, des contrôles déterministes l'ont REFUSÉE, " +
-        "il l'a corrigée et les mêmes contrôles passent. On te donne le refus et les deux versions.",
+      'An n8n assistant proposed a change, deterministic checks REFUSED it, ' +
+        'it fixed it and the same checks now pass. You are given the refusal and both versions.',
       observed,
     );
     if (!rule) return;
@@ -115,19 +124,19 @@ export class LessonDistillService {
 
   private async distill(change: CorrectionChange, answer?: string): Promise<string | null> {
     const observed = [
-      `Nœud : ${change.node || '(câblage)'}${change.nodeType ? ` (${change.nodeType})` : ''}`,
-      change.path ? `Paramètre : ${change.path}` : '',
-      `Ce que l'assistant avait écrit : ${change.wrote}`,
-      `Ce que l'humain a mis à la place : ${change.fixed}`,
-      `Lecture automatique : ${change.reason}`,
-      answer ? `Réponse de l'humain à la question posée : ${answer}` : '',
+      `Node: ${change.node || '(wiring)'}${change.nodeType ? ` (${change.nodeType})` : ''}`,
+      change.path ? `Parameter: ${change.path}` : '',
+      `What the assistant had written: ${change.wrote}`,
+      `What the human put instead: ${change.fixed}`,
+      `Automatic reading: ${change.reason}`,
+      answer ? `Human's answer to the question asked: ${answer}` : '',
     ]
       .filter(Boolean)
       .join('\n');
 
     return this.ask(
-      'Tu formules des règles pour un assistant n8n qui vient de se faire corriger à la main. ' +
-        "On te donne UN changement : ce que l'assistant avait écrit, ce que l'humain a mis.",
+      'You write rules for an n8n assistant that has just been corrected by hand. ' +
+        'You are given ONE change: what the assistant had written, what the human put instead.',
       observed,
     );
   }
@@ -141,31 +150,35 @@ export class LessonDistillService {
    * l'un des deux finirait par produire des règles qu'on servirait à tous les tours.
    */
   private async ask(framing: string, observed: string): Promise<string | null> {
+    // La leçon est persistée et servie à tous : elle s'écrit dans la langue de la
+    // plateforme, même quand la réponse d'un humain l'a déclenchée depuis sa console.
+    const language = this.platformLocale.run(() => writeInLanguage());
     try {
       const result = await this.ai.generateJson<DistilledLesson>({
         system:
           framing +
-          "\nTa seule tâche est de dégager la règle GÉNÉRALE que l'assistant aurait dû connaître.\n\n" +
-          'Impératifs :\n' +
-          `- ${MAX_LESSON_LENGTH} caractères maximum, une phrase, à l'impératif.\n` +
-          '- AUCUN nom de workflow, id, url, nom de table, ni valeur propre à ce cas : une règle ' +
-          'qui les contient ne servira jamais ailleurs. Le type de nœud, lui, est permis.\n' +
-          "- Si ce cas n'enseigne rien de généralisable (une préférence, une valeur " +
-          "métier, un choix d'humain), réponds rule: null et dis pourquoi dans why. " +
-          'Ne rien apprendre est une réponse correcte et fréquente : mieux vaut un silence ' +
-          "qu'une règle fausse, qu'on servira ensuite à tous les tours.\n\n" +
-          'Réponds UNIQUEMENT en JSON : {"rule": "…"|null, "why": "…"}',
+          '\nYour only task is to extract the GENERAL rule the assistant should have known.\n\n' +
+          'Requirements:\n' +
+          `- ${MAX_LESSON_LENGTH} characters maximum, one sentence, in the imperative.\n` +
+          '- NO workflow name, id, url, table name, or value specific to this case: a rule ' +
+          'that contains them will never be useful elsewhere. The node type, however, is allowed.\n' +
+          '- If this case teaches nothing generalizable (a preference, a business ' +
+          "value, a human's choice), answer rule: null and say why in why. " +
+          'Learning nothing is a correct and frequent answer: silence is better ' +
+          'than a wrong rule, which would then be served on every turn.\n' +
+          `- ${language}\n\n` +
+          'Answer ONLY in JSON: {"rule": "…"|null, "why": "…"}',
         prompt: observed,
         effort: 'low',
         maxTokens: 700,
       });
       if (!result.rule) {
-        this.logger.debug(`Rien à apprendre de ce changement : ${result.why ?? 'sans motif'}`);
+        this.logger.debug(`Nothing to learn from this change: ${result.why ?? 'no reason given'}`);
         return null;
       }
       return result.rule;
     } catch (error) {
-      this.logger.warn(`Distillation impossible : ${(error as Error).message}`);
+      this.logger.warn(`Distillation failed: ${(error as Error).message}`);
       return null;
     }
   }

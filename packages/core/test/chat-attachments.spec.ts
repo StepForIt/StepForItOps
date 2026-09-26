@@ -104,7 +104,7 @@ describe('renderChatFiles', () => {
       { name: 'run.log', mediaType: 'text/plain', text: 'boom', size: 4 },
     ]);
     expect(rendered.startsWith('Pourquoi ça plante ?')).toBe(true);
-    expect(rendered).toContain('--- Fichier joint : run.log (4 o) ---');
+    expect(rendered).toContain('--- Attached file: run.log (4 B) ---');
     expect(rendered).toContain('boom');
   });
 
@@ -119,7 +119,7 @@ describe('renderChatFiles', () => {
     const rendered = renderChatFiles('suite', [
       { name: 'vieux.csv', mediaType: 'text/csv', text: '', size: 2048, dropped: true },
     ]);
-    expect(rendered).toContain('contenu non rejoué');
+    expect(rendered).toContain('content not replayed');
   });
 });
 

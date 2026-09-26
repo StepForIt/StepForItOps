@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Space, Tag, Tooltip, message } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { DeleteOutlined, DollarOutlined, PlusOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost, apiPut } from '../../lib/api';
 import { ModelPriceRow } from './types';
 
@@ -33,6 +34,8 @@ export function ModelPricesModal({
   const [applying, setApplying] = useState(false);
   const [changed, setChanged] = useState(false);
   const [form] = Form.useForm<PriceForm>();
+  const t = useTranslations('health.llmCosts.prices');
+  const tc = useTranslations('common');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -92,8 +95,9 @@ export function ModelPricesModal({
         '/ai-cost/prices/apply-missing',
       );
       message.success(
-        `${result.updated} appel(s) valorisé(s)` +
-          (result.stillUnknown > 0 ? ` · ${result.stillUnknown} toujours sans tarif` : ''),
+        result.stillUnknown > 0
+          ? t('appliedWithUnknown', { updated: result.updated, stillUnknown: result.stillUnknown })
+          : t('applied', { updated: result.updated }),
       );
       setChanged(true);
     } catch (error) {
@@ -105,43 +109,43 @@ export function ModelPricesModal({
 
   return (
     <Modal
-      title="Tarifs par modèle (USD / million de tokens)"
+      title={t('title')}
       open={open}
       onCancel={() => onClose(changed)}
-      footer={<Button onClick={() => onClose(changed)}>Fermer</Button>}
+      footer={<Button onClick={() => onClose(changed)}>{tc('close')}</Button>}
       width={720}
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         {/* Ligne d'ajout dense : le libellé est porté par aria-label (accessible)
             plutôt qu'affiché, pour garder les trois champs sur une seule ligne. */}
         <Form form={form} layout="inline" onFinish={create}>
-          <Form.Item name="pattern" rules={[{ required: true, message: 'Motif requis' }]}>
+          <Form.Item name="pattern" rules={[{ required: true, message: t('patternRequired') }]}>
             <Input
-              aria-label="Motif du modèle"
-              placeholder="Motif (ex. gpt-4o, claude-sonnet-5)"
+              aria-label={t('patternLabel')}
+              placeholder={t('patternPlaceholder')}
               style={{ width: 240 }}
             />
           </Form.Item>
-          <Form.Item name="inputPerMTok" rules={[{ required: true, message: 'Prix input' }]}>
+          <Form.Item name="inputPerMTok" rules={[{ required: true, message: t('inputRequired') }]}>
             <InputNumber
-              aria-label="Prix input (USD / million de tokens)"
-              placeholder="Input"
+              aria-label={t('inputLabel')}
+              placeholder={t('input')}
               min={0}
               step={0.05}
               style={{ width: 100 }}
             />
           </Form.Item>
-          <Form.Item name="outputPerMTok" rules={[{ required: true, message: 'Prix output' }]}>
+          <Form.Item name="outputPerMTok" rules={[{ required: true, message: t('outputRequired') }]}>
             <InputNumber
-              aria-label="Prix output (USD / million de tokens)"
-              placeholder="Output"
+              aria-label={t('outputLabel')}
+              placeholder={t('output')}
               min={0}
               step={0.05}
               style={{ width: 100 }}
             />
           </Form.Item>
           <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-            Ajouter
+            {tc('add')}
           </Button>
         </Form>
 
@@ -153,7 +157,7 @@ export function ModelPricesModal({
           pagination={{ pageSize: 10, hideOnSinglePage: true }}
           columns={[
             {
-              title: 'Motif',
+              title: t('pattern'),
               dataIndex: 'pattern',
               render: (pattern: string, row) => (
                 <Space size={6}>
@@ -163,7 +167,7 @@ export function ModelPricesModal({
               ),
             },
             {
-              title: 'Input',
+              title: t('input'),
               dataIndex: 'inputPerMTok',
               width: 130,
               render: (value: number, row) => (
@@ -177,7 +181,7 @@ export function ModelPricesModal({
               ),
             },
             {
-              title: 'Output',
+              title: t('output'),
               dataIndex: 'outputPerMTok',
               width: 130,
               render: (value: number, row) => (
@@ -193,7 +197,7 @@ export function ModelPricesModal({
             {
               width: 50,
               render: (_, row) => (
-                <Popconfirm title="Supprimer ce tarif ?" onConfirm={() => remove(row)}>
+                <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(row)}>
                   <Button size="small" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               ),
@@ -201,9 +205,9 @@ export function ModelPricesModal({
           ]}
         />
 
-        <Tooltip title="Chiffre les appels sans tarif">
+        <Tooltip title={t('applyTooltip')}>
           <Button icon={<DollarOutlined />} loading={applying} onClick={applyMissing}>
-            Valoriser les appels sans tarif
+            {t('apply')}
           </Button>
         </Tooltip>
       </Space>

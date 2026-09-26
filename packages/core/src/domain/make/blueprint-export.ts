@@ -8,12 +8,13 @@
  * que des ids, jamais leurs secrets, et c'est l'import qui demande à les
  * rattacher dans le compte d'arrivée.
  */
+import { msg } from '../../i18n';
 import { flattenModules, isMakeBlueprint } from './blueprint';
 
 /** Refuse ce qui n'est pas un blueprint : un export illisible passerait pour une sauvegarde. */
 export function blueprintExportText(blueprint: unknown): string {
   if (!isMakeBlueprint(blueprint)) {
-    throw new Error("Contenu illisible comme blueprint Make (aucun 'flow') : rien à exporter.");
+    throw new Error(msg('platform.makeBlueprintUnreadableExport'));
   }
   return JSON.stringify(blueprint, null, 2);
 }

@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Input, Modal, Radio, Space, Tag, Typography, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
-import { ruleLabel } from '../lib/finding-rules';
+import { useRuleLabel } from '../lib/finding-rules';
 import { useEnvs } from '../lib/envs';
 
 export interface IgnorableFinding {
@@ -34,6 +35,9 @@ interface Props {
  * recrée à chaque env, et l'oubli d'un seul suffit à faire revenir le bruit.
  */
 export function IgnoreFindingModal({ findings, onClose, onIgnored }: Props) {
+  const t = useTranslations('reviewTools.ignoreFinding');
+  const tCommon = useTranslations('common');
+  const ruleLabel = useRuleLabel();
   const envLabels = useEnvs()
     .envs.map((env) => env.label)
     .join(', ');
@@ -68,11 +72,7 @@ export function IgnoreFindingModal({ findings, onClose, onIgnored }: Props) {
           reason: reason.trim() || undefined,
         });
       }
-      message.success(
-        rules.length === 1
-          ? 'Finding ignoré — il ne remontera plus dans les analyses'
-          : `${rules.length} règles créées — ces findings ne remonteront plus`,
-      );
+      message.success(rules.length === 1 ? t('ignoredOne') : t('ignoredMany', { count: rules.length }));
       onIgnored();
       onClose();
     } catch (error) {
@@ -84,23 +84,18 @@ export function IgnoreFindingModal({ findings, onClose, onIgnored }: Props) {
 
   return (
     <Modal
-      title={rules.length > 1 ? `Ignorer ces ${rules.length} findings ?` : 'Ignorer ce finding ?'}
+      title={rules.length > 1 ? t('titleMany', { count: rules.length }) : t('titleOne')}
       open={open}
       onCancel={onClose}
       onOk={confirm}
-      okText="Ignorer définitivement"
+      okText={t('ok')}
       okButtonProps={{ danger: true, loading: busy }}
-      cancelText="Annuler"
+      cancelText={tCommon('cancel')}
       width={640}
     >
       {open && (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Alert
-            type="info"
-            showIcon
-            message="Règle durable"
-            description="Le finding est supprimé et ne sera plus recréé par les prochaines analyses. Tu peux le réactiver depuis la page « Findings ignorés »."
-          />
+          <Alert type="info" showIcon message={t('durableTitle')} description={t('durableDescription')} />
           <div>
             {rules.map((rule) => (
               <div key={rule.id} style={{ marginBottom: 8 }}>
@@ -120,56 +115,54 @@ export function IgnoreFindingModal({ findings, onClose, onIgnored }: Props) {
             ))}
           </div>
           <div>
-            <Typography.Text strong>Portée</Typography.Text>
+            <Typography.Text strong>{t('scope')}</Typography.Text>
             <div style={{ marginTop: 4 }}>
               <Radio.Group value={scope} onChange={(e) => setScope(e.target.value)}>
                 <Space direction="vertical" size={2}>
                   <Radio value="family">
-                    Ce workflow, dans tous ses environnements{' '}
-                    <Typography.Text type="secondary">({envLabels})</Typography.Text>
+                    {t.rich('scopeFamily', {
+                      envs: () => <Typography.Text type="secondary">({envLabels})</Typography.Text>,
+                    })}
                   </Radio>
-                  <Radio value="workflow">Cet environnement seulement</Radio>
-                  <Radio value="global">Tous les workflows</Radio>
+                  <Radio value="workflow">{t('scopeWorkflow')}</Radio>
+                  <Radio value="global">{t('scopeGlobal')}</Radio>
                 </Space>
               </Radio.Group>
             </div>
           </div>
           {withNode && (
             <div>
-              <Typography.Text strong>Nœud</Typography.Text>
+              <Typography.Text strong>{tCommon('columns.node')}</Typography.Text>
               <div style={{ marginTop: 4 }}>
                 <Radio.Group value={nodeScope} onChange={(e) => setNodeScope(e.target.value)}>
-                  <Radio value="node">Uniquement le nœud visé</Radio>
-                  <Radio value="any-node">N&apos;importe quel nœud</Radio>
+                  <Radio value="node">{t('nodeOnly')}</Radio>
+                  <Radio value="any-node">{t('anyNode')}</Radio>
                 </Radio.Group>
               </div>
             </div>
           )}
           <div>
-            <Typography.Text strong>Raison (optionnel)</Typography.Text>
+            <Typography.Text strong>{t('reason')}</Typography.Text>
             <Input.TextArea
               rows={2}
               style={{ marginTop: 4 }}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="ex. placeholder remplacé plus tard dans le flux"
+              placeholder={t('reasonPlaceholder')}
             />
           </div>
           <Typography.Text type="secondary">
-            {rules.length === 1 ? 'Règle appliquée' : 'Règles appliquées'} : {SCOPE_WORDING[scope]},{' '}
-            {withNode && nodeScope === 'node' ? 'nœud visé uniquement' : 'tous les nœuds'}.
+            {t('summary', {
+              rules: rules.length === 1 ? t('summaryRulesOne') : t('summaryRulesMany'),
+              scope: t(`summaryScope.${scope}`),
+              node: t(withNode && nodeScope === 'node' ? 'summaryNode.only' : 'summaryNode.all'),
+            })}
           </Typography.Text>
         </Space>
       )}
     </Modal>
   );
 }
-
-const SCOPE_WORDING: Record<Scope, string> = {
-  family: 'ce workflow dans tous ses environnements',
-  workflow: 'cet environnement seulement',
-  global: 'tous les workflows',
-};
 
 /** Un représentant par (module, code, nœud) : la règle créée serait identique. */
 function dedupeRules(findings: IgnorableFinding[]): IgnorableFinding[] {

@@ -13,6 +13,7 @@ import {
   MAX_REPAIR_ROUNDS,
   MakeEditOperation,
   blueprintDocContext,
+  msg,
   parseAssistantTurn,
   repairNote,
   summarizeMakeOperations,
@@ -21,7 +22,7 @@ import {
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { MakeProposalService } from './make-proposal.service';
-import { MAKE_CHAT_SYSTEM_PROMPT, makeRepairRequest } from './make-chat-prompt';
+import { makeChatSystemPrompt, makeRepairRequest } from './make-chat-prompt';
 import { CheckedMakeDraft, buildMakeChatTools } from './make-chat-tools';
 import { ChatMemoryService } from './chat-memory.service';
 import { ChatHistoryService } from './chat-history.service';
@@ -73,9 +74,9 @@ export class MakeChatTurnService {
     signal?: AbortSignal;
   }): Promise<MakeTurnResult> {
     const { sessionId, workflowId } = input;
-    this.progress.step(sessionId, { label: 'Relecture du scénario depuis Make', done: false });
+    this.progress.step(sessionId, { label: msg('chat.progressSyncScenario'), done: false });
     const { workflow, raw } = await this.freshScenario(workflowId);
-    this.progress.step(sessionId, { label: 'Préparation du contexte', done: false });
+    this.progress.step(sessionId, { label: msg('chat.progressContext'), done: false });
 
     const checked: CheckedMakeDraft[] = [];
     const tools = buildMakeChatTools({
@@ -92,7 +93,7 @@ export class MakeChatTurnService {
       readDocs: (search) => this.docs.readDocs(search),
     });
     const call = {
-      system: MAKE_CHAT_SYSTEM_PROMPT,
+      system: makeChatSystemPrompt(),
       tools,
       maxRounds: MAX_TOOL_ROUNDS,
       maxTokens: 8192,
@@ -102,7 +103,7 @@ export class MakeChatTurnService {
       onProgress: (event: AiAgentEvent) => {
         if (event.type === 'round') {
           this.progress.step(sessionId, {
-            label: event.round === 0 ? 'Analyse du scénario' : 'Poursuite de l’analyse',
+            label: msg(event.round === 0 ? 'chat.progressAnalyseScenario' : 'chat.progressAnalyseMore'),
             done: false,
           });
         } else if (event.type === 'tool') {
@@ -114,7 +115,7 @@ export class MakeChatTurnService {
     };
     const messages: AiMessage[] = [
       await this.contextMessage(workflowId, workflow, raw),
-      { role: 'assistant', content: 'Contexte du scénario reçu.' },
+      { role: 'assistant', content: 'Scenario context received.' },
       ...input.history,
     ];
 
@@ -127,19 +128,19 @@ export class MakeChatTurnService {
       ({ text: answer, trace, thinking } = result);
     } catch (error) {
       if (input.signal?.aborted) throw error;
-      const detail = (error as Error).message ?? 'erreur inconnue';
+      const detail = (error as Error).message ?? msg('chat.unknownError');
       if (error instanceof AiToolLoopError) ({ trace, thinking } = error);
       if (!lastClean(checked)) {
-        return { reply: `⚠️ L'appel à l'IA a échoué : ${detail}`, proposalId: null, trace, thinking };
+        return { reply: msg('chat.aiCallFailed', { detail }), proposalId: null, trace, thinking };
       }
-      failureNote = `⚠️ L'assistant n'a pas rendu de réponse (${detail}), mais la modification qu'il avait vérifiée pendant ce tour est proposée ci-dessous.`;
+      failureNote = msg('chat.aiCallFailedSalvaged', { detail });
     }
 
-    this.progress.step(sessionId, { label: 'Rédaction de la réponse', done: false });
+    this.progress.step(sessionId, { label: msg('chat.progressWriting'), done: false });
     const turn = parseAssistantTurn(answer);
     let reply = failureNote ?? turn.reply;
     if (turn.proposal && turn.proposal.targets.length > 0) {
-      reply = `${reply}\n\n> ⚠️ Sur un scénario Make, seule la modification du scénario ouvert est retenue.`;
+      reply = `${reply}\n\n${msg('chat.makeOnlyOpenScenario')}`;
     }
 
     // Ce que la réponse porte, ou le dernier brouillon que la porte a laissé passer :
@@ -165,7 +166,7 @@ export class MakeChatTurnService {
 
     if (!draft) {
       if (turn.malformed) {
-        reply = `${reply}\n\n> ⚠️ Une modification était proposée mais son format était illisible : rien n'a été retenu.`;
+        reply = `${reply}\n\n${msg('chat.makeProposalUnreadable')}`;
       }
       return { reply, proposalId: null, trace, thinking };
     }
@@ -180,7 +181,7 @@ export class MakeChatTurnService {
       if (verdict.ok || attempts >= MAX_REPAIR_ROUNDS) break;
       attempts += 1;
       this.progress.step(sessionId, {
-        label: `Correction de la modification refusée (passe ${attempts})`,
+        label: msg('chat.progressRepair', { attempt: attempts }),
         done: false,
       });
       conversation = [
@@ -210,7 +211,7 @@ export class MakeChatTurnService {
         };
       } catch (error) {
         if (input.signal?.aborted) throw error;
-        this.logger.warn(`Passe de correction en échec (session ${sessionId}) : ${(error as Error).message}`);
+        this.logger.warn(`Repair pass failed (session ${sessionId}): ${(error as Error).message}`);
         break;
       }
     }
@@ -223,16 +224,16 @@ export class MakeChatTurnService {
         draft.operations,
       );
       if (draft.salvaged && !failureNote) {
-        reply = `${reply}\n\n> ℹ️ La réponse ne portait pas la modification : c'est le brouillon vérifié pendant ce tour qui est proposé ci-dessous.`;
+        reply = `${reply}\n\n${msg('chat.replySalvagedDraft')}`;
       }
       if (attempts > 0) reply = `${reply}\n\n${repairNote(gate.blocked ? 'gave-up' : 'repaired', attempts)}`;
       if (gate.reason) reply = `${reply}\n\n> ${gate.blocked ? '⛔' : '⚠️'} ${gate.reason}`;
       return { reply, proposalId: proposal.id, trace, thinking };
     } catch (error) {
-      const detail = (error as Error).message ?? 'erreur inconnue';
-      this.logger.warn(`Proposition Make rejetée (${workflowId}) : ${detail}`);
+      const detail = (error as Error).message ?? msg('chat.unknownError');
+      this.logger.warn(`Make proposal rejected (${workflowId}): ${detail}`);
       return {
-        reply: `${reply}\n\n> ⚠️ La plateforme n'a pas pu retenir la modification proposée : ${detail}`,
+        reply: `${reply}\n\n${msg('chat.replyProposalNotKept', { detail })}`,
         proposalId: null,
         trace,
         thinking,
@@ -250,10 +251,10 @@ export class MakeChatTurnService {
       if (!gate.blocked) return { ok: true };
       return {
         ok: false,
-        reason: gate.reason ?? 'La porte refuse ce brouillon.',
+        reason: gate.reason ?? 'The gate refuses this draft.',
         errors: gate.introduced
           .filter((finding) => finding.severity === 'error')
-          .map((finding) => `${finding.nodeName ? `« ${finding.nodeName} » : ` : ''}${finding.message}`),
+          .map((finding) => `${finding.nodeName ? `"${finding.nodeName}": ` : ''}${finding.message}`),
       };
     } catch (error) {
       if (error instanceof BlueprintEditError) return { ok: false, reason: error.message, errors: [] };
@@ -266,7 +267,7 @@ export class MakeChatTurnService {
     try {
       return await this.workflows.getFreshRawAny(workflowId);
     } catch (error) {
-      this.logger.warn(`Relecture Make impossible (${workflowId}) : ${(error as Error).message}`);
+      this.logger.warn(`Cannot reload from Make (${workflowId}): ${(error as Error).message}`);
       return this.workflows.getRawAny(workflowId);
     }
   }
@@ -288,14 +289,14 @@ export class MakeChatTurnService {
       context = {
         ...(context as object),
         modules: scenario.modules.map(({ id, name, module }) => ({ id, name, module })),
-        note: 'Scénario volumineux : la configuration des modules est élaguée — lis-la avec read_module.',
+        note: 'Large scenario: the module configuration is pruned — read it with read_module.',
       };
     }
     const brief = await this.memory.brief(workflowId);
     const preamble = brief
-      ? `Ce qui t'a déjà été dit sur ce scénario, et qui reste vrai :\n${brief}\n\n`
+      ? `What you have already been told about this scenario, and which still holds:\n${brief}\n\n`
       : '';
-    return { role: 'user', content: `${preamble}Scénario Make analysé :\n${JSON.stringify(context)}` };
+    return { role: 'user', content: `${preamble}Make scenario under analysis:\n${JSON.stringify(context)}` };
   }
 }
 

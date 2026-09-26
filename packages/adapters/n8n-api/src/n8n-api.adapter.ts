@@ -1,6 +1,7 @@
 import {
   N8nApiError,
   N8nApiPort,
+  N8nCommunityPackage,
   N8nExecutionSummary,
   N8nExecutionsPage,
   N8nInstanceConfig,
@@ -9,6 +10,7 @@ import {
   N8nVersionedNodeType,
   N8nWorkflow,
   NodeTypeVersionRef,
+  msg,
 } from '@nwm/core';
 import { n8nRequest } from './n8n-http';
 import { n8nSessionGet, n8nSessionPost } from './n8n-session';
@@ -236,9 +238,9 @@ export class N8nApiAdapter implements N8nApiPort {
     } catch (error) {
       const reason =
         (error as Error).name === 'TimeoutError'
-          ? `pas de réponse en ${Math.round(WEBHOOK_TIMEOUT_MS / 1000)} s`
+          ? msg('platform.webhookTimeout', { seconds: Math.round(WEBHOOK_TIMEOUT_MS / 1000) })
           : (error as Error).message;
-      throw new Error(`Webhook ${path} injoignable : ${reason}`);
+      throw new Error(msg('platform.webhookUnreachable', { path, reason }));
     }
     const text = await response.text().catch(() => '');
     let body: unknown = text;
@@ -266,7 +268,7 @@ export class N8nApiAdapter implements N8nApiPort {
     if (payload && typeof payload === 'object') {
       return Object.values(payload as Record<string, N8nNodeTypeDescription>);
     }
-    throw new N8nApiError('types/nodes.json : format inattendu', 502);
+    throw new N8nApiError(msg('platform.n8nNodeTypesUnexpected'), 502);
   }
 
   /**
@@ -291,6 +293,20 @@ export class N8nApiAdapter implements N8nApiPort {
       found.push(...(await describe(instance, wanted.slice(start, start + NODE_TYPES_BATCH))));
     }
     return found;
+  }
+
+  async listCommunityPackages(instance: N8nInstanceConfig): Promise<N8nCommunityPackage[]> {
+    const payload = await n8nSessionGet<unknown>(instance, '/rest/community-packages');
+    const list = payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload;
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((entry): entry is { packageName: string; installedVersion?: unknown } =>
+        Boolean(entry && typeof entry.packageName === 'string'),
+      )
+      .map((entry) => ({
+        packageName: entry.packageName,
+        ...(typeof entry.installedVersion === 'string' ? { installedVersion: entry.installedVersion } : {}),
+      }));
   }
 
   async listNodeTypeVersions(instance: N8nInstanceConfig): Promise<Record<string, number[]>> {

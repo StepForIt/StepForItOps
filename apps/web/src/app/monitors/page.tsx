@@ -13,6 +13,7 @@ import {
   SettingOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { KumaSettingsModal } from './kuma-settings-modal';
@@ -47,6 +48,9 @@ interface IntervalSyncResult {
 
 export default function MonitorsList() {
   const { scope, instanceName } = useInstanceScope();
+  const t = useTranslations('health.monitors.list');
+  const tc = useTranslations('common');
+  const locale = useLocale();
   const { tableProps, setFilters, sorters } = useTable<Monitor>({
     resource: 'monitors',
     sorters: { initial: [{ field: 'name', order: 'asc' }] },
@@ -88,7 +92,7 @@ export default function MonitorsList() {
   const provision = async (id: string) => {
     try {
       const monitor = await apiPost<Monitor>(`/monitors/${id}/provision`);
-      message.success(`Sonde Kuma créée : ${monitor.kumaPushUrl}`);
+      message.success(t('probeCreated', { url: monitor.kumaPushUrl ?? '' }));
       refresh();
     } catch (error) {
       message.error((error as Error).message);
@@ -101,20 +105,17 @@ export default function MonitorsList() {
     try {
       const result = await apiPost<ProvisionResult>(`/monitoring/provision-instance/${instanceId}`);
       Modal.success({
-        title: `${result.created.length} sondes créées, ${result.skipped.length} déjà couvertes`,
+        title: t('provisioned', { created: result.created.length, skipped: result.skipped.length }),
         width: 640,
         content: (
           <>
             {result.errorWatch && (
-              <p>
-                Monitor « erreurs d&apos;exécution » de l&apos;instance :{' '}
-                {result.errorWatch.created ? 'créé (poll API, sans exécution n8n)' : 'déjà en place'}.
-              </p>
+              <p>{result.errorWatch.created ? t('errorWatchCreated') : t('errorWatchExisting')}</p>
             )}
             <ul>
               {result.created.map((c) => (
                 <li key={c.workflowName}>
-                  <b>{c.workflowName}</b> → colle le snippet heartbeat dans ce workflow (bouton « Snippet »)
+                  {t.rich('pasteSnippet', { name: c.workflowName, b: (chunks) => <b>{chunks}</b> })}
                 </li>
               ))}
             </ul>
@@ -135,18 +136,20 @@ export default function MonitorsList() {
     try {
       const result = await apiPost<IntervalSyncResult>('/monitoring/kuma-sync-intervals');
       Modal.success({
-        title: `${result.updated.length} sonde(s) réalignée(s), ${result.unchanged} déjà correcte(s)`,
+        title: t('intervalsSynced', { updated: result.updated.length, unchanged: result.unchanged }),
         width: 640,
         content: (
           <>
-            <p>
-              L&apos;intervalle d&apos;une sonde push doit être plus large que la cadence réelle de push,
-              sinon Kuma la déclare DOWN alors que le beat n&apos;est pas encore dû.
-            </p>
+            <p>{t('intervalsHint')}</p>
             <ul>
               {result.updated.map((u) => (
                 <li key={u.name}>
-                  <b>{u.name}</b> : {u.fromSeconds ?? '?'} s → {u.toSeconds} s
+                  {t.rich('intervalChange', {
+                    name: u.name,
+                    from: u.fromSeconds ?? '?',
+                    to: u.toSeconds,
+                    b: (chunks) => <b>{chunks}</b>,
+                  })}
                 </li>
               ))}
             </ul>
@@ -154,7 +157,7 @@ export default function MonitorsList() {
               <ul>
                 {result.skipped.map((s) => (
                   <li key={s.name} style={{ opacity: 0.65 }}>
-                    {s.name} — ignoré ({s.reason})
+                    {t('intervalSkipped', { name: s.name, reason: s.reason })}
                   </li>
                 ))}
               </ul>
@@ -172,7 +175,7 @@ export default function MonitorsList() {
   const showSnippet = async (id: string) => {
     const snippet = await apiGet<object>(`/monitors/${id}/snippet`);
     Modal.info({
-      title: 'Nœud HTTP Request à coller dans le workflow',
+      title: t('snippetTitle'),
       width: 640,
       content: <pre style={{ maxHeight: 400, overflow: 'auto' }}>{JSON.stringify(snippet, null, 2)}</pre>,
     });
@@ -181,7 +184,7 @@ export default function MonitorsList() {
   const checkNow = async (id: string) => {
     try {
       const result = await apiPost<{ status: string }>(`/monitors/${id}/check`);
-      message.success(`Check : ${result.status}`);
+      message.success(t('checkResult', { status: result.status }));
       refresh();
     } catch (error) {
       message.error((error as Error).message);
@@ -196,27 +199,27 @@ export default function MonitorsList() {
           actions={[
             {
               key: 'settings',
-              label: 'Réglages Kuma',
+              label: t('actions.settings'),
               icon: <SettingOutlined />,
               onClick: () => setSettingsOpen(true),
             },
             {
               key: 'bulk',
-              label: 'Sondes Kuma pour une instance',
+              label: t('actions.bulk'),
               icon: <CloudUploadOutlined />,
               disabled: !kumaConfigured,
               onClick: () => setBulkOpen(true),
             },
             {
               key: 'import',
-              label: 'Importer depuis Kuma',
+              label: t('actions.import'),
               icon: <CloudDownloadOutlined />,
               disabled: !kumaConfigured,
               onClick: () => setImportOpen(true),
             },
             {
               key: 'intervals',
-              label: 'Réaligner les intervalles',
+              label: t('actions.intervals'),
               icon: <FieldTimeOutlined />,
               disabled: !kumaConfigured,
               loading: busy,
@@ -224,7 +227,7 @@ export default function MonitorsList() {
             },
             {
               key: 'redundancy',
-              label: 'Sondes redondantes',
+              label: t('actions.redundancy'),
               icon: <TagsOutlined />,
               disabled: !kumaConfigured,
               onClick: () => setRedundancyOpen(true),
@@ -238,39 +241,33 @@ export default function MonitorsList() {
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="Connecteur Uptime Kuma non configuré"
-          description={
-            <>
-              Renseigne l&apos;URL et les identifiants Kuma via le bouton « Réglages Kuma » (stockés en base),
-              ou via KUMA_URL, KUMA_USERNAME et KUMA_PASSWORD dans le .env de l&apos;API. Sans ça, tu peux
-              toujours coller manuellement une URL push dans chaque monitor.
-            </>
-          }
+          message={t('notConfigured')}
+          description={t('notConfiguredHint')}
         />
       )}
       <Table {...tableProps} rowKey="id" mobileLayout={{ badges: ['lastStatus'] }}>
         <Table.Column
           dataIndex="name"
-          title="Nom"
+          title={tc('columns.name')}
           sorter
           defaultSortOrder={getDefaultSortOrder('name', sorters)}
         />
         {!scope && (
           <Table.Column<Monitor>
-            title="Instance"
+            title={tc('columns.instance')}
             render={(_, record) => {
               const monitorInstanceId = record.workflow?.instanceId ?? record.config?.instanceId;
               return monitorInstanceId ? (
-                <Tag color="geekblue">{instanceName(monitorInstanceId)}</Tag>
+                <Tag color="blue">{instanceName(monitorInstanceId)}</Tag>
               ) : (
-                <Tag>global</Tag>
+                <Tag>{t('global')}</Tag>
               );
             }}
           />
         )}
         <Table.Column
           dataIndex="kind"
-          title="Type"
+          title={tc('columns.type')}
           sorter
           defaultSortOrder={getDefaultSortOrder('kind', sorters)}
           render={(k: string) => <Tag>{k}</Tag>}
@@ -280,60 +277,60 @@ export default function MonitorsList() {
           title="Kuma"
           render={(url: string | undefined, record) =>
             url ? (
-              <Tag color="green">sonde liée</Tag>
+              <Tag color="green">{t('probeLinked')}</Tag>
             ) : record.config?.importedFromKuma ? (
-              <Tag color="blue">check par Kuma</Tag>
+              <Tag color="blue">{t('checkedByKuma')}</Tag>
             ) : (
               <Tag>—</Tag>
             )
           }
         />
         <Table.Column<Monitor>
-          title="État"
+          title={t('state')}
           render={(_, record) =>
             record.enabled ? (
-              <Tag color="green">actif</Tag>
+              <Tag color="green">{t('enabled')}</Tag>
             ) : record.config?.importedFromKuma ? (
-              <Tooltip title="Volontairement inactif ici : c'est Uptime Kuma qui exécute ce check. L'activer doublerait les appels — et un check sur un webhook déclenche une exécution n8n.">
-                <Tag color="blue">géré par Kuma</Tag>
+              <Tooltip title={t('managedByKumaTooltip')}>
+                <Tag color="blue">{t('managedByKuma')}</Tag>
               </Tooltip>
             ) : (
-              <Tag>désactivé</Tag>
+              <Tag>{t('disabled')}</Tag>
             )
           }
         />
         <Table.Column
           dataIndex="lastStatus"
-          title="Dernier statut"
+          title={t('lastStatus')}
           sorter
           defaultSortOrder={getDefaultSortOrder('lastStatus', sorters)}
           render={(s?: string) => (s ? <Tag color={s === 'up' ? 'green' : 'red'}>{s}</Tag> : <Tag>—</Tag>)}
         />
         <Table.Column
           dataIndex="lastCheckAt"
-          title="Dernier check"
+          title={t('lastCheck')}
           sorter
           defaultSortOrder={getDefaultSortOrder('lastCheckAt', sorters)}
-          render={(d?: string) => (d ? new Date(d).toLocaleString('fr-FR') : '—')}
+          render={(d?: string) => (d ? new Date(d).toLocaleString(locale) : '—')}
         />
         <Table.Column<Monitor>
-          title="Actions"
+          title={tc('columns.actions')}
           className="row-actions"
           render={(_, record) => (
             <Space>
               {!record.kumaPushUrl && kumaConfigured && !record.config?.importedFromKuma && (
                 <Button size="small" type="primary" onClick={() => provision(record.id)}>
-                  Créer sonde Kuma
+                  {t('createProbe')}
                 </Button>
               )}
               {record.kind === 'heartbeat' && (
                 <Button size="small" onClick={() => showSnippet(record.id)}>
-                  Snippet
+                  {t('snippet')}
                 </Button>
               )}
               {(record.kind === 'active' || record.kind === 'error-watch') && (
                 <Button size="small" onClick={() => checkNow(record.id)}>
-                  Check
+                  {t('check')}
                 </Button>
               )}
               <EditButton hideText size="small" recordItemId={record.id} />
@@ -354,19 +351,16 @@ export default function MonitorsList() {
       <KumaRedundancyModal open={redundancyOpen} onClose={() => setRedundancyOpen(false)} />
 
       <Modal
-        title="Créer les sondes Kuma d'une instance"
+        title={t('bulkTitle')}
         open={bulkOpen}
         onCancel={() => setBulkOpen(false)}
         onOk={provisionInstance}
-        okText="Créer les sondes"
+        okText={t('bulkOk')}
         confirmLoading={busy}
       >
-        <p>
-          Pour chaque workflow <b>actif</b> sans monitor heartbeat : crée le monitor local + la sonde push
-          dans Uptime Kuma. Il restera à coller le snippet heartbeat dans chaque workflow.
-        </p>
+        <p>{t.rich('bulkHint', { b: (chunks) => <b>{chunks}</b> })}</p>
         <Select
-          placeholder="Choisir l'instance n8n"
+          placeholder={t('chooseInstance')}
           style={{ width: '100%' }}
           options={instanceOptions}
           value={instanceId}

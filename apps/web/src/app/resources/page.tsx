@@ -21,6 +21,7 @@ import {
 } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { EditOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 import { useIsMobile } from '../../components/mobile/use-is-mobile';
 import { useInstanceScope } from '../../lib/instance-scope';
@@ -30,11 +31,11 @@ import { ColumnImpact, ResourceCall, ResourceNodeUsage, ResourceSummary, Resourc
 
 const IMPACT_ORDER: Record<ColumnImpact, number> = { 'to-update': 0, unknown: 1, 'no-action': 2 };
 
-const IMPACT_META: Record<ColumnImpact, { label: string; color: string }> = {
-  'to-update': { label: 'À modifier', color: 'red' },
-  unknown: { label: 'À vérifier', color: 'orange' },
-  'no-action': { label: 'Sans action', color: 'green' },
-};
+const IMPACT_META = {
+  'to-update': { key: 'toUpdate', color: 'red' },
+  unknown: { key: 'unknown', color: 'orange' },
+  'no-action': { key: 'noAction', color: 'green' },
+} as const satisfies Record<ColumnImpact, { key: string; color: string }>;
 
 /** Même liste que `resource-label.ts` côté API, pour l'en-tête des groupes. */
 const PROVIDER_LABELS: Record<string, string> = {
@@ -46,11 +47,11 @@ const PROVIDER_LABELS: Record<string, string> = {
   http: 'API',
 };
 
-const ACCESS_META: Record<string, { label: string; color: string }> = {
-  read: { label: 'lecture', color: 'blue' },
-  write: { label: 'écriture', color: 'purple' },
-  delete: { label: 'suppression', color: 'default' },
-  other: { label: 'autre', color: 'default' },
+const ACCESS_META: Record<string, { key: 'read' | 'write' | 'delete' | 'other'; color: string }> = {
+  read: { key: 'read', color: 'blue' },
+  write: { key: 'write', color: 'purple' },
+  delete: { key: 'delete', color: 'default' },
+  other: { key: 'other', color: 'default' },
 };
 
 /** Sans colonne saisie, on classe quand même : liste figée = nœud à connaître. */
@@ -92,6 +93,7 @@ function writeUrl(key: string | undefined, column: string): void {
 }
 
 export default function ResourcesPage() {
+  const t = useTranslations('inventory.resources.page');
   const mobile = useIsMobile();
   const { scope } = useInstanceScope();
   const [resources, setResources] = useState<ResourceSummary[]>([]);
@@ -170,12 +172,16 @@ export default function ResourcesPage() {
       group.options.push({
         value: resource.key,
         terms: resource.terms,
-        label: `${item || resource.label} — ${resource.nodeCount} nœuds · ${resource.workflowCount} workflows`,
+        label: t('option', {
+          item: item || resource.label,
+          nodes: resource.nodeCount,
+          workflows: resource.workflowCount,
+        }),
       });
       groups.set(resource.containerKey, group);
     }
     return [...groups.values()];
-  }, [resources, search]);
+  }, [resources, search, t]);
 
   const usages = useMemo(() => {
     const rows = result?.usages ?? [];
@@ -212,7 +218,7 @@ export default function ResourcesPage() {
     if (!renaming) return;
     try {
       await apiPost('/dep-graph/alias', { key: renaming.key, label: newLabel });
-      message.success(newLabel.trim() ? 'Nom mis à jour' : 'Nom retiré');
+      message.success(newLabel.trim() ? t('renamed') : t('aliasRemoved'));
       setRenaming(null);
       loadResources();
     } catch (error) {
@@ -222,26 +228,26 @@ export default function ResourcesPage() {
 
   const usageColumns = [
     {
-      title: 'Impact',
+      title: t('columns.impact'),
       key: 'impact',
       width: 180,
       render: (_: unknown, usage: ResourceNodeUsage) => {
         const meta = IMPACT_META[impactOf(usage)];
         const matching = usage.matchingColumns?.length
-          ? `Rapprochement sur ${usage.matchingColumns.join(', ')}`
+          ? t('matching', { list: usage.matchingColumns.join(', ') })
           : undefined;
         return (
           <Space direction="vertical" size={0}>
             <Tooltip title={[usage.impactReason, matching].filter(Boolean).join(' · ') || undefined}>
               {impactOf(usage) === 'no-action' ? (
-                <Typography.Text type="secondary">{meta.label}</Typography.Text>
+                <Typography.Text type="secondary">{t(`impact.${meta.key}`)}</Typography.Text>
               ) : (
-                <Tag color={meta.color}>{meta.label}</Tag>
+                <Tag color={meta.color}>{t(`impact.${meta.key}`)}</Tag>
               )}
             </Tooltip>
             {usage.requiredNotMapped.length > 0 && (
               <Typography.Text type="warning" style={{ fontSize: 12 }}>
-                obligatoire non mappé : {usage.requiredNotMapped.join(', ')}
+                {t('requiredNotMapped', { list: usage.requiredNotMapped.join(', ') })}
               </Typography.Text>
             )}
           </Space>
@@ -249,51 +255,49 @@ export default function ResourcesPage() {
       },
     },
     {
-      title: 'Workflow',
+      title: t('columns.workflow'),
       key: 'workflow',
       render: (_: unknown, usage: ResourceNodeUsage) => (
         <Link href={`/workflows/show/${usage.workflowId}?tab=graph`}>{usage.workflowName}</Link>
       ),
     },
     {
-      title: 'Nœud',
+      title: t('columns.node'),
       key: 'node',
       render: (_: unknown, usage: ResourceNodeUsage) => (
         <Space size={4} wrap>
           <span>{usage.nodeName}</span>
-          {usage.disabled && <Tag>désactivé</Tag>}
+          {usage.disabled && <Tag>{t('disabled')}</Tag>}
           {usage.dynamicTable && (
-            <Tooltip title="La table est désignée par une expression : ce nœud vise peut-être une autre table à l'exécution.">
-              <Tag color="orange">table dynamique</Tag>
+            <Tooltip title={t('dynamicTableHint')}>
+              <Tag color="orange">{t('dynamicTable')}</Tag>
             </Tooltip>
           )}
         </Space>
       ),
     },
     {
-      title: 'Sens',
+      title: t('columns.access'),
       key: 'access',
       width: 150,
       render: (_: unknown, usage: ResourceNodeUsage) => {
         const meta = ACCESS_META[usage.access] ?? ACCESS_META.other;
         return (
           <Space size={4}>
-            <Tag color={meta.color}>{meta.label}</Tag>
+            <Tag color={meta.color}>{t(`access.${meta.key}`)}</Tag>
             <Typography.Text type="secondary">{usage.operation || '—'}</Typography.Text>
           </Space>
         );
       },
     },
     {
-      title: 'Champs figés',
+      title: t('columns.fields'),
       key: 'fields',
       width: 140,
       render: (_: unknown, usage: ResourceNodeUsage) =>
         usage.fields ? (
           <Tooltip title={usage.fields.join(', ')}>
-            <Typography.Text underline>
-              {usage.fields.length} champ{usage.fields.length > 1 ? 's' : ''}
-            </Typography.Text>
+            <Typography.Text underline>{t('fieldCount', { count: usage.fields.length })}</Typography.Text>
           </Tooltip>
         ) : (
           <Typography.Text type="secondary">—</Typography.Text>
@@ -303,30 +307,30 @@ export default function ResourcesPage() {
 
   const callColumns = [
     {
-      title: 'Workflow',
+      title: t('columns.workflow'),
       key: 'workflow',
       render: (_: unknown, call: ResourceCall) => (
         <Link href={`/workflows/show/${call.workflowId}?tab=graph`}>{call.workflowName}</Link>
       ),
     },
     {
-      title: 'Nœud',
+      title: t('columns.node'),
       key: 'node',
       render: (_: unknown, call: ResourceCall) => (
         <Space size={4} wrap>
           <span>{call.nodeName}</span>
-          {call.disabled && <Tag>désactivé</Tag>}
+          {call.disabled && <Tag>{t('disabled')}</Tag>}
         </Space>
       ),
     },
     {
-      title: 'Méthode',
+      title: t('columns.method'),
       key: 'method',
       width: 110,
       render: (_: unknown, call: ResourceCall) => <Tag>{call.method ?? '—'}</Tag>,
     },
     {
-      title: 'Route appelée',
+      title: t('columns.route'),
       key: 'url',
       render: (_: unknown, call: ResourceCall) => (
         <Typography.Text code copyable={{ text: call.url ?? '' }}>
@@ -338,13 +342,13 @@ export default function ResourcesPage() {
 
   return (
     <div style={{ padding: 8 }}>
-      <Card title="Ressources externes">
+      <Card title={t('title')}>
         {/* Empilés pleine largeur sur mobile : à 460 px, le sélecteur sortait de l'écran. */}
         <Space wrap direction={mobile ? 'vertical' : 'horizontal'} style={{ width: '100%' }}>
           <Select
             showSearch
             allowClear
-            placeholder="Choisir une ressource (système, base, table, hôte, id…)"
+            placeholder={t('selectPlaceholder')}
             style={{ width: mobile ? '100%' : 460 }}
             value={resourceKey}
             onChange={(value) => setResourceKey(value)}
@@ -354,7 +358,7 @@ export default function ResourcesPage() {
             onSearch={setSearch}
           />
           {selected && (
-            <Tooltip title="Renommer">
+            <Tooltip title={t('rename')}>
               <Button
                 icon={<EditOutlined />}
                 onClick={() => {
@@ -368,7 +372,7 @@ export default function ResourcesPage() {
             <AutoComplete
               allowClear
               style={{ width: mobile ? '100%' : 260 }}
-              placeholder="Colonne ajoutée (facultatif)"
+              placeholder={t('columnPlaceholder')}
               value={column}
               onChange={(value) => setColumn(value ?? '')}
               options={(result?.knownColumns ?? [])
@@ -377,23 +381,19 @@ export default function ResourcesPage() {
                 .map((known) => ({ value: known }))}
             />
           )}
-          <Tooltip
-            title={
-              scope ? 'Lit les noms de tables dans NocoDB' : 'Choisis une instance dans le menu de gauche'
-            }
-          >
+          <Tooltip title={scope ? t('namesHint') : t('pickInstance')}>
             <Button block={mobile} disabled={!scope} onClick={() => setNamesOpen(true)}>
-              Vrais noms (NocoDB)
+              {t('namesButton')}
             </Button>
           </Tooltip>
-          <Tooltip title="Masque les copies DEV/PREPROD">
+          <Tooltip title={t('hideCopies')}>
             <Space size={4}>
               <Switch
                 checked={!includeOtherEnvs}
                 onChange={(checked) => setIncludeOtherEnvs(!checked)}
                 size="small"
               />
-              <span>Prod uniquement</span>
+              <span>{t('prodOnly')}</span>
             </Space>
           </Tooltip>
         </Space>
@@ -407,16 +407,14 @@ export default function ResourcesPage() {
           />
         )}
 
-        {alreadyThere && (
-          <Alert style={{ marginTop: 16 }} type="info" showIcon message="Colonne déjà existante." />
-        )}
+        {alreadyThere && <Alert style={{ marginTop: 16 }} type="info" showIcon message={t('columnExists')} />}
 
         {result?.resource && !isApi && counts['to-update'] > 0 && (
           <Alert
             style={{ marginTop: 16 }}
             type="warning"
             showIcon
-            message={`${counts['to-update']} nœud${counts['to-update'] > 1 ? 's' : ''} à modifier`}
+            message={t('toUpdateCount', { count: counts['to-update'] })}
           />
         )}
       </Card>
@@ -425,7 +423,7 @@ export default function ResourcesPage() {
         <>
           {routes.length > 0 && (
             <Card
-              title={`Routes appelées · ${result.calls.length} nœud${result.calls.length > 1 ? 's' : ''} · ${routes.length} route${routes.length > 1 ? 's' : ''}`}
+              title={t('routesTitle', { nodes: result.calls.length, routes: routes.length })}
               size="small"
               style={{ marginTop: 8 }}
             >
@@ -433,9 +431,7 @@ export default function ResourcesPage() {
                 {routes.map(([url, count]) => (
                   <Space key={url} size={8}>
                     <Typography.Text code>{url}</Typography.Text>
-                    <Typography.Text type="secondary">
-                      {count} nœud{count > 1 ? 's' : ''}
-                    </Typography.Text>
+                    <Typography.Text type="secondary">{t('nodeCount', { count })}</Typography.Text>
                   </Space>
                 ))}
               </Space>
@@ -461,12 +457,15 @@ export default function ResourcesPage() {
             value={filter}
             onChange={(value) => setFilter(value as typeof filter)}
             options={[
-              { value: 'tout', label: `Tout (${result.usages.length})` },
+              { value: 'tout', label: t('all', { count: result.usages.length }) },
               ...(['to-update', 'no-action', 'unknown'] as const)
                 .filter((impact) => counts[impact] > 0 || filter === impact)
                 .map((impact) => ({
                   value: impact,
-                  label: `${IMPACT_META[impact].label} (${counts[impact]})`,
+                  label: t('impactCount', {
+                    label: t(`impact.${IMPACT_META[impact].key}`),
+                    count: counts[impact],
+                  }),
                 })),
             ]}
           />
@@ -483,28 +482,28 @@ export default function ResourcesPage() {
 
       {!resourceKey && (
         <Card style={{ marginTop: 8 }}>
-          <Empty description="Choisis une ressource pour voir les nœuds qui la touchent" />
+          <Empty description={t('empty')} />
         </Card>
       )}
 
       <Modal
-        title="Nommer la ressource"
+        title={t('renameTitle')}
         open={renaming !== null}
         onOk={submitRename}
         onCancel={() => setRenaming(null)}
-        okText="Enregistrer"
-        cancelText="Annuler"
+        okText={t('save')}
+        cancelText={t('cancel')}
       >
         <Space direction="vertical" style={{ width: '100%' }}>
           <Typography.Text type="secondary">{renaming?.key}</Typography.Text>
           <Input
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Ex : NocoDB · Contacts CRM"
+            placeholder={t('labelPlaceholder')}
             onPressEnter={submitRename}
             autoFocus
           />
-          <Typography.Text type="secondary">Vide = nom automatique.</Typography.Text>
+          <Typography.Text type="secondary">{t('emptyAuto')}</Typography.Text>
         </Space>
       </Modal>
     </div>

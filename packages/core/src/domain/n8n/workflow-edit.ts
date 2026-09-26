@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { msg } from '../../i18n';
 import { MASS_LEAF_LOSS, lostLeafCount } from './change-impact';
 import { safeRenameNodes } from './safe-rename';
 import { hasTrigger } from './workflow-graph';
@@ -58,7 +59,7 @@ function clone<T>(value: T): T {
 
 function findNode(workflow: N8nWorkflow, name: string): N8nNode {
   const node = workflow.nodes.find((n) => n.name === name);
-  if (!node) throw new WorkflowEditError(`Nœud « ${name} » introuvable dans le workflow`);
+  if (!node) throw new WorkflowEditError(msg('edit.nodeNotFound', { name }));
   return node;
 }
 
@@ -157,7 +158,7 @@ function pathSegments(path: string | string[]): string[] {
           return [head, ...indexes.map((index) => index.replace(']', ''))];
         });
   const kept = segments.map((segment) => segment.trim()).filter((segment) => segment.length > 0);
-  if (kept.length === 0) throw new WorkflowEditError('Chemin de paramètre vide');
+  if (kept.length === 0) throw new WorkflowEditError(msg('edit.emptyParamPath'));
   return kept;
 }
 
@@ -190,19 +191,19 @@ function removeAtPath(parameters: Record<string, unknown>, path: string | string
     if (Array.isArray(cursor)) cursor = cursor[Number(segment)];
     else if (isPlainObject(cursor)) cursor = cursor[segment];
     else cursor = undefined;
-    if (cursor === undefined) throw new WorkflowEditError(`Paramètre introuvable : ${shown}`);
+    if (cursor === undefined) throw new WorkflowEditError(msg('edit.paramNotFound', { path: shown }));
   }
   const last = segments[segments.length - 1];
   if (Array.isArray(cursor)) {
     const index = Number(last);
     if (!Number.isInteger(index) || index < 0 || index >= cursor.length) {
-      throw new WorkflowEditError(`Paramètre introuvable : ${shown}`);
+      throw new WorkflowEditError(msg('edit.paramNotFound', { path: shown }));
     }
     cursor.splice(index, 1);
     return;
   }
   if (!isPlainObject(cursor) || !(last in cursor)) {
-    throw new WorkflowEditError(`Paramètre introuvable : ${shown}`);
+    throw new WorkflowEditError(msg('edit.paramNotFound', { path: shown }));
   }
   delete cursor[last];
 
@@ -220,16 +221,16 @@ function removeAtPath(parameters: Record<string, unknown>, path: string | string
 function applyOne(workflow: N8nWorkflow, operation: WorkflowEditOperation): N8nWorkflow {
   switch (operation.op) {
     case 'set-workflow-name': {
-      if (!operation.name?.trim()) throw new WorkflowEditError('Nom de workflow vide');
+      if (!operation.name?.trim()) throw new WorkflowEditError(msg('edit.emptyWorkflowName'));
       return { ...workflow, name: operation.name.trim() };
     }
 
     case 'rename-node': {
       findNode(workflow, operation.node);
       const newName = operation.newName?.trim();
-      if (!newName) throw new WorkflowEditError('Nouveau nom de nœud vide');
+      if (!newName) throw new WorkflowEditError(msg('edit.emptyNodeName'));
       if (workflow.nodes.some((n) => n.name === newName)) {
-        throw new WorkflowEditError(`Un nœud nommé « ${newName} » existe déjà`);
+        throw new WorkflowEditError(msg('edit.nodeExists', { name: newName }));
       }
       return safeRenameNodes(workflow, [{ oldName: operation.node, newName }]);
     }
@@ -238,7 +239,7 @@ function applyOne(workflow: N8nWorkflow, operation: WorkflowEditOperation): N8nW
     case 'patch-node-parameters': {
       findNode(workflow, operation.node);
       if (!operation.parameters || typeof operation.parameters !== 'object') {
-        throw new WorkflowEditError(`Paramètres invalides pour « ${operation.node} »`);
+        throw new WorkflowEditError(msg('edit.invalidParams', { name: operation.node }));
       }
       return {
         ...workflow,
@@ -304,10 +305,10 @@ function applyOne(workflow: N8nWorkflow, operation: WorkflowEditOperation): N8nW
     case 'add-node': {
       const spec = operation.node;
       if (!spec?.name?.trim() || !spec.type?.trim()) {
-        throw new WorkflowEditError('Un nouveau nœud exige au moins un `name` et un `type`');
+        throw new WorkflowEditError(msg('edit.newNodeRequires'));
       }
       if (workflow.nodes.some((n) => n.name === spec.name)) {
-        throw new WorkflowEditError(`Un nœud nommé « ${spec.name} » existe déjà`);
+        throw new WorkflowEditError(msg('edit.nodeExists', { name: spec.name }));
       }
       if (operation.after) findNode(workflow, operation.after);
       if (operation.before) findNode(workflow, operation.before);
@@ -374,7 +375,9 @@ function applyOne(workflow: N8nWorkflow, operation: WorkflowEditOperation): N8nW
 
     default: {
       const unknown = operation as { op?: string };
-      throw new WorkflowEditError(`Opération inconnue : ${unknown.op ?? '(sans op)'}`);
+      throw new WorkflowEditError(
+        msg('edit.unknownOperation', { hasOp: unknown.op !== undefined, op: unknown.op ?? '' }),
+      );
     }
   }
 }
@@ -384,7 +387,7 @@ function assertNoDuplicateNames(workflow: N8nWorkflow): void {
   const names = workflow.nodes.map((node) => node.name);
   const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
   if (duplicates.length > 0) {
-    throw new WorkflowEditError(`Noms de nœuds en double : ${[...new Set(duplicates)].join(', ')}`);
+    throw new WorkflowEditError(msg('edit.duplicateNames', { names: [...new Set(duplicates)].join(', ') }));
   }
 }
 
@@ -392,15 +395,15 @@ function assertNoDuplicateNames(workflow: N8nWorkflow): void {
  * Nœuds cités par les connexions mais absents du graphe, avec le côté de l'arête
  * où ils apparaissent (pour le message).
  */
-function missingConnectionNodes(workflow: N8nWorkflow): Map<string, 'depuis' | 'vers'> {
+function missingConnectionNodes(workflow: N8nWorkflow): Map<string, 'from' | 'to'> {
   const known = new Set(workflow.nodes.map((node) => node.name));
-  const missing = new Map<string, 'depuis' | 'vers'>();
+  const missing = new Map<string, 'from' | 'to'>();
   for (const [from, byType] of Object.entries(workflow.connections ?? {})) {
-    if (!known.has(from) && !missing.has(from)) missing.set(from, 'depuis');
+    if (!known.has(from) && !missing.has(from)) missing.set(from, 'from');
     for (const outputs of Object.values(byType)) {
       for (const targets of outputs) {
         for (const target of targets ?? []) {
-          if (!known.has(target.node) && !missing.has(target.node)) missing.set(target.node, 'vers');
+          if (!known.has(target.node) && !missing.has(target.node)) missing.set(target.node, 'to');
         }
       }
     }
@@ -439,7 +442,7 @@ function pruneDanglingConnections(workflow: N8nWorkflow): string[] {
 function collectWarnings(before: N8nWorkflow, after: N8nWorkflow): string[] {
   const warnings: string[] = [];
   if (hasTrigger(before) && !hasTrigger(after)) {
-    warnings.push("Le workflow n'a plus de nœud déclencheur : il ne pourra plus démarrer.");
+    warnings.push(msg('edit.warnNoTrigger'));
   }
   const connected = new Set<string>();
   for (const [from, byType] of Object.entries(after.connections ?? {})) {
@@ -456,10 +459,7 @@ function collectWarnings(before: N8nWorkflow, after: N8nWorkflow): string[] {
     if (!previous) continue;
     const lost = lostLeafCount(previous.parameters ?? {}, node.parameters ?? {});
     if (lost >= MASS_LEAF_LOSS) {
-      warnings.push(
-        `« ${node.name} » perd ${lost} paramètres : si tu voulais n'en retirer qu'un, ` +
-          'utilise `remove-node-parameter` plutôt que de renvoyer le bloc entier.',
-      );
+      warnings.push(msg('edit.warnMassLoss', { name: node.name, lost }));
     }
   }
 
@@ -468,7 +468,7 @@ function collectWarnings(before: N8nWorkflow, after: N8nWorkflow): string[] {
     .filter((node) => !connected.has(node.name) && !beforeNames.has(node.name))
     .map((node) => node.name);
   if (orphans.length > 0) {
-    warnings.push(`Nœud(s) ajouté(s) sans connexion : ${orphans.join(', ')}.`);
+    warnings.push(msg('edit.warnOrphans', { names: orphans.join(', ') }));
   }
   return warnings;
 }
@@ -480,7 +480,7 @@ function collectWarnings(before: N8nWorkflow, after: N8nWorkflow): string[] {
  */
 export function applyEditOperations(workflow: N8nWorkflow, operations: WorkflowEditOperation[]): EditResult {
   if (!Array.isArray(operations) || operations.length === 0) {
-    throw new WorkflowEditError('Aucune opération à appliquer');
+    throw new WorkflowEditError(msg('edit.noOperations'));
   }
   let current = clone(workflow);
   operations.forEach((operation, index) => {
@@ -488,7 +488,9 @@ export function applyEditOperations(workflow: N8nWorkflow, operations: WorkflowE
       current = applyOne(current, operation);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new WorkflowEditError(`Opération ${index + 1} (${operation?.op ?? '?'}) : ${message}`);
+      throw new WorkflowEditError(
+        msg('edit.operationFailed', { index: index + 1, op: operation?.op ?? '?', message }),
+      );
     }
   });
   assertNoDuplicateNames(current);
@@ -500,14 +502,16 @@ export function applyEditOperations(workflow: N8nWorkflow, operations: WorkflowE
   const introduced = [...missingConnectionNodes(current)].filter(([name]) => !inherited.has(name));
   if (introduced.length > 0) {
     throw new WorkflowEditError(
-      introduced.map(([name, side]) => `Connexion ${side} un nœud inexistant : ${name}`).join(' ; '),
+      introduced
+        .map(([name, side]) => msg('edit.danglingIntroduced', { side, name }))
+        .join(msg('edit.clauseSeparator')),
     );
   }
 
   const warnings = collectWarnings(workflow, current);
   const pruned = pruneDanglingConnections(current);
   if (pruned.length > 0) {
-    warnings.push(`Connexion(s) pendante(s) nettoyée(s) : ${pruned.join(', ')} (nœud absent du workflow).`);
+    warnings.push(msg('edit.warnPruned', { names: pruned.join(', ') }));
   }
   return { workflow: current, warnings };
 }

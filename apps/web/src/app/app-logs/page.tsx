@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { List } from '@refinedev/antd';
+import { useTranslations } from 'next-intl';
 import { Alert, Card, Checkbox, Input, Modal, Select, Space, Switch, Typography, message } from 'antd';
 import { ClearOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { apiDelete, apiGet } from '../../lib/api';
@@ -36,6 +37,8 @@ function queryString(
  * de plusieurs centaines de ko par tick, et rejouerait le rendu du journal entier.
  */
 export default function AppLogsPage() {
+  const t = useTranslations('misc.appLogs');
+  const tc = useTranslations('common');
   const [levels, setLevels] = useState<AppLogLevel[]>(DEFAULT_LEVELS);
   const [context, setContext] = useState<string>();
   const [search, setSearch] = useState('');
@@ -98,7 +101,7 @@ export default function AppLogsPage() {
       link.download = `logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.log`;
       link.click();
       URL.revokeObjectURL(url);
-      message.success(`${lines} ligne(s) téléchargée(s)`);
+      message.success(t('downloaded', { count: lines }));
     } catch (caught) {
       message.error((caught as Error).message);
     }
@@ -109,7 +112,7 @@ export default function AppLogsPage() {
       await apiDelete('/app-logs');
       lastSeq.current = undefined;
       setEntries([]);
-      message.success('Tampon vidé');
+      message.success(t('cleared'));
     } catch (caught) {
       message.error((caught as Error).message);
     }
@@ -119,32 +122,32 @@ export default function AppLogsPage() {
 
   return (
     <List
-      title="Logs de la plateforme"
+      title={t('title')}
       headerButtons={
         <ActionBar
           primary={
             <Space size={4}>
               <Switch checked={follow} onChange={setFollow} size="small" />
-              <Typography.Text type="secondary">Suivre</Typography.Text>
+              <Typography.Text type="secondary">{t('follow')}</Typography.Text>
             </Space>
           }
           actions={[
             {
               key: 'reload',
-              label: 'Rafraîchir',
+              label: tc('refresh'),
               icon: <ReloadOutlined />,
               loading,
               onClick: () => void load(true),
             },
             {
               key: 'download',
-              label: 'Télécharger',
+              label: tc('download'),
               icon: <DownloadOutlined />,
               onClick: () => void download(),
             },
             {
               key: 'clear',
-              label: 'Vider',
+              label: t('clear'),
               icon: <ClearOutlined />,
               danger: true,
               onClick: () => setClearOpen(true),
@@ -155,31 +158,26 @@ export default function AppLogsPage() {
     >
       <Modal
         open={clearOpen}
-        title="Vider le tampon ?"
-        okText="Vider"
+        title={t('clearModal.title')}
+        okText={t('clear')}
         okButtonProps={{ danger: true }}
-        cancelText="Annuler"
+        cancelText={tc('cancel')}
         onCancel={() => setClearOpen(false)}
         onOk={() => {
           setClearOpen(false);
           void clear();
         }}
       >
-        Les lignes affichées ici disparaissent. La sortie du conteneur, elle, garde tout.
+        {t('clearModal.body')}
       </Modal>
       <Alert
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="Les dernières lignes de l'API, gardées en mémoire du process"
-        description={
-          <>
-            Un redémarrage de l&apos;api les efface, et chaque process ne voit que les siennes. Pour
-            l&apos;historique complet, la sortie du conteneur reste la source :{' '}
-            <Typography.Text code>docker compose logs -f api</Typography.Text>. Les secrets reconnaissables
-            (clés d&apos;API, jetons) sont masqués avant affichage.
-          </>
-        }
+        message={t('info.title')}
+        description={t.rich('info.body', {
+          code: (chunks) => <Typography.Text code>{chunks}</Typography.Text>,
+        })}
       />
 
       {error && <Alert type="error" showIcon style={{ marginBottom: 16 }} message={error} closable />}
@@ -189,11 +187,11 @@ export default function AppLogsPage() {
           <Checkbox.Group
             value={levels}
             onChange={(next) => setLevels(next as AppLogLevel[])}
-            options={LEVELS.map((level) => ({ label: level.label, value: level.value }))}
+            options={LEVELS.map((level) => ({ label: t(`levels.${level.value}`), value: level.value }))}
           />
           <Select
             allowClear
-            placeholder="Tous les contextes"
+            placeholder={t('allContexts')}
             style={{ minWidth: 220 }}
             value={context}
             onChange={setContext}
@@ -202,7 +200,7 @@ export default function AppLogsPage() {
           />
           <Input.Search
             allowClear
-            placeholder="Chercher (message, contexte, pile)"
+            placeholder={t('searchPlaceholder')}
             style={{ width: 300 }}
             onSearch={setSearch}
             onChange={(event) => {
@@ -215,9 +213,9 @@ export default function AppLogsPage() {
       <LogConsole entries={entries} />
 
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        {entries.length} ligne(s) affichée(s)
-        {buffer ? ` · tampon : ${buffer.held}/${buffer.capacity}` : ''}
-        {buffer?.dropped ? ` · ${buffer.dropped} ligne(s) déjà sorties du tampon` : ''}
+        {t('shown', { count: entries.length })}
+        {buffer ? t('buffer', { held: buffer.held, capacity: buffer.capacity }) : ''}
+        {buffer?.dropped ? t('dropped', { count: buffer.dropped }) : ''}
       </Typography.Text>
     </List>
   );

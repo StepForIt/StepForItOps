@@ -52,9 +52,7 @@ export class CorrectionCaptureService {
     } catch (error) {
       // Apprendre est un bonus : un échec ici ne doit jamais remonter dans la
       // synchro qui a émis l'événement.
-      this.logger.warn(
-        `Lecture de correction impossible (${event.workflowId}) : ${(error as Error).message}`,
-      );
+      this.logger.warn(`Could not read correction (${event.workflowId}): ${(error as Error).message}`);
     }
   }
 
@@ -105,8 +103,8 @@ export class CorrectionCaptureService {
     });
 
     this.logger.log(
-      `Correction humaine lue sur ${event.workflowName} : ` +
-        `${reading.lessons.length} leçon(s), ${reading.questions.length} question(s).`,
+      `Human correction read on ${event.workflowName}: ` +
+        `${reading.lessons.length} lesson(s), ${reading.questions.length} question(s).`,
     );
 
     if (reading.lessons.length > 0) {

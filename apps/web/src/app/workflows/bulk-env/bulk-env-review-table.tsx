@@ -8,10 +8,11 @@ import {
   LoadingOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { useInstanceScope } from '../../../lib/instance-scope';
 import { versionForLevel } from '../show/[id]/promote-version-card';
 import { BulkEnvRowDetail } from './bulk-env-row-detail';
-import { STATUS_TAG, rowStatus } from './row-status';
+import { STATUS_COLOR, rowStatus } from './row-status';
 import { ReviewRow, RowChoices } from './types';
 
 /** Le nom de l'exemplaire n'apprend rien quand il n'ajoute au nom métier que son suffixe d'env. */
@@ -35,6 +36,8 @@ export function BulkEnvReviewTable({
   onRefresh: (row: ReviewRow) => void;
   locked: boolean;
 }) {
+  const t = useTranslations('workflowsList.bulkEnv.review');
+  const tCommon = useTranslations('common');
   const { instanceName } = useInstanceScope();
 
   return (
@@ -58,7 +61,8 @@ export function BulkEnvReviewTable({
       }}
     >
       <Table.Column<ReviewRow>
-        title="Workflow"
+        key="workflow"
+        title={tCommon('columns.workflow')}
         width={220}
         render={(_, row) => (
           <>
@@ -72,18 +76,18 @@ export function BulkEnvReviewTable({
         )}
       />
       <Table.Column<ReviewRow>
-        title="Statut"
+        key="status"
+        title={tCommon('columns.status')}
         width={110}
         render={(_, row) => {
           const status = rowStatus(row);
           const validated = status === 'ready' && row.choices.validated;
-          return (
-            <Tag color={STATUS_TAG[status].color}>{validated ? 'validée' : STATUS_TAG[status].label}</Tag>
-          );
+          return <Tag color={STATUS_COLOR[status]}>{validated ? t('validated') : t(`status.${status}`)}</Tag>;
         }}
       />
       <Table.Column<ReviewRow>
-        title="Cible"
+        key="target"
+        title={t('columns.target')}
         width={200}
         render={(_, row) =>
           row.plan.status === 'skipped' ? (
@@ -91,10 +95,10 @@ export function BulkEnvReviewTable({
           ) : (
             <>
               <Tag>{row.plan.targetEnv.toUpperCase()}</Tag>
-              <Tag color="geekblue">{instanceName(row.plan.targetInstanceId)}</Tag>
+              <Tag color="blue">{instanceName(row.plan.targetInstanceId)}</Tag>
               {row.preview?.kind === 'promote' && (
                 <Typography.Text type="secondary">
-                  {row.preview.data.mode === 'update' ? 'écrase' : 'crée'} ·{' '}
+                  {row.preview.data.mode === 'update' ? t('overwrites') : t('creates')} ·{' '}
                   {versionForLevel(
                     row.preview.data.gates.version,
                     row.choices.bump ?? row.preview.data.gates.version.level,
@@ -106,7 +110,8 @@ export function BulkEnvReviewTable({
         }
       />
       <Table.Column<ReviewRow>
-        title="À faire"
+        key="todo"
+        title={t('columns.todo')}
         render={(_, row) => {
           if (row.plan.status === 'skipped') {
             return <Typography.Text type="secondary">{row.plan.reason}</Typography.Text>;
@@ -126,7 +131,8 @@ export function BulkEnvReviewTable({
         }}
       />
       <Table.Column<ReviewRow>
-        title="Résultat"
+        key="result"
+        title={t('columns.result')}
         width={280}
         render={(_, row) => {
           switch (row.outcome.state) {

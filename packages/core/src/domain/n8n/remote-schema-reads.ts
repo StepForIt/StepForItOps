@@ -7,6 +7,7 @@
 
 import { RemoteTableLocator } from './remote-requirements';
 import { RemoteColumn, RemoteTableSchema } from './remote-schema-compare';
+import { msg } from '../../i18n/translate';
 
 /** Requête HTTP exécutée par le workflow temporaire. */
 export interface ProbeHttpRequest {
@@ -114,8 +115,7 @@ export function schemaReadFor(locator: RemoteTableLocator, context: { host?: str
       if (!context.host) {
         return {
           kind: 'unsupported',
-          reason:
-            "URL de l'API NocoDB inconnue pour cette credential (à renseigner dans Tables externes → Vrais noms)",
+          reason: msg('checks.nocodbHostUnknown'),
         };
       }
       return {

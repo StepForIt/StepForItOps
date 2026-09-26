@@ -64,17 +64,17 @@ export class ChatHistoryService {
       where: { id: sessionId },
       select: { workflowId: true },
     });
-    if (!session) throw new NotFoundException(`Conversation ${sessionId} introuvable`);
+    if (!session) throw new NotFoundException(`Conversation ${sessionId} not found`);
     if (session.workflowId !== workflowId) {
-      throw new ForbiddenException('Cette conversation appartient à un autre workflow');
+      throw new ForbiddenException('This conversation belongs to another workflow');
     }
 
     const { markdown } = await this.exporter.exportSession(sessionId);
     if (markdown.length <= MAX_CHARS) return markdown;
     return (
       `${markdown.slice(0, MAX_CHARS)}\n\n` +
-      `[…] Conversation tronquée (${markdown.length} caractères, ${MAX_CHARS} rendus). ` +
-      `La fin manque : ne conclus pas de son absence que rien ne s'y est passé.`
+      `[…] Conversation truncated (${markdown.length} characters, ${MAX_CHARS} returned). ` +
+      `The end is missing: do not conclude from its absence that nothing happened there.`
     );
   }
 }

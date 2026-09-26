@@ -109,7 +109,7 @@ export class NodeBenchPreviewService {
         SAMPLE_ITEMS,
       );
     } catch (error) {
-      this.logger.warn(`Échantillons indisponibles (${externalId}) : ${(error as Error).message}`);
+      this.logger.warn(`Samples unavailable (${externalId}): ${(error as Error).message}`);
     }
 
     return feeds.map((feed) => ({

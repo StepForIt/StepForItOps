@@ -9,6 +9,7 @@
  * d'une forme inconnue ressort `understood: false`, jamais « sans action ».
  */
 
+import { msg } from '../../i18n';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { activeParameters } from './inert-params';
 import { extractNodeResourceRefs } from './resource-refs';
@@ -227,31 +228,30 @@ function sameColumn(a: string, b: string): boolean {
 /** Ce que l'ajout de `column` impose à ce nœud. */
 export function columnImpact(usage: ResourceFieldUsage, column: string): ColumnVerdict {
   if (!usage.understood) {
-    return { impact: 'unknown', reason: 'forme de nœud non reconnue : à ouvrir pour vérifier' };
+    return { impact: 'unknown', reason: msg('platform.columnUnknownShape') };
   }
   if (usage.access === 'delete' || usage.access === 'other') {
-    return { impact: 'no-action', reason: "ce nœud ne sélectionne ni n'écrit de champs" };
+    return { impact: 'no-action', reason: msg('platform.columnNoFields') };
   }
   if (!usage.fields) {
     return usage.access === 'write'
-      ? { impact: 'no-action', reason: "mapping automatique : le nœud écrit les champs qu'il reçoit" }
-      : { impact: 'no-action', reason: 'aucune sélection : le nœud remonte toutes les colonnes' };
+      ? { impact: 'no-action', reason: msg('platform.columnAutoMap') }
+      : { impact: 'no-action', reason: msg('platform.columnAllRead') };
   }
   if (usage.fields.some((field) => sameColumn(field, column))) {
     return usage.access === 'write'
-      ? { impact: 'no-action', reason: 'colonne déjà mappée' }
-      : { impact: 'no-action', reason: 'colonne déjà sélectionnée' };
+      ? { impact: 'no-action', reason: msg('platform.columnAlreadyMapped') }
+      : { impact: 'no-action', reason: msg('platform.columnAlreadySelected') };
   }
   const count = usage.fields.length;
-  const plural = count > 1 ? 's' : '';
   return usage.access === 'write'
     ? {
         impact: 'to-update',
-        reason: `mapping figé sur ${count} champ${plural} : la colonne ne sera pas écrite`,
+        reason: msg('platform.columnFixedMapping', { count }),
       }
     : {
         impact: 'to-update',
-        reason: `${count} champ${plural} sélectionné${plural} : la colonne ne remontera pas`,
+        reason: msg('platform.columnFixedSelection', { count }),
       };
 }
 

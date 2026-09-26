@@ -44,7 +44,7 @@ export class DriftWatchService {
     try {
       await this.check();
     } catch (error) {
-      this.logger.warn(`Contrôle de dérive KO : ${(error as Error).message}`);
+      this.logger.warn(`Drift check failed: ${(error as Error).message}`);
     }
   }
 
@@ -83,7 +83,7 @@ export class DriftWatchService {
     }
 
     if (newAlerts > 0 || cleared > 0) {
-      this.logger.log(`Dérives : ${newAlerts} nouvelle(s), ${cleared} réarmée(s)`);
+      this.logger.log(`Drifts: ${newAlerts} new, ${cleared} re-armed`);
     }
     return { drifting: drifting.length, newAlerts, cleared };
   }

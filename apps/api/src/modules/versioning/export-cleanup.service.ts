@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { STORAGE_PORT, StoragePort, VCS_PORT, VcsPort } from '@nwm/core';
+import { STORAGE_PORT, StoragePort, VCS_PORT, VcsPort, msg } from '@nwm/core';
 import { ExportTarget } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { GITHUB_EXPORT_ROOT, exportLocation, n8nIdFromFileName } from './export-path';
@@ -75,7 +75,7 @@ export class ExportCleanupService {
 
   private async run(targetId: string, destructive: boolean): Promise<CleanupReport> {
     const target = await this.prisma.exportTarget.findUnique({ where: { id: targetId } });
-    if (!target) throw new NotFoundException(`Cible ${targetId} introuvable`);
+    if (!target) throw new NotFoundException(msg('platform.cleanupTargetNotFound', { id: targetId }));
 
     const known = await this.knownWorkflows(target.kind);
     const files = await this.listFiles(target);
@@ -163,7 +163,7 @@ export class ExportCleanupService {
         return {
           ...base,
           externalId: idFromName,
-          reason: 'Aucun workflow avec cet id n8n sur la plateforme — fichier conservé',
+          reason: msg('platform.cleanupNoWorkflow'),
         };
       }
       if (workflow.expectedPath === file.path) {
@@ -180,22 +180,22 @@ export class ExportCleanupService {
         workflowName: workflow.name,
         expectedPath: workflow.expectedPath,
         reason: moved
-          ? 'Emplacement obsolète : le fichier à jour existe déjà'
-          : 'Emplacement obsolète : ré-exporte ce workflow avant de supprimer',
+          ? msg('platform.cleanupStaleLocationReady')
+          : msg('platform.cleanupStaleLocationReexport'),
       };
     }
 
     // Ancien format : le seul moyen fiable de savoir à qui il appartient est son contenu.
     const id = await this.n8nIdFromContent(target, file);
     if (!id) {
-      return { ...base, reason: 'Format inconnu, id n8n illisible — fichier conservé' };
+      return { ...base, reason: msg('platform.cleanupUnknownFormat') };
     }
     const workflow = known.get(id);
     if (!workflow) {
       return {
         ...base,
         externalId: id,
-        reason: 'Aucun workflow avec cet id n8n sur la plateforme — fichier conservé',
+        reason: msg('platform.cleanupNoWorkflow'),
       };
     }
     const upToDateExists = present.has(workflow.expectedPath);
@@ -206,8 +206,8 @@ export class ExportCleanupService {
       workflowName: workflow.name,
       expectedPath: workflow.expectedPath,
       reason: upToDateExists
-        ? 'Ancien format : le fichier à jour existe déjà'
-        : 'Ancien format : ré-exporte ce workflow avant de supprimer',
+        ? msg('platform.cleanupOldFormatReady')
+        : msg('platform.cleanupOldFormatReexport'),
     };
   }
 
@@ -234,7 +234,7 @@ export class ExportCleanupService {
         if (target.kind === 'github') {
           const result = await this.vcs.deleteFile(this.vcsConfig(target), {
             path: entry.path,
-            message: `chore(export): supprime le doublon ${entry.path}`,
+            message: `chore(export): delete duplicate ${entry.path}`,
           });
           if (result.deleted) deleted.push(entry.path);
         } else if (entry.remoteId) {
@@ -244,10 +244,10 @@ export class ExportCleanupService {
           if (result.deleted) deleted.push(entry.path);
         }
       } catch (error) {
-        this.logger.warn(`Suppression ${entry.path} KO : ${(error as Error).message}`);
+        this.logger.warn(`Deleting ${entry.path} failed: ${(error as Error).message}`);
       }
     }
-    this.logger.log(`Nettoyage "${target.name}" : ${deleted.length} fichier(s) supprimé(s)`);
+    this.logger.log(`Cleanup "${target.name}": ${deleted.length} file(s) deleted`);
     return deleted;
   }
 

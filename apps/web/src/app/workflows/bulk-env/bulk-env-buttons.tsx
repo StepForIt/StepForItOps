@@ -3,29 +3,15 @@
 import React from 'react';
 import { Alert, Button, Space, Tooltip, Typography } from 'antd';
 import { ApartmentOutlined, CopyOutlined, RocketOutlined, TagOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { WorkflowFamily } from '../workflow-row';
 import { BulkEnvModal } from './bulk-env-modal';
 import { BulkEnvAction } from './types';
 
-const BUTTONS: Array<{ action: BulkEnvAction; label: string; icon: React.ReactNode; hint: string }> = [
-  {
-    action: 'promote',
-    label: 'Promouvoir',
-    icon: <RocketOutlined />,
-    hint: 'Vers l’env suivant, aperçu par workflow',
-  },
-  {
-    action: 'duplicate',
-    label: 'Dupliquer vers un env',
-    icon: <CopyOutlined />,
-    hint: 'Copie dans un autre env, même instance',
-  },
-  {
-    action: 'mark',
-    label: 'Déclarer l’env',
-    icon: <TagOutlined />,
-    hint: 'Tag env:x, aucune donnée touchée',
-  },
+const BUTTONS: Array<{ action: BulkEnvAction; icon: React.ReactNode }> = [
+  { action: 'promote', icon: <RocketOutlined /> },
+  { action: 'duplicate', icon: <CopyOutlined /> },
+  { action: 'mark', icon: <TagOutlined /> },
 ];
 
 /**
@@ -42,6 +28,7 @@ export function FamilyBulkBar({
   onApplied: () => void;
   onClear: () => void;
 }) {
+  const t = useTranslations('workflowsList.bulkEnv');
   const [action, setAction] = React.useState<BulkEnvAction | null>(null);
 
   return (
@@ -53,19 +40,16 @@ export function FamilyBulkBar({
         showIcon
         message={
           <Space wrap>
-            <Typography.Text strong>
-              {families.length} workflow{families.length > 1 ? 's' : ''} métier sélectionné
-              {families.length > 1 ? 's' : ''}
-            </Typography.Text>
+            <Typography.Text strong>{t('selected', { count: families.length })}</Typography.Text>
             {BUTTONS.map((button) => (
-              <Tooltip key={button.action} title={button.hint}>
+              <Tooltip key={button.action} title={t(`hints.${button.action}`)}>
                 <Button size="small" icon={button.icon} onClick={() => setAction(button.action)}>
-                  {button.label}
+                  {t(`actions.${button.action}`)}
                 </Button>
               </Tooltip>
             ))}
             <Button size="small" type="link" onClick={onClear}>
-              Tout décocher
+              {t('clearAll')}
             </Button>
           </Space>
         }

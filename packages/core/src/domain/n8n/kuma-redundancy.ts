@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { extractUrlHost, extractWebhookPath } from './webhook-url';
 
 /**
@@ -87,8 +88,7 @@ function pausedButEnabled(probe: RedundancyProbe, linkedEnabled: Set<number>): R
     externalId: probe.externalId,
     name: probe.name,
     rule: 'paused',
-    reason:
-      'En pause côté Uptime Kuma alors que son monitor est activé dans la plateforme : elle ne surveille plus rien.',
+    reason: msg('ops.redundancyPaused'),
   };
 }
 
@@ -100,7 +100,7 @@ function duplicateErrorWatch(probe: RedundancyProbe, watched: RedundancyInstance
     externalId: probe.externalId,
     name: probe.name,
     rule: 'duplicate-error-watch',
-    reason: `Doublon du monitor error-watch de « ${instance.name} », qui détecte les mêmes erreurs sans workflow dédié.`,
+    reason: msg('ops.redundancyDuplicateErrorWatch', { instance: instance.name }),
     instanceName: instance.name,
   };
 }
@@ -113,12 +113,15 @@ function healthWebhook(probe: RedundancyProbe, watched: RedundancyInstance[]): R
 
   const interval = probe.intervalSeconds;
   const executionsPerDay = interval && interval > 0 ? Math.round(SECONDS_PER_DAY / interval) : undefined;
-  const cost = executionsPerDay ? ` (~${executionsPerDay} exécutions/jour)` : '';
   return {
     externalId: probe.externalId,
     name: probe.name,
     rule: 'health-webhook',
-    reason: `Appelle un webhook de « ${instance.name} » à chaque check${cost} ; l'error-watch détecte les échecs sans rien exécuter.`,
+    reason: msg('ops.redundancyHealthWebhook', {
+      instance: instance.name,
+      hasCost: Boolean(executionsPerDay),
+      perDay: String(executionsPerDay ?? ''),
+    }),
     instanceName: instance.name,
     executionsPerDay,
   };
@@ -126,7 +129,7 @@ function healthWebhook(probe: RedundancyProbe, watched: RedundancyInstance[]): R
 
 /** Sonde push alimentée par un workflow de contrôle d'erreurs (« … Errors Check »). */
 function isErrorCheckName(name: string): boolean {
-  return /error[s]?\s*(check|watch)|erreurs?\s+d['’]ex[ée]cution/i.test(name);
+  return /error[s]?\s*(check|watch)|erreurs?\s+d['’]ex[ée]cution|execution\s+errors?/i.test(name);
 }
 
 /**

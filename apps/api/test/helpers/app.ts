@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import {
   AI_PORT,
   DOCS_PORT,
+  PACKAGE_DOCS_PORT,
   MONITOR_ADMIN_PORT,
   MONITOR_PORT,
   N8N_API_PORT,
@@ -69,7 +70,10 @@ export interface TestApp {
 export interface TestAppOptions {
   /** Doublures fournies par le test, par token de port. */
   ports?: Partial<
-    Record<'n8n' | 'ai' | 'catalog' | 'monitor' | 'notify' | 'vcs' | 'storage' | 'docs', object>
+    Record<
+      'n8n' | 'ai' | 'catalog' | 'monitor' | 'notify' | 'vcs' | 'storage' | 'docs' | 'packageDocs',
+      object
+    >
   >;
   /** Variables d'environnement posées avant le démarrage (jeton d'API, par ex.). */
   env?: Record<string, string | undefined>;
@@ -84,6 +88,7 @@ const TOKENS = {
   vcs: VCS_PORT,
   storage: STORAGE_PORT,
   docs: DOCS_PORT,
+  packageDocs: PACKAGE_DOCS_PORT,
 } as const;
 
 export async function startTestApp(options: TestAppOptions = {}): Promise<TestApp> {

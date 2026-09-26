@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Alert, Button, Collapse, Form, Input, Select, Space, Switch, message } from 'antd';
 import type { FormProps } from 'antd';
 import { ApiOutlined, GithubOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
 
 interface Repo {
@@ -20,6 +21,7 @@ interface Repo {
  * passent `targetId` pour que l'API le reprenne côté serveur.
  */
 export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
+  const t = useTranslations('settings.exportTargetForm');
   const [repos, setRepos] = useState<Repo[]>([]);
   const [branches, setBranches] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
     try {
       const result = await apiPost<Repo[]>('/export-targets/github/repos', { token: token(), targetId });
       setRepos(result);
-      message.success(`${result.length} repos accessibles — choisis dans la liste`);
+      message.success(t('reposLoaded', { count: result.length }));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -73,8 +75,8 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
         targetId,
         config,
       });
-      if (result.ok) message.success('Accès au repo vérifié ✔');
-      else message.error(`Accès KO : ${result.error}`);
+      if (result.ok) message.success(t('accessOk'));
+      else message.error(t('accessKo', { error: result.error ?? '' }));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -84,7 +86,7 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
 
   return (
     <Form {...formProps} layout="vertical">
-      <Form.Item label="Type" name="kind" initialValue="github" rules={[{ required: true }]}>
+      <Form.Item label={t('kind')} name="kind" initialValue="github" rules={[{ required: true }]}>
         <Select
           options={[
             { value: 'github', label: 'GitHub' },
@@ -102,35 +104,29 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
           getFieldValue('kind') === 'github' ? (
             <>
               <Form.Item
-                label="Token GitHub"
+                label={t('githubToken')}
                 name={['config', 'token']}
-                extra={
-                  hasStoredToken
-                    ? 'Un token est déjà enregistré (jamais réaffiché). Laisse vide pour le conserver.'
-                    : 'Fine-grained PAT avec « Contents: Read and write » sur le repo. Laisse vide pour utiliser GITHUB_TOKEN du serveur.'
-                }
+                extra={hasStoredToken ? t('tokenStoredHint') : t('githubTokenHint')}
               >
                 <Input.Password
                   placeholder={
-                    hasStoredToken
-                      ? '•••••• (token enregistré, conservé si vide)'
-                      : 'ghp_… (optionnel si GITHUB_TOKEN défini)'
+                    hasStoredToken ? t('githubTokenStoredPlaceholder') : t('githubTokenPlaceholder')
                   }
                 />
               </Form.Item>
               <Space style={{ marginBottom: 16 }}>
                 <Button icon={<GithubOutlined />} loading={busy === 'repos'} onClick={loadRepos}>
-                  Lister mes repos
+                  {t('listRepos')}
                 </Button>
                 <Button icon={<ApiOutlined />} loading={busy === 'test'} onClick={testAccess}>
-                  Tester l&apos;accès
+                  {t('testAccess')}
                 </Button>
               </Space>
               {repos.length > 0 && (
-                <Form.Item label="Repo">
+                <Form.Item label={t('repo')}>
                   <Select
                     showSearch
-                    placeholder="Choisir un repo"
+                    placeholder={t('chooseRepo')}
                     options={repos.map((r) => ({
                       value: r.fullName,
                       label: `${r.fullName}${r.private ? ' 🔒' : ''}`,
@@ -140,10 +136,10 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
                 </Form.Item>
               )}
               <Space size="large" wrap>
-                <Form.Item label="Owner" name={['config', 'owner']} rules={[{ required: true }]}>
-                  <Input placeholder="mon-org" style={{ width: 200 }} />
+                <Form.Item label={t('owner')} name={['config', 'owner']} rules={[{ required: true }]}>
+                  <Input placeholder={t('ownerPlaceholder')} style={{ width: 200 }} />
                 </Form.Item>
-                <Form.Item label="Repo" name={['config', 'repo']} rules={[{ required: true }]}>
+                <Form.Item label={t('repo')} name={['config', 'repo']} rules={[{ required: true }]}>
                   <Input placeholder="n8n-workflows" style={{ width: 220 }} />
                 </Form.Item>
               </Space>
@@ -154,10 +150,10 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
                 items={[
                   {
                     key: 'advanced',
-                    label: 'Options avancées',
+                    label: t('advanced'),
                     forceRender: true,
                     children: (
-                      <Form.Item label="Branche" name={['config', 'branch']} initialValue="main">
+                      <Form.Item label={t('branch')} name={['config', 'branch']} initialValue="main">
                         {branches.length > 0 ? (
                           <Select
                             options={branches.map((b) => ({ value: b, label: b }))}
@@ -174,35 +170,26 @@ export function ExportTargetForm({ formProps }: { formProps: FormProps }) {
             </>
           ) : (
             <>
-              <Alert
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-                message="Google Drive : token OAuth à durée courte (~1h) — utilisable pour des exports ponctuels."
-              />
-              <Form.Item label="Folder ID (optionnel)" name={['config', 'folderId']}>
+              <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('gdriveInfo')} />
+              <Form.Item label={t('folderId')} name={['config', 'folderId']}>
                 <Input placeholder="1AbC…" />
               </Form.Item>
               <Form.Item
-                label="Access token"
+                label={t('accessToken')}
                 name={['config', 'accessToken']}
-                extra={
-                  hasStoredToken
-                    ? 'Un token est déjà enregistré (jamais réaffiché). Laisse vide pour le conserver.'
-                    : 'Laisse vide pour utiliser GDRIVE_ACCESS_TOKEN du serveur.'
-                }
+                extra={hasStoredToken ? t('tokenStoredHint') : t('gdriveTokenHint')}
               >
-                <Input.Password placeholder={hasStoredToken ? '•••••• (token enregistré)' : 'ya29….'} />
+                <Input.Password placeholder={hasStoredToken ? t('gdriveTokenStoredPlaceholder') : 'ya29….'} />
               </Form.Item>
             </>
           )
         }
       </Form.Item>
 
-      <Form.Item label="Nom" name="name" rules={[{ required: true }]}>
-        <Input placeholder="Rempli automatiquement au choix du repo" />
+      <Form.Item label={t('name')} name="name" rules={[{ required: true }]}>
+        <Input placeholder={t('namePlaceholder')} />
       </Form.Item>
-      <Form.Item label="Activée" name="enabled" valuePropName="checked" initialValue={true}>
+      <Form.Item label={t('enabled')} name="enabled" valuePropName="checked" initialValue={true}>
         <Switch />
       </Form.Item>
     </Form>

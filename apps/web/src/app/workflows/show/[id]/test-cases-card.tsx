@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Popconfirm, Select, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { Table } from '../../../../components/resizable-table';
 import { CaretRightOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost } from '../../../../lib/api';
 
 type DiffKind = 'value' | 'type' | 'missing' | 'extra' | 'count' | 'normalization';
@@ -31,23 +32,26 @@ interface TestCaseRow {
 }
 
 /** Nature de l'écart : ce que l'utilisateur doit en conclure, en un mot. */
-const DIFF_META: Record<DiffKind, { color: string; label: string }> = {
-  value: { color: 'red', label: 'valeur différente' },
-  type: { color: 'red', label: 'type différent' },
-  missing: { color: 'orange', label: 'champ disparu' },
-  extra: { color: 'blue', label: 'champ en plus' },
-  count: { color: 'orange', label: 'nombre d’éléments' },
-  normalization: { color: 'default', label: 'artefact de comparaison' },
+const DIFF_META: Record<DiffKind, { color: string; label: DiffLabel }> = {
+  value: { color: 'red', label: 'value' },
+  type: { color: 'red', label: 'type' },
+  missing: { color: 'orange', label: 'missing' },
+  extra: { color: 'blue', label: 'extra' },
+  count: { color: 'orange', label: 'count' },
+  normalization: { color: 'default', label: 'normalization' },
 };
 
+/** Clé de libellé d'un écart (`testCases.diff.*`). */
+type DiffLabel = DiffKind | 'unknown';
+
 /** Nature inconnue : un écart reste un écart, on ne prétend pas savoir lequel. */
-const UNKNOWN_META = { color: 'default', label: 'écart' };
+const UNKNOWN_META: { color: string; label: DiffLabel } = { color: 'default', label: 'unknown' };
 
 /** Une ligne de détail prête à afficher, quelle que soit la forme stockée. */
 interface RenderableDiff {
   key: string;
   color: string;
-  label: string;
+  label: DiffLabel;
   message: string;
   /** Chemin machine, seulement quand l'entrée en porte un vrai. */
   path?: string;
@@ -85,22 +89,10 @@ interface ExecutionOption {
  * planté ou simplement produit autre chose — c'est pourtant deux enquêtes
  * différentes.
  */
-const STATUS_META: Record<string, { color: string; label: string; hint: string }> = {
-  passed: {
-    color: 'green',
-    label: 'conforme',
-    hint: 'Le rejeu a produit la même sortie que la référence (ids et dates neutralisés).',
-  },
-  failed: {
-    color: 'red',
-    label: 'sortie différente',
-    hint: 'Le workflow est allé au bout, mais sa sortie ne correspond plus à la référence : le détail est sous la ligne.',
-  },
-  error: {
-    color: 'volcano',
-    label: 'rejeu impossible',
-    hint: 'Rien n’a pu être comparé : webhook absent, workflow inactif, ou aucune exécution déclenchée.',
-  },
+const STATUS_COLOR: Record<NonNullable<TestCaseRow['lastStatus']>, string> = {
+  passed: 'green',
+  failed: 'red',
+  error: 'volcano',
 };
 
 /**
@@ -110,6 +102,8 @@ const STATUS_META: Record<string, { color: string; label: string; hint: string }
  * promotion.
  */
 export function TestCasesCard({ workflowId }: { workflowId: string }) {
+  const t = useTranslations('workflowShow.testCases');
+  const locale = useLocale();
   const [rows, setRows] = useState<TestCaseRow[]>([]);
   const [executions, setExecutions] = useState<ExecutionOption[]>([]);
   const [selectedExecution, setSelectedExecution] = useState<string | undefined>();
@@ -133,7 +127,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
     setBusy('create');
     try {
       await apiPost(`/tester/cases/from-execution/${workflowId}`, { executionId: selectedExecution });
-      message.success('Cas de test créé : cette exécution est maintenant la référence.');
+      message.success(t('created'));
       setSelectedExecution(undefined);
       load();
     } catch (error) {
@@ -147,10 +141,10 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
     setBusy(id);
     try {
       const result = await apiPost<{ status: string; message?: string }>(`/tester/cases/${id}/run`);
-      const said = result.message ?? 'Détail sous la ligne.';
-      if (result.status === 'passed') message.success(`Conforme — ${said}`);
-      else if (result.status === 'failed') message.warning(`Sortie différente — ${said}`);
-      else message.error(`Rejeu impossible — ${said}`);
+      const said = result.message ?? t('detailBelow');
+      if (result.status === 'passed') message.success(t('passedMsg', { said }));
+      else if (result.status === 'failed') message.warning(t('failedMsg', { said }));
+      else message.error(t('errorMsg', { said }));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -166,7 +160,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
         `/tester/cases/run-all/${workflowId}`,
       );
       const passed = results.filter((r) => r.status === 'passed').length;
-      message.info(`${passed}/${results.length} conformes`);
+      message.info(t('runAllResult', { passed, total: results.length }));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -183,13 +177,13 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
   return (
     <Card
       size="small"
-      title="Cas de test enregistrés"
+      title={t('title')}
       style={{ marginTop: 16 }}
       extra={
         rows.length > 0 && (
-          <Tooltip title="Rejoue chaque cas : le webhook est réellement appelé, une exécution part sur n8n.">
+          <Tooltip title={t('runAllTooltip')}>
             <Button icon={<CaretRightOutlined />} loading={busy === 'all'} onClick={runAll}>
-              Tout rejouer ({rows.length})
+              {t('runAll', { count: rows.length })}
             </Button>
           </Tooltip>
         )
@@ -198,12 +192,12 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
       <Space style={{ marginBottom: 12 }}>
         <Select
           style={{ minWidth: 320 }}
-          placeholder="Choisir une exécution récente comme référence…"
+          placeholder={t('selectPlaceholder')}
           value={selectedExecution}
           onChange={setSelectedExecution}
           options={executions.map((execution) => ({
             value: execution.id,
-            label: `#${execution.id} — ${execution.status}${execution.startedAt ? ` — ${new Date(execution.startedAt).toLocaleString('fr-FR')}` : ''}`,
+            label: `#${execution.id} — ${execution.status}${execution.startedAt ? ` — ${new Date(execution.startedAt).toLocaleString(locale)}` : ''}`,
           }))}
         />
         <Button
@@ -213,7 +207,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
           loading={busy === 'create'}
           onClick={create}
         >
-          En faire un cas de test
+          {t('create')}
         </Button>
       </Space>
       <Table
@@ -221,7 +215,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
         rowKey="id"
         size="small"
         pagination={false}
-        locale={{ emptyText: 'Aucun cas de test — enregistre une exécution de référence ci-dessus.' }}
+        locale={{ emptyText: t('empty') }}
         expandable={{
           rowExpandable: (record) =>
             Boolean(record.lastMessage) || Boolean(record.lastDiff && record.lastDiff.length > 0),
@@ -230,19 +224,22 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
               {record.lastMessage && <Typography.Text strong>{record.lastMessage}</Typography.Text>}
               {record.lastExecutionId && (
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Exécution n8n du rejeu : #{record.lastExecutionId}
+                  {t('replayExecution', { id: record.lastExecutionId })}
                 </Typography.Text>
               )}
               {(record.lastDiff ?? []).map(toRenderable).map((diff) => (
                 <div key={diff.key}>
                   <Space size={6} align="start" wrap>
-                    <Tag color={diff.color}>{diff.label}</Tag>
+                    <Tag color={diff.color}>{t(`diff.${diff.label}`)}</Tag>
                     <Typography.Text>{diff.message}</Typography.Text>
                   </Space>
                   {diff.path && (
                     <div>
                       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        dans la sortie : <Typography.Text code>{diff.path}</Typography.Text>
+                        {t.rich('inOutput', {
+                          path: diff.path,
+                          code: (chunks) => <Typography.Text code>{chunks}</Typography.Text>,
+                        })}
                       </Typography.Text>
                     </div>
                   )}
@@ -252,25 +249,25 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
           ),
         }}
       >
-        <Table.Column dataIndex="name" title="Cas" />
+        <Table.Column dataIndex="name" title={t('columnCase')} />
         <Table.Column<TestCaseRow>
           dataIndex="lastStatus"
-          title="Dernier rejeu"
+          title={t('columnLastRun')}
           width={180}
           render={(status: TestCaseRow['lastStatus'], record) =>
             status ? (
               <Space size={4}>
-                <Tooltip title={STATUS_META[status].hint}>
-                  <Tag color={STATUS_META[status].color}>{STATUS_META[status].label}</Tag>
+                <Tooltip title={t(`status.${status}.hint`)}>
+                  <Tag color={STATUS_COLOR[status]}>{t(`status.${status}.label`)}</Tag>
                 </Tooltip>
                 {record.lastRunAt && (
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {new Date(record.lastRunAt).toLocaleString('fr-FR')}
+                    {new Date(record.lastRunAt).toLocaleString(locale)}
                   </Typography.Text>
                 )}
               </Space>
             ) : (
-              <Tag>jamais joué</Tag>
+              <Tag>{t('neverRun')}</Tag>
             )
           }
         />
@@ -279,7 +276,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
           width={110}
           render={(_, record) => (
             <Space>
-              <Tooltip title="Rejouer (appelle réellement le webhook)">
+              <Tooltip title={t('replayTooltip')}>
                 <Button
                   size="small"
                   icon={<CaretRightOutlined />}
@@ -287,7 +284,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
                   onClick={() => run(record.id)}
                 />
               </Tooltip>
-              <Popconfirm title="Supprimer ce cas de test ?" onConfirm={() => remove(record.id)}>
+              <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record.id)}>
                 <Button size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
             </Space>

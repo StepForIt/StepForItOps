@@ -10,6 +10,8 @@ import {
   ZoomInOutlined,
   ZoomOutOutlined,
 } from '@ant-design/icons';
+import { BRAND } from '../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
@@ -60,6 +62,7 @@ export function MermaidView({
   layout?: 'dagre' | 'elk';
   startDots?: boolean;
 }) {
+  const t = useTranslations('reviewTools.mermaid');
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
@@ -248,26 +251,26 @@ export function MermaidView({
         }}
       >
         <Space size={2}>
-          <Tooltip title="Zoom arrière">
+          <Tooltip title={t('zoomOut')}>
             <Button size="small" icon={<ZoomOutOutlined />} onClick={() => zoomBy(1 / 1.25)} />
           </Tooltip>
-          <span style={{ minWidth: 44, textAlign: 'center', fontSize: 12, color: '#8c8c8c' }}>
-            {Math.round(transform.scale * 100)} %
+          <span style={{ minWidth: 44, textAlign: 'center', fontSize: 12, color: BRAND.slate }}>
+            {t('zoom', { percent: Math.round(transform.scale * 100) })}
           </span>
-          <Tooltip title="Zoom avant">
+          <Tooltip title={t('zoomIn')}>
             <Button size="small" icon={<ZoomInOutlined />} onClick={() => zoomBy(1.25)} />
           </Tooltip>
-          <Tooltip title="Ajuster">
+          <Tooltip title={t('fit')}>
             <Button size="small" icon={<CompressOutlined />} onClick={fit} />
           </Tooltip>
-          <Tooltip title="Taille réelle">
+          <Tooltip title={t('actualSize')}>
             <Button
               size="small"
               icon={<ExpandOutlined />}
               onClick={() => setTransform({ scale: 1, x: 0, y: 0 })}
             />
           </Tooltip>
-          <Tooltip title={fullscreen ? 'Quitter le plein écran' : 'Plein écran'}>
+          <Tooltip title={fullscreen ? t('exitFullscreen') : t('fullscreen')}>
             <Button
               size="small"
               icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}

@@ -12,6 +12,9 @@ import {
   NotificationPort,
   ModelLifecycleChangedEvent,
   PerfDriftDetectedEvent,
+  currentLocale,
+  msg,
+  MessageId,
 } from '@nwm/core';
 import { NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -42,12 +45,12 @@ interface DigestPayload {
 type NotifiableToggle = 'onNewGroup' | 'onRegression';
 
 /** Libellés des catégories dans les messages (même vocabulaire que la page Erreurs). */
-const CATEGORY_LABELS: Record<string, string> = {
-  auth: 'authentification',
-  'rate-limit': 'rate limit',
-  timeout: 'timeout',
-  network: 'réseau',
-  data: 'données',
+const CATEGORY_LABELS: Record<string, MessageId> = {
+  auth: 'ops.alertCategoryAuth',
+  'rate-limit': 'ops.alertCategoryRateLimit',
+  timeout: 'ops.alertCategoryTimeout',
+  network: 'ops.alertCategoryNetwork',
+  data: 'ops.alertCategoryData',
 };
 
 export interface TestResult {
@@ -76,12 +79,12 @@ export class NotifierService {
 
   @OnEvent(EVENTS.errorGroupOpened)
   async onGroupOpened(event: ErrorGroupNotableEvent): Promise<void> {
-    await this.handle(event, 'onNewGroup', '🆕 Nouveau problème');
+    await this.handle(event, 'onNewGroup', msg('ops.alertNewGroup'));
   }
 
   @OnEvent(EVENTS.errorGroupRegressed)
   async onGroupRegressed(event: ErrorGroupNotableEvent): Promise<void> {
-    await this.handle(event, 'onRegression', `🔁 Problème revenu (${event.regressions}ᵉ rechute)`);
+    await this.handle(event, 'onRegression', msg('ops.alertRegressed', { regressions: event.regressions }));
   }
 
   /**
@@ -112,12 +115,15 @@ export class NotifierService {
       if (channels.length === 0) continue;
 
       const message: NotificationMessage = {
-        title: `🔁 Toujours là — ${event.workflowName}`,
+        title: msg('ops.alertStillThere', { workflow: event.workflowName }),
         body: [
-          instanceName ? `Instance : ${instanceName}` : null,
-          event.failedNode ? `Nœud : ${event.failedNode}` : null,
-          `${digest.count} nouvelle${digest.count > 1 ? 's' : ''} exécution${digest.count > 1 ? 's' : ''} en erreur depuis ${formatTime(digest.since)}` +
-            ` (${event.occurrences} au total).`,
+          instanceName ? msg('ops.alertInstance', { name: instanceName }) : null,
+          event.failedNode ? msg('ops.alertNode', { name: event.failedNode }) : null,
+          msg('ops.alertDigest', {
+            count: digest.count,
+            since: formatTime(digest.since),
+            total: event.occurrences,
+          }),
           event.pattern,
         ]
           .filter(Boolean)
@@ -127,7 +133,7 @@ export class NotifierService {
         try {
           await this.dispatch(channel, message, event);
         } catch (error) {
-          this.logger.warn(`Alerte KO sur « ${channel.name} » : ${(error as Error).message}`);
+          this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
         }
       }
     }
@@ -148,12 +154,16 @@ export class NotifierService {
     const retired = event.to === 'retired';
     const names = [...new Set(event.workflows.map((workflow) => workflow.name))];
     const message: NotificationMessage = {
-      title: `${retired ? '⛔️' : '⚠️'} Modèle ${retired ? 'retiré' : 'déprécié'} — ${event.pattern}`,
+      title: msg('ops.alertModelTitle', { retired, pattern: event.pattern }),
       body: [
-        `Provider : ${event.provider}`,
-        event.retiresAt ? `Retrait annoncé : ${event.retiresAt.slice(0, 10)}` : null,
-        event.replacedByPattern ? `Successeur : ${event.replacedByPattern}` : null,
-        `${event.workflows.length} nœud(s) dans ${names.length} workflow(s) : ${names.slice(0, 8).join(', ')}${names.length > 8 ? '…' : ''}`,
+        msg('ops.alertModelProvider', { provider: event.provider }),
+        event.retiresAt ? msg('ops.alertModelRetiresAt', { date: event.retiresAt.slice(0, 10) }) : null,
+        event.replacedByPattern ? msg('ops.alertModelSuccessor', { pattern: event.replacedByPattern }) : null,
+        msg('ops.alertModelNodes', {
+          nodes: event.workflows.length,
+          workflows: names.length,
+          names: `${names.slice(0, 8).join(', ')}${names.length > 8 ? '…' : ''}`,
+        }),
       ]
         .filter(Boolean)
         .join('\n'),
@@ -162,7 +172,7 @@ export class NotifierService {
       try {
         await this.dispatch(channel, message);
       } catch (error) {
-        this.logger.warn(`Alerte KO sur « ${channel.name} » : ${(error as Error).message}`);
+        this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
       }
     }
   }
@@ -180,12 +190,16 @@ export class NotifierService {
       select: { name: true },
     });
     const message: NotificationMessage = {
-      title: `🐢 Dérive de durée — ${event.workflowName}`,
+      title: msg('ops.alertDriftTitle', { workflow: event.workflowName }),
       body: [
-        instance ? `Instance : ${instance.name}` : null,
-        `Médiane ×${event.ratio.toFixed(1)} vs les ${event.days} jours précédents` +
-          (event.p50Ms !== null ? ` (actuelle : ${Math.round(event.p50Ms / 100) / 10} s)` : ''),
-        `Une seule alerte par dérive : elle se réarmera quand la durée redescendra.`,
+        instance ? msg('ops.alertInstance', { name: instance.name }) : null,
+        msg('ops.alertDriftMedian', {
+          ratio: event.ratio.toFixed(1),
+          days: event.days,
+          hasCurrent: event.p50Ms !== null,
+          current: event.p50Ms !== null ? String(Math.round(event.p50Ms / 100) / 10) : '',
+        }),
+        msg('ops.alertDriftOnce'),
       ]
         .filter(Boolean)
         .join('\n'),
@@ -194,7 +208,7 @@ export class NotifierService {
       try {
         await this.dispatch(channel, message);
       } catch (error) {
-        this.logger.warn(`Alerte KO sur « ${channel.name} » : ${(error as Error).message}`);
+        this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
       }
     }
   }
@@ -206,12 +220,12 @@ export class NotifierService {
   @OnEvent(EVENTS.monitorRelayBroken)
   async onRelayBroken(event: MonitorRelayEvent): Promise<void> {
     await this.relay(event, {
-      title: `🔕 Surveillance muette — ${event.monitorName}`,
+      title: msg('ops.alertRelayBrokenTitle', { monitor: event.monitorName }),
       body: [
-        `${event.failures} échecs d'affilée en poussant vers la sonde Uptime Kuma.`,
-        event.reason ? `Dernière erreur : ${event.reason}` : null,
-        `Tant que le relais est coupé, un arrêt de ce monitor ne déclencherait AUCUNE alerte.`,
-        `À vérifier : la sonde existe-t-elle encore dans Kuma ? (page Monitors → Provisionner)`,
+        msg('ops.alertRelayBrokenFailures', { failures: event.failures }),
+        event.reason ? msg('ops.alertRelayLastError', { reason: event.reason }) : null,
+        msg('ops.alertRelayBrokenImpact'),
+        msg('ops.alertRelayBrokenCheck'),
       ]
         .filter(Boolean)
         .join('\n'),
@@ -221,8 +235,8 @@ export class NotifierService {
   @OnEvent(EVENTS.monitorRelayRestored)
   async onRelayRestored(event: MonitorRelayEvent): Promise<void> {
     await this.relay(event, {
-      title: `🔔 Surveillance rétablie — ${event.monitorName}`,
-      body: `Le push vers la sonde Uptime Kuma repasse après ${event.failures} échecs.`,
+      title: msg('ops.alertRelayRestoredTitle', { monitor: event.monitorName }),
+      body: msg('ops.alertRelayRestoredBody', { failures: event.failures }),
     });
   }
 
@@ -238,11 +252,14 @@ export class NotifierService {
       .map((w) => `• ${w.name} : ${w.costUsd.toFixed(w.costUsd >= 1 ? 2 : 4)} $`)
       .join('\n');
     const message: NotificationMessage = {
-      title: `💸 Budget IA dépassé — ${event.costUsd.toFixed(2)} $ / ${event.budgetUsd.toFixed(2)} $`,
+      title: msg('ops.alertBudgetTitle', {
+        cost: event.costUsd.toFixed(2),
+        budget: event.budgetUsd.toFixed(2),
+      }),
       body: [
-        `Coût LLM du ${event.date} au-dessus du budget quotidien.`,
-        top ? `Plus gros contributeurs :\n${top}` : null,
-        `Une seule alerte par jour — le détail est sur la page Coûts IA.`,
+        msg('ops.alertBudgetBody', { date: event.date }),
+        top ? msg('ops.alertBudgetTop', { top }) : null,
+        msg('ops.alertBudgetOnce'),
       ]
         .filter(Boolean)
         .join('\n'),
@@ -251,7 +268,7 @@ export class NotifierService {
       try {
         await this.dispatch(channel, message);
       } catch (error) {
-        this.logger.warn(`Alerte KO sur « ${channel.name} » : ${(error as Error).message}`);
+        this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
       }
     }
   }
@@ -266,7 +283,7 @@ export class NotifierService {
       try {
         await this.dispatch(channel, message);
       } catch (error) {
-        this.logger.warn(`Alerte KO sur « ${channel.name} » : ${(error as Error).message}`);
+        this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
       }
     }
   }
@@ -274,10 +291,10 @@ export class NotifierService {
   /** Message d'essai vers un canal — le bouton « Tester » de la page Alertes. */
   async test(channelId: string): Promise<TestResult> {
     const channel = await this.prisma.notificationChannel.findUnique({ where: { id: channelId } });
-    if (!channel) throw new NotFoundException(`Canal ${channelId} introuvable`);
+    if (!channel) throw new NotFoundException(msg('ops.channelNotFound', { id: channelId }));
     await this.dispatch(channel, {
-      title: '✅ Test de la plateforme n8n ops',
-      body: `Le canal « ${channel.name} » est bien branché.`,
+      title: msg('ops.channelTestTitle'),
+      body: msg('ops.channelTestBody', { name: channel.name }),
     });
     return { ok: true };
   }
@@ -299,13 +316,14 @@ export class NotifierService {
       where: { id: event.instanceId },
       select: { name: true },
     });
-    const category = CATEGORY_LABELS[event.category];
+    const categoryId = CATEGORY_LABELS[event.category];
+    const category = categoryId ? msg(categoryId) : null;
     const message: NotificationMessage = {
       title: `${title} — ${event.workflowName}`,
       body: [
-        instance ? `Instance : ${instance.name}` : null,
-        event.failedNode ? `Nœud : ${event.failedNode}` : null,
-        category ? `Type : ${category}` : null,
+        instance ? msg('ops.alertInstance', { name: instance.name }) : null,
+        event.failedNode ? msg('ops.alertNode', { name: event.failedNode }) : null,
+        category ? msg('ops.alertType', { category }) : null,
         event.pattern,
       ]
         .filter(Boolean)
@@ -317,7 +335,7 @@ export class NotifierService {
         await this.dispatch(channel, message, event);
       } catch (error) {
         // Un canal en panne ne doit ni bloquer les autres, ni casser l'ingestion des erreurs.
-        this.logger.warn(`Alerte KO sur « ${channel.name} » : ${(error as Error).message}`);
+        this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
       }
     }
 
@@ -350,5 +368,5 @@ export class NotifierService {
 
 /** Heure locale « 9 h 40 » : le récapitulatif dit depuis quand on compte. */
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' });
 }

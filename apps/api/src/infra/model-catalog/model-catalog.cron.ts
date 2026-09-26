@@ -21,12 +21,12 @@ export class ModelCatalogCron {
     try {
       const result = await this.refresh.refreshFromSource();
       if (result.proposed > 0) {
-        this.logger.log(`Catalogue des modèles : ${result.proposed} proposition(s) à revoir.`);
+        this.logger.log(`Model catalog: ${result.proposed} proposal(s) to review.`);
       }
     } catch (error) {
       // Un amont injoignable n'est pas une panne d'ici : le catalogue local
       // continue de servir, et sa fraîcheur le dit à l'écran.
-      this.logger.warn(`Catalogue des modèles non rafraîchi : ${(error as Error).message}`);
+      this.logger.warn(`Model catalog not refreshed: ${(error as Error).message}`);
     }
     await this.refresh.refreshFromAi();
   }

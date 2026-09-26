@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { EVENTS, ModelLifecycleChangedEvent } from '@nwm/core';
+import { EVENTS, ModelLifecycleChangedEvent, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { ModuleRegistryService } from '../../infra/modules-registry/module-registry.service';
@@ -47,7 +47,7 @@ export class LifecycleWatchService {
       await this.audit.auditAll();
       await this.check();
     } catch (error) {
-      this.logger.warn(`Audit des modèles KO : ${(error as Error).message}`);
+      this.logger.warn(`Model audit failed: ${(error as Error).message}`);
     }
   }
 
@@ -75,7 +75,7 @@ export class LifecycleWatchService {
       if (!armed) continue; // Amorçage : on retient l'état sans réveiller personne.
       const payload: ModelLifecycleChangedEvent = {
         pattern: model.model,
-        provider: model.provider ?? 'inconnu',
+        provider: model.provider ?? msg('analysis.unknownProvider'),
         from: announced.get(key) ?? 'active',
         to: status,
         retiresAt: model.retiresAt,

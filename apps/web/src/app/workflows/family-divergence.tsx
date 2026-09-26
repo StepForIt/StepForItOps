@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Space, Tag, Tooltip, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { DivergenceModal } from './divergence-modal';
 import { WorkflowFamily } from './workflow-row';
 import { useEnvColor, useEnvLabel } from '../../lib/envs';
@@ -11,6 +12,7 @@ import { useEnvColor, useEnvLabel } from '../../lib/envs';
  * « à jour » seulement quand au moins un exemplaire a été comparé et que tous égalent la prod.
  */
 export function FamilyDivergence({ family }: { family: WorkflowFamily }) {
+  const t = useTranslations('workflowsList.divergence');
   const envColor = useEnvColor();
   const envLabel = useEnvLabel();
   const [openId, setOpenId] = React.useState<string | null>(null);
@@ -26,18 +28,18 @@ export function FamilyDivergence({ family }: { family: WorkflowFamily }) {
     id ? { style: { cursor: 'pointer' }, onClick: () => setOpenId(id) } : {};
   return (
     <Space size={4} wrap>
-      {inSync && <Typography.Text type="secondary">à jour</Typography.Text>}
+      {inSync && <Typography.Text type="secondary">{t('family.inSync')}</Typography.Text>}
       {family.toDeploy.map((env) => (
-        <Tooltip key={env} title={ahead(env) ? 'Cliquer pour voir l’écart' : 'Jamais déployé en prod'}>
+        <Tooltip key={env} title={ahead(env) ? t('why.clickToSee') : t('family.neverDeployed')}>
           <Tag color={envColor(env)} {...clickable(ahead(env)?.id)}>
-            {envLabel(env)} à déployer
+            {t('family.toDeploy', { env: envLabel(env) })}
           </Tag>
         </Tooltip>
       ))}
       {family.prodAhead && (
-        <Tooltip title="Correctif en prod, à reporter">
+        <Tooltip title={t('why.behind')}>
           <Tag color="volcano" {...clickable(behind?.id)}>
-            prod modifiée
+            {t('labels.behind')}
           </Tag>
         </Tooltip>
       )}

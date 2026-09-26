@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, List, Modal, Popconfirm, Space, Tag, Typography, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../../../lib/api';
 
 /** Miroir de `PublicationStep` (@nwm/core) : le web ne dépend pas du domaine. */
@@ -21,24 +22,28 @@ export interface PublishRunView {
   steps: PublishRunStep[];
 }
 
-const STATE: Record<PublishRunStep['state'], { label: string; color?: string }> = {
-  pending: { label: 'à publier' },
-  done: { label: 'publié', color: 'green' },
-  already: { label: 'déjà publié', color: 'green' },
-  'kept-draft': { label: 'brouillon en source' },
-  'not-applicable': { label: 'ignoré' },
-  failed: { label: 'refusé', color: 'red' },
-  skipped: { label: 'passé', color: 'orange' },
+type StateLabel = 'pending' | 'done' | 'already' | 'keptDraft' | 'notApplicable' | 'failed' | 'skipped';
+
+const STATE: Record<PublishRunStep['state'], { label: StateLabel; color?: string }> = {
+  pending: { label: 'pending' },
+  done: { label: 'done', color: 'green' },
+  already: { label: 'already', color: 'green' },
+  'kept-draft': { label: 'keptDraft' },
+  'not-applicable': { label: 'notApplicable' },
+  failed: { label: 'failed', color: 'red' },
+  skipped: { label: 'skipped', color: 'orange' },
 };
 
+export type PublishRunT = ReturnType<typeof useTranslations<'workflowShow.publishRun'>>;
+
 /** Résumé d'une ligne, pour le message qui suit la promotion. */
-export function publishRunSummary(run: PublishRunView): string {
+export function publishRunSummary(run: PublishRunView, t: PublishRunT): string {
   const published = run.steps.filter((step) => step.state === 'done').length;
   if (run.status === 'paused') {
     const failed = run.steps.find((step) => step.state === 'failed');
-    return `Publication en pause sur « ${failed?.name} » : ${failed?.reason ?? 'refus de n8n'}`;
+    return t('pausedOn', { name: failed?.name ?? '', reason: failed?.reason ?? t('n8nRefusal') });
   }
-  return published > 0 ? `${published} workflow(s) publié(s) comme la source` : 'Rien à publier';
+  return published > 0 ? t('published', { count: published }) : t('nothing');
 }
 
 function PublishRunPanel({
@@ -48,14 +53,15 @@ function PublishRunPanel({
   run: PublishRunView;
   onChange: (run: PublishRunView) => void;
 }) {
+  const t = useTranslations('workflowShow.publishRun');
   const [busy, setBusy] = useState<'resume' | 'skip' | 'abandon' | null>(null);
   const act = async (action: 'resume' | 'skip' | 'abandon') => {
     setBusy(action);
     try {
       const next = await apiPost<PublishRunView>(`/env-switcher/publish-runs/${run.id}/${action}`);
       onChange(next);
-      if (next.status === 'paused') message.error(publishRunSummary(next), 10);
-      else if (next.status === 'done') message.success(publishRunSummary(next));
+      if (next.status === 'paused') message.error(publishRunSummary(next, t), 10);
+      else if (next.status === 'done') message.success(publishRunSummary(next, t));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -67,7 +73,12 @@ function PublishRunPanel({
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       {failed && (
-        <Alert type="error" showIcon message={`« ${failed.name} » refusé`} description={failed.reason} />
+        <Alert
+          type="error"
+          showIcon
+          message={t('refused', { name: failed.name })}
+          description={failed.reason}
+        />
       )}
       <List
         size="small"
@@ -75,7 +86,7 @@ function PublishRunPanel({
         renderItem={(step) => (
           <List.Item>
             <Space wrap>
-              <Tag color={STATE[step.state].color}>{STATE[step.state].label}</Tag>
+              <Tag color={STATE[step.state].color}>{t(`states.${STATE[step.state].label}`)}</Tag>
               <span>{step.name}</span>
               {step.env && <Tag>{step.env.toUpperCase()}</Tag>}
               {step.state === 'not-applicable' && step.reason && (
@@ -88,18 +99,14 @@ function PublishRunPanel({
       {run.status === 'paused' && (
         <Space wrap>
           <Button type="primary" loading={busy === 'resume'} onClick={() => act('resume')}>
-            Reprendre
+            {t('resume')}
           </Button>
-          <Popconfirm
-            title="Passer cette étape ?"
-            description="Les workflows qui l’appellent seront sans doute refusés à leur tour."
-            onConfirm={() => act('skip')}
-          >
-            <Button loading={busy === 'skip'}>Passer</Button>
+          <Popconfirm title={t('skipTitle')} description={t('skipDescription')} onConfirm={() => act('skip')}>
+            <Button loading={busy === 'skip'}>{t('skip')}</Button>
           </Popconfirm>
-          <Popconfirm title="Abandonner la publication ?" onConfirm={() => act('abandon')}>
+          <Popconfirm title={t('abandonTitle')} onConfirm={() => act('abandon')}>
             <Button danger loading={busy === 'abandon'}>
-              Abandonner
+              {t('abandon')}
             </Button>
           </Popconfirm>
         </Space>
@@ -120,6 +127,8 @@ export function PublishRunBanner({
   workflowId: string;
   pushed?: PublishRunView | null;
 }) {
+  const t = useTranslations('workflowShow.publishRun');
+  const tCommon = useTranslations('common');
   const [run, setRun] = useState<PublishRunView | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -146,15 +155,15 @@ export function PublishRunBanner({
         <Alert
           type={run.status === 'paused' ? 'error' : 'info'}
           showIcon
-          message={run.status === 'paused' ? 'Publication en pause' : 'Publication en cours'}
+          message={run.status === 'paused' ? t('paused') : t('running')}
           action={
             <Button size="small" onClick={() => setOpen(true)}>
-              Voir
+              {tCommon('see')}
             </Button>
           }
         />
       )}
-      <Modal title="Publier comme la source" open={open} onCancel={() => setOpen(false)} footer={null}>
+      <Modal title={t('modalTitle')} open={open} onCancel={() => setOpen(false)} footer={null}>
         <PublishRunPanel run={run} onChange={setRun} />
       </Modal>
     </>

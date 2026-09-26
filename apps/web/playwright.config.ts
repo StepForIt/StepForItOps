@@ -58,6 +58,8 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${WEB_PORT}`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // Les parcours lisent les libellés français : Chromium annoncerait sinon `en-US`.
+    locale: 'fr-FR',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [

@@ -18,6 +18,7 @@
  */
 
 import { activeParameters } from './inert-params';
+import { msg } from '../../i18n/translate';
 import { CheckFinding } from './structural-checks';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 
@@ -127,14 +128,9 @@ export function findShapeMismatches(reference: ShapeReference, node: N8nNode): S
   return mismatches;
 }
 
-const KIND_FR: Record<ValueKind, string> = {
-  string: 'une chaîne',
-  number: 'un nombre',
-  boolean: 'un booléen',
-  array: 'une liste',
-  object: 'un objet',
-  null: 'null',
-};
+function kindLabel(kind: ValueKind): string {
+  return msg('checks.shapeKind', { kind });
+}
 
 export function describeShapeMismatch(mismatch: ShapeMismatch, nodeType: string): CheckFinding {
   const short = nodeType.split('.').pop() ?? nodeType;
@@ -142,11 +138,13 @@ export function describeShapeMismatch(mismatch: ShapeMismatch, nodeType: string)
     severity: 'warning',
     code: 'param-shape',
     nodeName: mismatch.nodeName,
-    message:
-      `Le paramètre « ${mismatch.path} » vaut ${KIND_FR[mismatch.found]}, alors que ` +
-      `les ${mismatch.witnesses} autres nœuds ${short} de l'instance y mettent ` +
-      `${KIND_FR[mismatch.expected]}. Une forme que l'éditeur n8n n'attend pas à cet ` +
-      `endroit peut le faire échouer à l'ouverture du workflow.`,
+    message: msg('checks.paramShape', {
+      path: mismatch.path,
+      found: kindLabel(mismatch.found),
+      witnesses: mismatch.witnesses,
+      nodeType: short,
+      expected: kindLabel(mismatch.expected),
+    }),
   };
 }
 

@@ -18,6 +18,7 @@ import {
   isPlaceholder,
   mask,
 } from '../secret-patterns';
+import { msg } from '../../i18n/translate';
 
 export interface ReliabilityFinding {
   severity: 'info' | 'warning' | 'error';
@@ -96,13 +97,10 @@ export function runReliabilityChecks(workflow: N8nWorkflow): ReliabilityFinding[
       findings.push({
         severity: 'warning',
         code: 'http-no-retry',
-        message: `"${node.name}" appelle une API sans « Retry on Fail »`,
+        message: msg('checks.httpNoRetry', { node: node.name }),
         nodeName: node.name,
         data: {
-          suggestion:
-            'Activer « Retry on Fail » dans les Settings du nœud (avec un délai entre essais) ' +
-            'pour absorber les erreurs passagères — sauf si l’appel crée une ressource ' +
-            'et que le rejouer ferait un doublon.',
+          suggestion: msg('checks.httpNoRetryFix'),
         },
       });
     }
@@ -114,12 +112,10 @@ export function runReliabilityChecks(workflow: N8nWorkflow): ReliabilityFinding[
       findings.push({
         severity: 'warning',
         code: 'error-swallowed',
-        message: `"${node.name}" continue silencieusement en cas d'erreur (l'échec devient invisible)`,
+        message: msg('checks.errorSwallowed', { node: node.name }),
         nodeName: node.name,
         data: {
-          suggestion:
-            'Préférer « Continue (using error output) » avec la branche d’erreur branchée ' +
-            'sur un traitement, ou laisser l’exécution échouer pour que le monitoring la voie.',
+          suggestion: msg('checks.errorSwallowedFix'),
         },
       });
     }
@@ -130,13 +126,11 @@ export function runReliabilityChecks(workflow: N8nWorkflow): ReliabilityFinding[
       findings.push({
         severity: 'error',
         code: 'hardcoded-secret',
-        message: `"${node.name}" contient un secret en clair (${hit.excerpt})`,
+        message: msg('checks.hardcodedSecret', { node: node.name, excerpt: hit.excerpt }),
         nodeName: node.name,
         data: {
           path: hit.path,
-          suggestion:
-            'Déplacer le secret dans un credential n8n (Header Auth, Bearer…) : ' +
-            'en paramètre, il est copié dans chaque export et chaque version du workflow.',
+          suggestion: msg('checks.hardcodedSecretFix'),
         },
       });
     }
@@ -150,12 +144,10 @@ export function runReliabilityChecks(workflow: N8nWorkflow): ReliabilityFinding[
         findings.push({
           severity: 'info',
           code: 'http-no-timeout',
-          message: `"${node.name}" appelle une API sans timeout`,
+          message: msg('checks.httpNoTimeout', { node: node.name }),
           nodeName: node.name,
           data: {
-            suggestion:
-              'Renseigner Options → Timeout sur le nœud : une API qui ne répond pas ' +
-              'bloquerait l’exécution entière.',
+            suggestion: msg('checks.httpNoTimeoutFix'),
           },
         });
       }

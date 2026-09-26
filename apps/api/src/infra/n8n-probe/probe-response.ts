@@ -1,5 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
-import { ProbeHttpRequest } from '@nwm/core';
+import { ProbeHttpRequest, msg } from '@nwm/core';
 
 /** Refus du provider relayé par la sonde, avec son statut HTTP quand il en a un. */
 export class ProbeCallError extends BadGatewayException {
@@ -39,7 +39,7 @@ export function readHttpProbeResponse(body: unknown, request: ProbeHttpRequest):
 
   const failure = field(item, 'error');
   if (failure !== undefined) {
-    throw new ProbeCallError(`${where} a échoué : ${describeFailure(failure)}`);
+    throw new ProbeCallError(msg('platform.probeFailed', { what: where, detail: describeFailure(failure) }));
   }
 
   const status = field(item, 'statusCode');
@@ -52,6 +52,8 @@ export function readHttpProbeResponse(body: unknown, request: ProbeHttpRequest):
 export function readRowsProbeResponse(body: unknown, what: string): unknown[] {
   const rows = Array.isArray(body) ? body : [body];
   const failure = rows.map((row) => field(row, 'error')).find((error) => error !== undefined);
-  if (failure !== undefined) throw new ProbeCallError(`${what} a échoué : ${describeFailure(failure)}`);
+  if (failure !== undefined) {
+    throw new ProbeCallError(msg('platform.probeFailed', { what, detail: describeFailure(failure) }));
+  }
   return rows;
 }

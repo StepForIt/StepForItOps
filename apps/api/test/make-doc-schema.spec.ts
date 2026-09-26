@@ -111,7 +111,7 @@ describe('documentation générée d un scénario Make', () => {
     ).generate(workflowId, true);
 
     const context = JSON.parse(requests[0].prompt);
-    expect(requests[0].system).toMatch(/scénario Make/);
+    expect(requests[0].system).toMatch(/Make scenario/);
     expect(context.links).toEqual([
       { from: 1, to: 2 },
       { from: 2, to: 3, label: 'route 1' },
@@ -134,7 +134,7 @@ describe('documentation générée d un scénario Make', () => {
     ).generate(workflowId, true);
 
     expect(doc.mermaid).toContain('Déclencheur');
-    expect(requests[0].system).toMatch(/workflow n8n/);
+    expect(requests[0].system).toMatch(/n8n workflow/);
     expect(JSON.parse(requests[0].prompt)).toHaveProperty('connections');
   });
 });

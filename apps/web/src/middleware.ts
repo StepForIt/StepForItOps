@@ -3,6 +3,20 @@ import type { NextRequest } from 'next/server';
 import { isAuthEnabled } from './lib/auth/auth-config';
 import { dbAuthState } from './lib/auth/db-auth';
 import { SESSION_COOKIE, SessionUser, readSession } from './lib/auth/session';
+import { LOCALE_COOKIE, resolveLocale } from './i18n/locale';
+import frApp from '../messages/fr/app.json';
+import enApp from '../messages/en/app.json';
+
+function callerLocale(req: NextRequest) {
+  return resolveLocale(req.cookies.get(LOCALE_COOKIE)?.value, req.headers.get('accept-language'));
+}
+
+/** Message d'un 401 dans la langue de l'appelant : l'UI l'affiche tel quel. */
+function unauthorized(req: NextRequest, key: keyof typeof frApp.middleware): NextResponse {
+  const locale = callerLocale(req);
+  const message = (locale === 'en' ? enApp : frApp).middleware[key];
+  return NextResponse.json({ statusCode: 401, message }, { status: 401 });
+}
 
 /**
  * Garde d'accès unique de la plateforme.
@@ -52,6 +66,7 @@ function isPublic(pathname: string): boolean {
  * `x-user-email` sert à signer les actions humaines côté API (qui a marqué une
  * erreur comme traitée) : les deux en-têtes sont posés — ou effacés — ici et
  * nulle part ailleurs, sinon le navigateur pourrait se faire passer pour un autre.
+ * `x-locale` porte la langue d'affichage : l'API répond dans celle-là.
  */
 function forward(req: NextRequest, session?: SessionUser | null): NextResponse {
   if (!req.nextUrl.pathname.startsWith('/backend/')) return NextResponse.next();
@@ -59,6 +74,7 @@ function forward(req: NextRequest, session?: SessionUser | null): NextResponse {
   const headers = new Headers(req.headers);
   headers.delete('x-api-token');
   headers.delete('x-user-email');
+  headers.set('x-locale', callerLocale(req));
   if (token) headers.set('x-api-token', token);
   if (session?.email) headers.set('x-user-email', session.email);
   return NextResponse.next({ request: { headers } });
@@ -74,10 +90,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     // Rien de configuré : la seule destination possible est le premier setup.
     if (isPublic(pathname)) return NextResponse.next();
     if (pathname.startsWith('/backend/')) {
-      return NextResponse.json(
-        { statusCode: 401, message: 'Plateforme non configurée — passe par /setup.' },
-        { status: 401 },
-      );
+      return unauthorized(req, 'notConfigured');
     }
     const setupUrl = req.nextUrl.clone();
     setupUrl.pathname = '/setup';
@@ -100,10 +113,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (session) return forward(req, session);
 
   if (pathname.startsWith('/backend/')) {
-    return NextResponse.json(
-      { statusCode: 401, message: 'Session expirée — reconnecte-toi.' },
-      { status: 401 },
-    );
+    return unauthorized(req, 'sessionExpired');
   }
 
   const loginUrl = req.nextUrl.clone();

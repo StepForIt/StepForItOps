@@ -28,6 +28,7 @@ import {
   SettingOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost, apiPut } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
@@ -36,11 +37,7 @@ import { WorkflowCostTable } from './workflow-cost-table';
 import { CostDailyChart } from './cost-daily-chart';
 import { ModelPricesModal } from './model-prices-modal';
 
-const PERIODS = [
-  { label: '7 jours', value: 7 },
-  { label: '30 jours', value: 30 },
-  { label: '90 jours', value: 90 },
-];
+const PERIODS = [7, 30, 90];
 
 /**
  * Coûts IA : ce que coûtent les workflows qui appellent un LLM, extrait des
@@ -49,8 +46,11 @@ const PERIODS = [
  */
 export default function LlmCostsPage() {
   const { scope } = useInstanceScope();
+  const t = useTranslations('health.llmCosts');
+  const tc = useTranslations('common');
+  const locale = useLocale();
   const [days, setDays] = usePersistedState('days', 7, {
-    validate: (value) => PERIODS.find((period) => period.value === value)?.value,
+    validate: (value) => PERIODS.find((period) => period === value),
   });
   const [summary, setSummary] = useState<AiCostSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ export default function LlmCostsPage() {
     setSavingBudget(true);
     try {
       await apiPut('/ai-cost/budget', { dailyBudgetUsd: budget });
-      message.success(budget ? `Alerte au-delà de ${budget} $ / jour.` : 'Alerte de budget désactivée.');
+      message.success(budget ? t('page.budgetSaved', { budget }) : t('page.budgetDisabled'));
       setBudgetOpen(false);
     } catch (error) {
       message.error((error as Error).message);
@@ -104,7 +104,11 @@ export default function LlmCostsPage() {
       setSilent(result.silentWorkflows ?? []);
       if (result.calls > 0) {
         message.success(
-          `${result.calls} appel(s) LLM extraits de ${result.executions} exécution(s) sur ${result.instances} instance(s).`,
+          t('page.sampled', {
+            calls: result.calls,
+            executions: result.executions,
+            instances: result.instances,
+          }),
         );
       } else {
         // Un zéro sans explication se lit « la plateforme ne voit rien ». On dit
@@ -112,10 +116,10 @@ export default function LlmCostsPage() {
         // aucune exécution nouvelle, ou des exécutions sans consommation lisible.
         message.warning(
           result.candidateWorkflows === 0
-            ? 'Aucun workflow ne semble appeler un modèle (nœud LLM, nœud vendeur ou HTTP vers un provider).'
+            ? t('page.sampleNoCandidate')
             : result.inspectedExecutions === 0
-              ? `${result.candidateWorkflows} workflow(s) candidat(s), mais aucune exécution terminée à inspecter — n8n enregistre-t-il les exécutions ?`
-              : `${result.inspectedExecutions} exécution(s) inspectée(s) sans consommation lisible — détail des workflows concernés sur la page.`,
+              ? t('page.sampleNoExecution', { count: result.candidateWorkflows })
+              : t('page.sampleNoUsage', { count: result.inspectedExecutions }),
           10,
         );
       }
@@ -139,24 +143,28 @@ export default function LlmCostsPage() {
 
   return (
     <Card
-      title="Coûts IA"
+      title={t('page.title')}
       extra={
         <Space wrap>
-          <Segmented options={PERIODS} value={days} onChange={(value) => setDays(value as number)} />
+          <Segmented
+            options={PERIODS.map((value) => ({ value, label: t('page.periodDays', { days: value }) }))}
+            value={days}
+            onChange={(value) => setDays(value as number)}
+          />
           <Button icon={<SettingOutlined />} onClick={() => setPricesOpen(true)}>
-            Tarifs
+            {t('page.prices')}
           </Button>
-          <Tooltip title={budget ? `Alerte au-delà de ${budget} $ / jour` : 'Aucune alerte de budget'}>
+          <Tooltip title={budget ? t('page.budgetTooltip', { budget }) : t('page.noBudget')}>
             <Button icon={<AlertOutlined />} onClick={() => setBudgetOpen(true)}>
-              Budget
+              {t('page.budget')}
             </Button>
           </Tooltip>
-          <Tooltip title="Auto toutes les 5 min — forcer maintenant">
+          <Tooltip title={t('page.sampleTooltip')}>
             <Button icon={<ThunderboltOutlined />} loading={sampling} onClick={sampleNow}>
-              Rafraîchir les coûts
+              {t('page.sample')}
             </Button>
           </Tooltip>
-          <Button icon={<ReloadOutlined />} onClick={load} loading={loading} />
+          <Button icon={<ReloadOutlined />} onClick={load} loading={loading} aria-label={tc('refresh')} />
         </Space>
       }
     >
@@ -165,11 +173,14 @@ export default function LlmCostsPage() {
           <Alert
             type="warning"
             showIcon
-            message={`${totals.unknownModels.length} modèle(s) sans tarif : ${totals.unknownModels.join(', ')}`}
-            description="Totaux = planchers. Ajoutez le tarif puis « Valoriser les appels sans tarif »."
+            message={t('page.unknownModels', {
+              count: totals.unknownModels.length,
+              models: totals.unknownModels.join(', '),
+            })}
+            description={t('page.unknownModelsHint')}
             action={
               <Button size="small" onClick={() => setPricesOpen(true)}>
-                Ajouter le tarif
+                {t('page.addPrice')}
               </Button>
             }
           />
@@ -181,27 +192,29 @@ export default function LlmCostsPage() {
             showIcon
             closable
             onClose={() => setSilent([])}
-            message={`${silent.length} workflow(s) appellent un modèle sans qu'on puisse lire la consommation`}
+            message={t('page.silentTitle', { count: silent.length })}
             description={
               <Space direction="vertical" size={8}>
                 {silent.map((w) => (
                   <div key={w.id}>
                     <Link href={`/workflows/show/${w.id}`}>{w.name}</Link>{' '}
                     <Typography.Text type="secondary">
-                      ({w.instanceName}, {w.inspectedExecutions} exécution(s) inspectée(s))
+                      {t('page.silentMeta', { instance: w.instanceName, count: w.inspectedExecutions })}
                     </Typography.Text>
                     <br />
                     {w.simplifiedNodes.length > 0 ? (
                       <Typography.Text>
-                        Nœud(s) <b>{w.simplifiedNodes.join(', ')}</b> : « Simplify Output » est activé (défaut
-                        n8n) et retire le compte de tokens de la sortie. Correctif : ouvrir le nœud → Options
-                        / champ « Simplify Output » → le désactiver, puis relancer une exécution.
+                        {t.rich('page.silentSimplify', {
+                          nodes: w.simplifiedNodes.join(', '),
+                          b: (chunks) => <b>{chunks}</b>,
+                        })}
                       </Typography.Text>
                     ) : (
                       <Typography.Text>
-                        Aucun réglage fautif identifié sur {w.watchedNodes.join(', ') || 'ses nœuds'} :
-                        vérifier que la sortie du nœud contient bien un champ <code>usage</code> (ouvrir une
-                        exécution récente dans n8n), et que l'exécution est enregistrée avec ses données.
+                        {t.rich('page.silentUnknown', {
+                          nodes: w.watchedNodes.join(', ') || t('page.itsNodes'),
+                          code: (chunks) => <code>{chunks}</code>,
+                        })}
                       </Typography.Text>
                     )}
                   </div>
@@ -215,8 +228,8 @@ export default function LlmCostsPage() {
           <Col xs={12} md={8}>
             <Card size="small">
               <Statistic
-                title="Coût total"
-                value={formatUsd(totalCost)}
+                title={t('page.totalCost')}
+                value={formatUsd(totalCost, locale)}
                 prefix={
                   <>
                     <DollarOutlined />
@@ -229,18 +242,20 @@ export default function LlmCostsPage() {
           <Col xs={12} md={8}>
             <Card size="small">
               <Statistic
-                title="Tokens"
-                value={formatTokens((totals?.promptTokens ?? 0) + (totals?.completionTokens ?? 0))}
+                title={t('page.tokens')}
+                value={formatTokens((totals?.promptTokens ?? 0) + (totals?.completionTokens ?? 0), locale)}
               />
               <Typography.Text type="secondary">
-                {formatTokens(totals?.promptTokens ?? 0)} in / {formatTokens(totals?.completionTokens ?? 0)}{' '}
-                out
+                {t('page.tokensInOut', {
+                  tokensIn: formatTokens(totals?.promptTokens ?? 0, locale),
+                  tokensOut: formatTokens(totals?.completionTokens ?? 0, locale),
+                })}
               </Typography.Text>
               {totals && totals.estimatedShare > 0 && (
-                <Tooltip title="Tokens estimés faute de chiffres du provider">
+                <Tooltip title={t('page.estimatedTooltip')}>
                   <Typography.Text type="secondary" style={{ cursor: 'help' }}>
                     {' '}
-                    · {Math.round(totals.estimatedShare * 100)} % estimés
+                    · {t('page.estimated', { percent: Math.round(totals.estimatedShare * 100) })}
                   </Typography.Text>
                 </Tooltip>
               )}
@@ -248,34 +263,36 @@ export default function LlmCostsPage() {
           </Col>
           <Col xs={24} md={8}>
             <Card size="small">
-              <Statistic title="Appels LLM" value={totals?.calls ?? 0} />
+              <Statistic title={t('page.llmCalls')} value={totals?.calls ?? 0} />
               <Typography.Text type="secondary">
-                {totals?.executions ?? 0} exécution(s)
-                {totals && totals.executions > 0 && ` · ${formatUsd(totalCost / totals.executions)} / exéc.`}
+                {t('page.executions', { count: totals?.executions ?? 0 })}
+                {totals &&
+                  totals.executions > 0 &&
+                  ` · ${t('page.perExecution', { cost: formatUsd(totalCost / totals.executions, locale) })}`}
               </Typography.Text>
             </Card>
           </Col>
         </Row>
 
-        <Card size="small" title="Tendance quotidienne">
+        <Card size="small" title={t('page.dailyTrend')}>
           <CostDailyChart daily={summary?.daily ?? []} />
         </Card>
 
         <Card
           size="small"
-          title="Par workflow"
+          title={t('page.byWorkflow')}
           extra={
             <Space wrap>
               <Segmented
                 value={grouped ? 'grouped' : 'flat'}
                 onChange={(value) => setGrouped(value === 'grouped')}
                 options={[
-                  { value: 'grouped', label: 'Groupés par env' },
-                  { value: 'flat', label: 'Par workflow n8n' },
+                  { value: 'grouped', label: t('page.grouped') },
+                  { value: 'flat', label: t('page.flat') },
                 ]}
               />
               <Input.Search
-                placeholder="Rechercher un workflow…"
+                placeholder={t('page.searchPlaceholder')}
                 allowClear
                 style={{ width: 240 }}
                 value={search}
@@ -294,7 +311,7 @@ export default function LlmCostsPage() {
           />
         </Card>
 
-        <Card size="small" title="Par modèle">
+        <Card size="small" title={t('page.byModel')}>
           <Table<ModelCost>
             rowKey="model"
             dataSource={summary?.models ?? []}
@@ -304,27 +321,29 @@ export default function LlmCostsPage() {
             scroll={{ x: true }}
             columns={[
               {
-                title: 'Modèle',
+                title: t('page.model'),
                 dataIndex: 'model',
                 render: (model: string) => <Tag>{model}</Tag>,
               },
-              { title: 'Appels', dataIndex: 'calls', align: 'right', width: 90 },
+              { title: t('columns.calls'), dataIndex: 'calls', align: 'right', width: 90 },
               {
-                title: 'Tokens in / out',
+                key: 'tokens',
+                title: t('columns.tokens'),
                 align: 'right',
                 width: 160,
                 render: (_, row) =>
-                  `${formatTokens(row.promptTokens)} / ${formatTokens(row.completionTokens)}`,
+                  `${formatTokens(row.promptTokens, locale)} / ${formatTokens(row.completionTokens, locale)}`,
               },
               {
-                title: 'Coût',
+                title: t('columns.cost'),
                 dataIndex: 'costUsd',
                 align: 'right',
                 width: 120,
-                render: (cost: number | null) => formatUsd(cost),
+                render: (cost: number | null) => formatUsd(cost, locale),
               },
               {
-                title: '% du total',
+                key: 'totalShare',
+                title: t('columns.totalShare'),
                 width: 160,
                 render: (_, row) => (
                   <Progress
@@ -341,22 +360,22 @@ export default function LlmCostsPage() {
       </Space>
 
       <Modal
-        title="Budget quotidien"
+        title={t('page.budgetTitle')}
         open={budgetOpen}
         onOk={saveBudget}
         confirmLoading={savingBudget}
         onCancel={() => setBudgetOpen(false)}
-        okText="Enregistrer"
+        okText={tc('save')}
       >
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          <Typography.Text>Alerte une fois par jour au-delà du seuil. Vide = désactivée.</Typography.Text>
+          <Typography.Text>{t('page.budgetHint')}</Typography.Text>
           <InputNumber
             min={0}
             step={0.5}
             placeholder="—"
             value={budget}
             onChange={setBudget}
-            addonAfter="$ / jour"
+            addonAfter={t('page.perDay')}
             style={{ width: 200 }}
           />
         </Space>

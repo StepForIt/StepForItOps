@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Checkbox, Modal, Space, Switch, Tag, Tooltip, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../../../lib/api';
 
 interface MockCandidate {
@@ -44,6 +45,8 @@ export function MockTestModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations('workflowShow.mockTest');
+  const tCommon = useTranslations('common');
   const [candidates, setCandidates] = useState<MockCandidate[] | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
   const [stubSubWorkflows, setStubSubWorkflows] = useState(true);
@@ -76,12 +79,12 @@ export function MockTestModal({
       message.success({
         content: (
           <span>
-            Copie [TEST] créée
+            {t('created')}
             {copyUrl && (
               <>
                 {' '}
                 <a href={copyUrl} target="_blank" rel="noopener noreferrer">
-                  Ouvrir
+                  {t('open')}
                 </a>
               </>
             )}
@@ -99,25 +102,23 @@ export function MockTestModal({
 
   return (
     <Modal
-      title="Tester sans rien envoyer"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={620}
       footer={
         <Space>
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{tCommon('cancel')}</Button>
           <Button type="primary" loading={busy} disabled={candidates === null} onClick={create}>
-            Créer la copie [TEST]
+            {t('create')}
           </Button>
         </Space>
       }
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        <Alert type="info" showIcon message="Crée une copie [TEST] ; les nœuds cochés ne partent pas." />
+        <Alert type="info" showIcon message={t('info')} />
 
-        {candidates?.length === 0 && (
-          <Alert type="success" showIcon message="Aucun nœud ne sort du système : rien à bouchonner." />
-        )}
+        {candidates?.length === 0 && <Alert type="success" showIcon message={t('nothing')} />}
 
         {(candidates ?? []).map((candidate) => (
           <Tooltip key={candidate.nodeName} title={candidate.exemption}>
@@ -138,10 +139,10 @@ export function MockTestModal({
         ))}
 
         {subCalls.length > 0 && (
-          <Tooltip title="L'appel part vers un workflow vide, dont l'exécution montre ce qui aurait été envoyé.">
+          <Tooltip title={t('stubTooltip')}>
             <div>
-              <Switch checked={stubSubWorkflows} onChange={setStubSubWorkflows} size="small" /> Rerouter{' '}
-              {subCalls.length} sous-workflow(s) vers un bouchon
+              <Switch checked={stubSubWorkflows} onChange={setStubSubWorkflows} size="small" />{' '}
+              {t('reroute', { count: subCalls.length })}
             </div>
           </Tooltip>
         )}

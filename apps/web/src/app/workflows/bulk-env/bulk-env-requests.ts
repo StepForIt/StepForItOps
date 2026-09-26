@@ -1,4 +1,6 @@
+import { createTranslator, type useTranslations } from 'next-intl';
 import { apiPost } from '../../../lib/api';
+import frWorkflowsList from '../../../../messages/fr/workflowsList.json';
 import {
   BulkEnvAction,
   BulkPlanRow,
@@ -15,6 +17,17 @@ import {
  * page d'un workflow. Aucun geste n'a de version « de masse » côté API : un lot
  * porte ainsi exactement les gardes d'un workflow seul.
  */
+
+/** Les phrases du compte rendu d'un lot : elles finissent dans la colonne « Résultat » et dans les procédures. */
+export type BulkRequestsT = ReturnType<typeof useTranslations<'workflowsList.bulkEnv.requests'>>;
+
+/** Repli pour un appelant hors composant qui ne passe pas son traducteur : le français, langue par défaut. */
+const frRequests = createTranslator({
+  locale: 'fr',
+  // Seul l'espace de noms lu ici est chargé : le typage, lui, attend le catalogue entier.
+  messages: { workflowsList: frWorkflowsList } as unknown as IntlMessages,
+  namespace: 'workflowsList.bulkEnv.requests',
+}) as unknown as BulkRequestsT;
 
 export function fetchPlan(action: BulkEnvAction, familyKeys: string[], settings: BulkSettings) {
   return apiPost<BulkPlanRow[]>('/env-switcher/bulk/plan', {
@@ -39,6 +52,7 @@ export async function fetchPreview(
   action: BulkEnvAction,
   row: PlannedRow,
   settings: BulkSettings,
+  t: BulkRequestsT = frRequests,
 ): Promise<BulkPreview> {
   switch (action) {
     case 'promote':
@@ -64,7 +78,9 @@ export async function fetchPreview(
           sourceName: row.sourceName,
           changes: [
             `tag env:${row.targetEnv}`,
-            ...(settings.rename ? [`« ${row.sourceName} » suffixé par ${row.targetEnv.toUpperCase()}`] : []),
+            ...(settings.rename
+              ? [t('suffixed', { name: row.sourceName, env: row.targetEnv.toUpperCase() })]
+              : []),
           ],
           readiness: { status: 'ready', decisions: [], reasons: [] },
         },
@@ -108,6 +124,7 @@ export async function applyRow(
   action: BulkEnvAction,
   row: ReviewRow,
   settings: BulkSettings,
+  t: BulkRequestsT = frRequests,
 ): Promise<{
   summary: string;
   detail?: string;
@@ -131,22 +148,27 @@ export async function applyRow(
         result.publication?.status === 'paused'
           ? {
               id: result.publication.id,
-              reason: `publication en pause sur « ${refused?.name} » : ${refused?.reason ?? 'refus de n8n'}`,
+              reason: t('pausedOn', {
+                name: refused?.name ?? '',
+                reason: refused?.reason ?? t('n8nRefusal'),
+              }),
             }
           : undefined;
       const unpublished =
-        pausedRun?.reason ?? (result.publicationError && `publication à faire : ${result.publicationError}`);
+        pausedRun?.reason ??
+        (result.publicationError && t('publicationPending', { error: result.publicationError }));
       return {
         pausedRun,
         summary:
-          (result.mode === 'update' ? 'écrasé' : 'créé') + (result.version ? ` · v${result.version}` : ''),
+          (result.mode === 'update' ? t('overwritten') : t('created')) +
+          (result.version ? ` · v${result.version}` : ''),
         detail: [
-          `« ${result.targetName} »`,
+          t('quotedName', { name: result.targetName }),
           result.through?.length
-            ? `passé par ${result.through.map((s) => s.env.toUpperCase()).join(', ')}`
+            ? t('through', { envs: result.through.map((s) => s.env.toUpperCase()).join(', ') })
             : '',
           result.cascaded.length
-            ? `sous-workflows créés : ${result.cascaded.map((c) => c.targetName).join(', ')}`
+            ? t('subWorkflowsCreated', { names: result.cascaded.map((c) => c.targetName).join(', ') })
             : '',
         ]
           .filter(Boolean)
@@ -154,7 +176,9 @@ export async function applyRow(
         warning:
           [
             failed.length > 0
-              ? `nom n8n non mis à jour : ${failed.map((rename) => rename.error ?? rename.renamed).join(' ; ')}`
+              ? t('renameFailed', {
+                  errors: failed.map((rename) => rename.error ?? rename.renamed).join(' ; '),
+                })
               : '',
             unpublished || '',
           ]
@@ -172,13 +196,15 @@ export async function applyRow(
         switched.length > 0
           ? switched.map((row) => `${row.nodeName} : ${row.from} → ${row.to}`).join(' · ')
           : result.replacements > 0
-            ? `${result.replacements} base(s)/table(s) remplacée(s)`
+            ? t('replacements', { count: result.replacements })
             : '',
-        result.cascaded.length ? `copiés aussi : ${result.cascaded.map((c) => c.newName).join(', ')}` : '',
+        result.cascaded.length
+          ? t('alsoCopied', { names: result.cascaded.map((c) => c.newName).join(', ') })
+          : '',
       ]
         .filter(Boolean)
         .join(' · ');
-      return { summary: `copie « ${result.newName} »`, detail: detail || undefined };
+      return { summary: t('copy', { name: result.newName }), detail: detail || undefined };
     }
     case 'mark': {
       const result = await apiPost<MarkResult>(`/env-switcher/mark/${plan.sourceId}`, {
@@ -186,7 +212,7 @@ export async function applyRow(
         rename: settings.rename,
       });
       return {
-        summary: `tag env:${plan.targetEnv}` + (result.newName ? `, renommé « ${result.newName} »` : ''),
+        summary: `tag env:${plan.targetEnv}` + (result.newName ? t('renamed', { name: result.newName }) : ''),
       };
     }
   }

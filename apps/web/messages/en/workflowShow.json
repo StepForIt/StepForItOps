@@ -1,0 +1,399 @@
+{
+  "page": {
+    "verifySteps": {
+      "structure": "Structure",
+      "js": "JS",
+      "naming": "Naming",
+      "champs": "Fields"
+    },
+    "stepSkipped": "{label} (module disabled)",
+    "verifyDone": "{count} findings",
+    "verifyDoneSkipped": "{count} findings — skipped modules: {modules}",
+    "analysisNotRerun": "Analysis not rerun — {error}",
+    "docGenerated": "Documentation generated",
+    "noDocYet": "No doc yet — generate it",
+    "resyncMissing": "n8n no longer knows this workflow: marked as missing",
+    "resyncUpdated": "Workflow updated from n8n",
+    "upToDate": "Already up to date",
+    "alreadyPublished": "This workflow was already published.",
+    "published": "Workflow published: n8n now opens and runs it.",
+    "testDone": "Test finished: {status}",
+    "assistantTooltip": "AI assistant — on mobile, also opens with a swipe to the left",
+    "assistant": "AI assistant",
+    "reload": "Reload from n8n",
+    "active": "active",
+    "inactive": "inactive",
+    "versionTooltip": "Set by the last promotion.",
+    "version": "v{version}",
+    "plugged": "wired to: {env}",
+    "pluggedMixed": "wired to: {env} (mixed!)",
+    "aiCostLabel": "AI cost ({days} d)",
+    "aiCostTooltip": "{calls, plural, one {# LLM call} other {# LLM calls}} over {executions, plural, one {# execution} other {# executions}}",
+    "aiCostTooltipUnpriced": "{calls, plural, one {# LLM call} other {# LLM calls}} over {executions, plural, one {# execution} other {# executions}} — {unpriced} without pricing: minimum cost",
+    "timeSaved": {
+      "title": "Time saved per successful execution",
+      "placeholder": "{minutes} (estimated)",
+      "addon": "min / exec.",
+      "reestimate": "Re-estimate (AI)",
+      "why": "why?",
+      "label": "Time saved:",
+      "value": "{minutes} min / exec.",
+      "estimatedValue": "{minutes} min / exec. (estimated)",
+      "toFill": "not set"
+    },
+    "actions": {
+      "verify": "Check",
+      "publish": "Publish",
+      "publishHint": "No published version",
+      "checks": "Checks",
+      "checksCount": "Checks ({enabled}/{total})",
+      "checksHintInherited": "Checks to run — configuration inherited from: {source}",
+      "checksHint": "Choose which checks to run",
+      "remote": "Check remote tables",
+      "remoteHint": "Do the Airtable, NocoDB, Notion, Sheets and Postgres tables have the columns this workflow reads or writes?",
+      "naming": "Suggest names",
+      "envs": "Environments"
+    },
+    "unavailable": "{count, plural, one {# action unavailable} other {# actions unavailable}} on Make",
+    "tabs": {
+      "graph": "Diagram",
+      "nodes": "Nodes",
+      "nodesCount": "Nodes ({count})",
+      "samples": "Real data",
+      "findings": "Findings ({count})",
+      "doc": "Documentation",
+      "test": "Test"
+    },
+    "filters": {
+      "module": "Check type",
+      "severity": "Severity",
+      "structure": "Structure",
+      "js": "JS",
+      "naming": "Naming",
+      "fields": "Fields (executions)",
+      "remote": "Remote tables"
+    },
+    "doc": {
+      "saved": "Saved documentation",
+      "regenerate": "Regenerate (AI)",
+      "empty": "No documentation for this workflow yet",
+      "generate": "Generate documentation (AI)"
+    },
+    "test": {
+      "payloadPlaceholder": "JSON payload sent to the webhook, e.g. {example}",
+      "trigger": "Trigger via webhook",
+      "mockTooltip": "Replays the workflow with simulated responses: nothing is written or sent outside.",
+      "mock": "Test without sending anything"
+    },
+    "thisGroup": "this group"
+  },
+  "envLinks": {
+    "active": "active",
+    "inactive": "inactive",
+    "archived": "archived",
+    "missing": "deleted in n8n",
+    "noCopyTooltip": "No copy in {env} — click to copy this one there",
+    "toCreate": "to create",
+    "unknownEnv": "env ?"
+  },
+  "groupLinks": {
+    "label": "Group{count, plural, one {} other {s}}:",
+    "unreadable": "Unreadable group",
+    "here": "{name} (here)",
+    "openGroup": "Open group →"
+  },
+  "promoteChecks": {
+    "detail": "details",
+    "title": "Checks",
+    "noProblem": "No issues",
+    "othersOk": "{count, plural, one {# other check} other {# other checks}} without issues"
+  },
+  "promoteCheckList": {
+    "ok": "OK",
+    "remoteTable": "table “{name}”",
+    "quoted": "“{name}”",
+    "findings": {
+      "label": "Verification",
+      "errors": "{count, plural, one {# error} other {# errors}}",
+      "more": "… and {count} more.",
+      "open": "Open findings"
+    },
+    "tests": {
+      "label": "Tests",
+      "none": "no test cases",
+      "ok": "{passed}/{total} OK",
+      "okNeverRun": "{passed}/{total} OK · {neverRun} never run",
+      "failed": "{count} failing (Test tab)"
+    },
+    "subs": {
+      "label": "Sub-workflows",
+      "none": "none",
+      "ok": "{mapped}/{total} found",
+      "okCascade": "{mapped}/{total} found · {cascade} to create",
+      "missing": "not found: {names}",
+      "archived": "archived on target",
+      "mapped": "found",
+      "unchanged": "unchanged",
+      "dynamic": "id computed at runtime, to check",
+      "willCreate": "will be created",
+      "promoteFirst": "promote first",
+      "node": "— node {name}"
+    },
+    "remote": {
+      "label": "Remote tables",
+      "notChecked": "not checked",
+      "none": "none",
+      "missing": "missing on target: {names}",
+      "unverified": "{count} not verified"
+    },
+    "credentials": {
+      "label": "Credentials",
+      "missing": "missing on target: {names}"
+    },
+    "unmapped": {
+      "label": "Resources not switched",
+      "summary": "{names} — will stay on the same data",
+      "declare": "Declare a mapping"
+    }
+  },
+  "promoteChain": {
+    "backward": "{from} → {to}: reverse direction.",
+    "through": "The promotion will go through {skipped} before the target",
+    "skips": "This promotion skips {skipped}",
+    "throughCheckbox": "Go through the intermediate environments",
+    "onInstance": "on {instance}",
+    "toCreate": "to create",
+    "overwrite": "overwrite",
+    "confirmSkip": "Skip {skipped}",
+    "blocked": "Skipping not allowed (blocking chain)."
+  },
+  "promoteVersion": {
+    "levels": {
+      "major": {
+        "label": "Major",
+        "hint": "The contract changes, or something goes away"
+      },
+      "minor": {
+        "label": "Minor",
+        "hint": "The workflow does something more"
+      },
+      "patch": {
+        "label": "Patch",
+        "hint": "Tweak, fix — nothing new, nothing lost"
+      },
+      "none": {
+        "label": "Carry over",
+        "hint": "Nothing new to release: the source number is carried over as is"
+      }
+    },
+    "title": "Version",
+    "today": "Today",
+    "noneVersioned": "no versioned copy",
+    "after": "After promotion",
+    "keptAsIs": "number kept as is",
+    "nameInN8n": "Name in n8n",
+    "quotedName": "“{name}”",
+    "sourceAndTarget": "— source and target",
+    "level": "Level",
+    "byAi": "suggested by AI",
+    "byRule": "suggested by the rule"
+  },
+  "publishRun": {
+    "states": {
+      "pending": "to publish",
+      "done": "published",
+      "already": "already published",
+      "keptDraft": "draft in source",
+      "notApplicable": "ignored",
+      "failed": "refused",
+      "skipped": "skipped"
+    },
+    "pausedOn": "Publication paused on “{name}”: {reason}",
+    "n8nRefusal": "refused by n8n",
+    "published": "{count, plural, one {# workflow} other {# workflows}} published like the source",
+    "nothing": "Nothing to publish",
+    "refused": "“{name}” refused",
+    "resume": "Resume",
+    "skipTitle": "Skip this step?",
+    "skipDescription": "Workflows that call it will probably be refused in turn.",
+    "skip": "Skip",
+    "abandonTitle": "Abandon the publication?",
+    "abandon": "Abandon",
+    "paused": "Publication paused",
+    "running": "Publication in progress",
+    "modalTitle": "Publish like the source"
+  },
+  "mockTest": {
+    "title": "Test without sending anything",
+    "create": "Create the [TEST] copy",
+    "created": "[TEST] copy created",
+    "open": "Open",
+    "info": "Creates a [TEST] copy; checked nodes don't send anything.",
+    "nothing": "No node leaves the system: nothing to stub.",
+    "stubTooltip": "The call goes to an empty workflow, whose execution shows what would have been sent.",
+    "reroute": "Reroute {count, plural, one {# sub-workflow} other {# sub-workflows}} to a stub"
+  },
+  "testCases": {
+    "diff": {
+      "value": "different value",
+      "type": "different type",
+      "missing": "field gone",
+      "extra": "extra field",
+      "count": "item count",
+      "normalization": "comparison artifact",
+      "unknown": "difference"
+    },
+    "status": {
+      "passed": {
+        "label": "matches",
+        "hint": "The replay produced the same output as the reference (ids and dates neutralized)."
+      },
+      "failed": {
+        "label": "different output",
+        "hint": "The workflow ran to the end, but its output no longer matches the reference: details are below the row."
+      },
+      "error": {
+        "label": "replay failed",
+        "hint": "Nothing could be compared: missing webhook, inactive workflow, or no execution triggered."
+      }
+    },
+    "created": "Test case created: this execution is now the reference.",
+    "detailBelow": "Details below the row.",
+    "passedMsg": "Matches — {said}",
+    "failedMsg": "Different output — {said}",
+    "errorMsg": "Replay failed — {said}",
+    "runAllResult": "{passed}/{total} matching",
+    "title": "Saved test cases",
+    "runAllTooltip": "Replays each case: the webhook is really called, an execution runs on n8n.",
+    "runAll": "Replay all ({count})",
+    "selectPlaceholder": "Pick a recent execution as reference…",
+    "create": "Make it a test case",
+    "empty": "No test cases — save a reference execution above.",
+    "replayExecution": "n8n execution of the replay: #{id}",
+    "inOutput": "in the output: <code>{path}</code>",
+    "columnCase": "Case",
+    "columnLastRun": "Last replay",
+    "neverRun": "never run",
+    "replayTooltip": "Replay (really calls the webhook)",
+    "deleteConfirm": "Delete this test case?"
+  },
+  "envAssistant": {
+    "choices": {
+      "switchTitle": "Rewire this workflow to another env",
+      "switchDetail": "Replaces the ids in place.",
+      "switchBlocked": "no mapping declared",
+      "copyTitle": "Copy to another env",
+      "copyDetail": "Inactive copy “… - {env}”.",
+      "markTitle": "Just declare its env",
+      "markDetail": "Tag <code>env:{env}</code> + name suffix.",
+      "groupTitle": "Handle the whole group",
+      "groupDetail": "The whole group {names}.",
+      "groupBlocked": "not in any group",
+      "promoteTitleTo": "Promote to {env}",
+      "promoteTitle": "Promote this work",
+      "promoteDetail": "Overwrites or creates the twin in another env."
+    },
+    "switched": "Rewired to {env}",
+    "copyCreated": "Copy “{name}” created.",
+    "pinsLost": "Not pinned: {names} — they will really send.",
+    "subsMissing": "No {env} copy: {names} — calls the original.",
+    "marked": "Declared env:{env}",
+    "markedRenamed": "Declared env:{env} and renamed “{name}”",
+    "actions": {
+      "group": "Open group duplication",
+      "switch": "Rewire to {env}",
+      "copy": "Create the {env} copy",
+      "mark": "Declare env:{env}"
+    },
+    "title": "Environments",
+    "question": "What do you want to do with “{name}”?",
+    "unavailable": "Unavailable: {reason}.",
+    "declareMapping": "Declare a mapping",
+    "createGroup": "Create a group",
+    "addInstance": "Add an instance",
+    "whichGroup": "Which group to duplicate?",
+    "switchQuestion": "Which env should this workflow be rewired to?",
+    "copyQuestion": "Copy to which env?",
+    "markQuestion": "What is this workflow's env?",
+    "activeWarning": "Active: switches to {env} immediately",
+    "understood": "I understand, rewire anyway",
+    "nothingToReplace": "Nothing to replace for {env}.",
+    "cascade": "Copy missing sub-workflows",
+    "pin": "Stub {count, plural, one {# outgoing node} other {# outgoing nodes}}",
+    "rename": "Also rename to “{name} - {env}”",
+    "alreadyTagged": "already env:{env}",
+    "unmapped": "{count, plural, one {# resource} other {# resources}} without mapping"
+  },
+  "promote": {
+    "diff": {
+      "added": "added",
+      "removed": "removed",
+      "modified": "modified",
+      "renamed": "renamed"
+    },
+    "diffCount": {
+      "added": "{count} added",
+      "removed": "{count} removed",
+      "modified": "{count} modified",
+      "renamed": "{count} renamed"
+    },
+    "previewRefreshed": "Preview refreshed",
+    "quoted": "“{name}”",
+    "result": {
+      "created": "“{name}” created on the target instance{version} (inactive, {count} replacements){rest}",
+      "updated": "“{name}” updated on the target instance{version} ({count} replacements){rest}",
+      "version": " as {version}",
+      "traversed": " — went through {envs}",
+      "cascaded": " — {count, plural, one {# sub-workflow} other {# sub-workflows}} created along the way: {names}",
+      "renamed": " — n8n name updated ({names})",
+      "noMarker": " — n8n name unchanged: no version marker (1.2.3) in the name",
+      "freed": " — URL freed: {moves}",
+      "moved": "“{name}” moved to /{to}",
+      "calleesPublished": "Sub-workflows published: {names}",
+      "manualCallee": "“{name}” still needs publishing in n8n: {reason}",
+      "renameFailed": "“{name}” should have become “{renamed}” in n8n: {error}. The version is set in the platform; the name must be fixed by hand.",
+      "n8nRefusal": "refused by n8n",
+      "publicationError": "Publication to do by hand: {error}"
+    },
+    "title": "Promote",
+    "refreshPreview": "Refresh preview",
+    "overwrite": "Overwrite on target",
+    "promote": "Promote",
+    "targetInstance": "Target instance",
+    "sameInstance": "{name} (same instance)",
+    "envRequired": "Target env (required)",
+    "envOptional": "Target env (optional)",
+    "noEnv": "None — copy as is",
+    "cascade": "Also create the sub-workflows missing on the target: {names}",
+    "publishLikeSource": "Publish like the source (sub-workflows first)",
+    "target": "Target",
+    "onInstance": "on {instance}",
+    "willCreate": "will be created (inactive)",
+    "willReplace": "will be replaced",
+    "active": "ACTIVE",
+    "archived": "ARCHIVED",
+    "data": "{env} data",
+    "replacedCount": "{count, plural, one {# base/table} other {# bases/tables}} replaced by their {env} equivalent",
+    "nodesVsTarget": "Nodes vs target",
+    "hide": "hide",
+    "which": "which ones?",
+    "identical": "identical — nothing changes",
+    "blocked": "Promotion blocked: {blockers}",
+    "force": "Force anyway, knowingly",
+    "notForceable": "This block cannot be forced: n8n refuses to write to an archived workflow.",
+    "calleesTitle": "Draft sub-workflows on the target",
+    "calleesExplain": "n8n refuses to activate a workflow until its sub-workflows are published.",
+    "willPublish": "“{name}”: will be published",
+    "manual": "“{name}”: to publish by hand — {reason}",
+    "publishCallees": "Publish these sub-workflows before promoting",
+    "clashTitle": "URL already served on the target",
+    "holderActive": "active",
+    "holderInactive": "inactive",
+    "clashMove": "“{node}”: <code>/{url}</code> is held by “{holder}” ({state}) → <code>/{move}</code>",
+    "clashFree": "“{node}”: <code>/{url}</code> is held by “{holder}” ({state}) — to free in n8n",
+    "moveClashing": "Free these URLs during the promotion",
+    "webhooksTitle": "Webhook URLs",
+    "preserved": "“{node}”: URL unchanged (<code>/{to}</code>)",
+    "changed": "“{node}”: new URL <code>/{to}</code>"
+  }
+}

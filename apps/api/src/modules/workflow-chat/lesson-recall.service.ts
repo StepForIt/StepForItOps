@@ -87,7 +87,7 @@ export class LessonRecallService {
       };
     } catch (error) {
       // Les leçons sont un bonus : leur absence ne doit jamais couper une conversation.
-      this.logger.warn(`Rappel des leçons impossible : ${(error as Error).message}`);
+      this.logger.warn(`Lesson recall failed: ${(error as Error).message}`);
       return { brief: null, question: null };
     }
   }
@@ -106,13 +106,13 @@ export class LessonRecallService {
     author?: string | null;
   }): Promise<{ recorded: boolean; reason?: string }> {
     if (!(await this.registry.isEnabled('assistant-learning'))) {
-      return { recorded: false, reason: "le module d'apprentissage est désactivé" };
+      return { recorded: false, reason: 'the learning module is disabled' };
     }
     const pending = await this.prisma.assistantCorrection.findFirst({
       where: { workflowId: input.workflowId, status: 'pending', question: { not: null } },
       orderBy: { createdAt: 'desc' },
     });
-    if (!pending) return { recorded: false, reason: 'aucune correction en attente sur ce workflow' };
+    if (!pending) return { recorded: false, reason: 'no pending correction on this workflow' };
 
     this.bus.emit(EVENTS.assistantCorrectionAnswered, {
       correctionId: pending.id,

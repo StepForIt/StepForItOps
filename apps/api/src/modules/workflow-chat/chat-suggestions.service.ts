@@ -11,23 +11,6 @@ const PHRASE_MAX = 160;
 const HISTORY_LIMIT = 60;
 
 /**
- * Les demandes courantes de la maison. Elles amorcent la complétion sur un
- * workflow dont personne n'a encore rien demandé : sans elles, l'aide à la
- * frappe n'existerait qu'une fois la conversation vieille, c'est-à-dire quand on
- * n'en a plus besoin.
- */
-const COMMON_PHRASES = [
-  'Explique-moi ce que fait ce workflow, étape par étape.',
-  'Quels sont les points de fragilité (erreurs non gérées, données manquantes) ?',
-  'Ajoute une note explicative sur chaque nœud sans nom clair.',
-  'Ajoute un retry et un timeout sur les appels HTTP.',
-  'Pourquoi ce workflow échoue-t-il en production ?',
-  'Renomme les nœuds pour que leur rôle soit lisible.',
-  'Que se passe-t-il si la réponse est vide ?',
-  'Propose une gestion d’erreur pour ce nœud : ',
-];
-
-/**
  * De quoi compléter la frappe dans la saisie du chat.
  *
  * Lu du miroir local et jamais de n8n : c'est un confort de saisie, pas un
@@ -60,9 +43,8 @@ export class ChatSuggestionsService {
       .filter((phrase) => phrase.length > 0 && phrase.length <= PHRASE_MAX);
 
     return {
-      // L'historique d'abord : à égalité de préfixe, ce que l'équipe écrit
-      // vraiment prime sur le catalogue, et le dédoublonnage garde le premier.
-      phrases: [...new Set([...history, ...COMMON_PHRASES])],
+      // L'historique seul : le catalogue des demandes courantes vit côté web, dans la langue affichée.
+      phrases: [...new Set(history)],
       nodeNames: [...new Set(itemNames(workflow.platform, raw).filter(Boolean))],
     };
   }

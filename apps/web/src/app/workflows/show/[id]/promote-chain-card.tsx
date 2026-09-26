@@ -3,6 +3,7 @@
 import React from 'react';
 import { Alert, Checkbox, Space, Tag, Typography } from 'antd';
 import { ArrowRightOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { useEnvColor, useEnvLabel } from '../../../../lib/envs';
 
 export interface PromoteChainGate {
@@ -53,6 +54,7 @@ export function PromoteChainCard({
   confirmSkip: boolean;
   onConfirmSkip: (value: boolean) => void;
 }) {
+  const t = useTranslations('workflowShow.promoteChain');
   const envColor = useEnvColor();
   const envLabel = useEnvLabel();
   // Le chemin n'est pas situable (env indéterminé, ou hors chaîne) : rien à dire.
@@ -62,7 +64,7 @@ export function PromoteChainCard({
       <Alert
         type="warning"
         showIcon
-        message={`${envLabel(gate.from)} → ${envLabel(gate.to)} : sens inverse.`}
+        message={t('backward', { from: envLabel(gate.from), to: envLabel(gate.to) })}
       />
     );
   }
@@ -74,34 +76,36 @@ export function PromoteChainCard({
     <Alert
       type={through ? 'info' : blocked ? 'error' : 'warning'}
       showIcon
-      message={
-        through ? `La promotion passera par ${skipped} avant la cible` : `Cette promotion saute ${skipped}`
-      }
+      message={through ? t('through', { skipped }) : t('skips', { skipped })}
       description={
         <Space direction="vertical" size={8} style={{ width: '100%' }}>
           <div>
             <EnvPath envs={gate.chain} highlight={[gate.from ?? '', ...gate.skipped, gate.to ?? '']} />
           </div>
           <Checkbox checked={through} onChange={(event) => onThrough(event.target.checked)}>
-            Passer par les environnements intermédiaires
+            {t('throughCheckbox')}
           </Checkbox>
           {through && (
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {gate.steps.map((step) => (
                 <li key={step.env}>
                   <Tag color={envColor(step.env)}>{envLabel(step.env)}</Tag>
-                  sur {step.instanceName}{' '}
-                  {step.creates ? <Tag color="green">à créer</Tag> : <Tag color="orange">écrasement</Tag>}
+                  {t('onInstance', { instance: step.instanceName })}{' '}
+                  {step.creates ? (
+                    <Tag color="green">{t('toCreate')}</Tag>
+                  ) : (
+                    <Tag color="orange">{t('overwrite')}</Tag>
+                  )}
                 </li>
               ))}
             </ul>
           )}
           {!through && gate.mode === 'warn' && (
             <Checkbox checked={confirmSkip} onChange={(event) => onConfirmSkip(event.target.checked)}>
-              Sauter {skipped}
+              {t('confirmSkip', { skipped })}
             </Checkbox>
           )}
-          {blocked && <Typography.Text type="danger">Saut interdit (chaîne bloquante).</Typography.Text>}
+          {blocked && <Typography.Text type="danger">{t('blocked')}</Typography.Text>}
         </Space>
       }
     />

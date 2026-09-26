@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { EVENTS, MONITOR_PORT, MonitorPort } from '@nwm/core';
+import { EVENTS, MONITOR_PORT, MonitorPort, msg } from '@nwm/core';
 import { Monitor } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
@@ -18,7 +18,7 @@ export class HeartbeatService {
   async beat(token: string, status: 'up' | 'down' = 'up', message?: string): Promise<Monitor> {
     const monitor = await this.prisma.monitor.findUnique({ where: { token } });
     if (!monitor || !monitor.enabled || monitor.kind !== 'heartbeat') {
-      throw new NotFoundException('Monitor heartbeat introuvable ou désactivé');
+      throw new NotFoundException(msg('ops.heartbeatNotFound'));
     }
     const updated = await this.prisma.monitor.update({
       where: { id: monitor.id },
@@ -28,7 +28,7 @@ export class HeartbeatService {
       try {
         await this.monitorPort.push(monitor.kumaPushUrl, status, message);
       } catch (error) {
-        this.logger.warn(`Push Kuma KO pour ${monitor.name} : ${(error as Error).message}`);
+        this.logger.warn(`Kuma push failed for ${monitor.name}: ${(error as Error).message}`);
       }
     }
     this.eventBus.emit(EVENTS.monitorBeat, { monitorId: monitor.id, status });

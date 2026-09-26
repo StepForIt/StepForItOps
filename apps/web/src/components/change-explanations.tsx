@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Typography } from 'antd';
+import { BRAND } from '../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 export interface ChangeExplanation {
   text: string;
@@ -15,15 +17,16 @@ export interface ChangeExplanation {
  * c'est ce qu'on veut repérer sans tout lire.
  */
 export function ChangeExplanations({ explanations }: { explanations: ChangeExplanation[] }) {
+  const t = useTranslations('chat.diff');
   if (explanations.length === 0) {
-    return <Typography.Text type="secondary">Sans effet sur l&apos;exécution</Typography.Text>;
+    return <Typography.Text type="secondary">{t('noRuntimeEffect')}</Typography.Text>;
   }
   return (
     <ul style={{ margin: 0, paddingLeft: 18 }}>
       {explanations.map((explanation, index) => (
         <li
           key={`${explanation.path ?? ''}:${index}`}
-          style={{ marginBottom: 2, color: explanation.level === 'warning' ? '#ad4e00' : undefined }}
+          style={{ marginBottom: 2, color: explanation.level === 'warning' ? BRAND.warning : undefined }}
         >
           {explanation.text}
         </li>

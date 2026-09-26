@@ -50,7 +50,7 @@ export class KumaAdminAdapter implements MonitorAdminPort {
     const credentials = await this.credentialsProvider();
     if (!credentials) {
       throw new Error(
-        'Uptime Kuma non configuré : renseigner les réglages Kuma ou KUMA_URL/KUMA_USERNAME/KUMA_PASSWORD',
+        'Uptime Kuma is not configured: fill in the Kuma settings or KUMA_URL/KUMA_USERNAME/KUMA_PASSWORD',
       );
     }
     return credentials;
@@ -83,7 +83,7 @@ export class KumaAdminAdapter implements MonitorAdminPort {
       }),
     );
     if (ack.monitorID === undefined) {
-      throw new Error('Uptime Kuma : monitorID absent de la réponse');
+      throw new Error('Uptime Kuma: monitorID missing from the response');
     }
     return {
       externalId: ack.monitorID,

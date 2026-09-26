@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { EVENTS, VersionCreatedEvent, WorkflowSyncedEvent } from '@nwm/core';
+import { EVENTS, VersionCreatedEvent, WorkflowSyncedEvent, msg } from '@nwm/core';
 import { WorkflowVersion } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EnvChainGuardService } from '../../infra/settings/env-chain-guard.service';
@@ -58,7 +58,7 @@ export class VersioningService {
       hash,
     };
     this.eventBus.emit(EVENTS.versionCreated, event);
-    this.logger.log(`Version ${version.id} créée pour "${workflow.name}" (${origin})`);
+    this.logger.log(`Version ${version.id} created for "${workflow.name}" (${origin})`);
     return version;
   }
 
@@ -87,7 +87,7 @@ export class VersioningService {
 
   async getVersion(id: string): Promise<WorkflowVersion> {
     const version = await this.prisma.workflowVersion.findUnique({ where: { id } });
-    if (!version) throw new NotFoundException(`Version ${id} introuvable`);
+    if (!version) throw new NotFoundException(msg('platform.versionNotFound', { id }));
     return version;
   }
 
@@ -108,7 +108,13 @@ export class VersioningService {
     const workflow = await this.prisma.workflow.findUniqueOrThrow({ where: { id: version.workflowId } });
     const { port, config } = await this.instances.getPlatformConfig(workflow.instanceId);
     await port.updateWorkflow(config, workflow.externalId, version.raw);
-    await this.createVersion(workflow.id, version.raw, version.hash, 'restore', `Restore de ${versionId}`);
+    await this.createVersion(
+      workflow.id,
+      version.raw,
+      version.hash,
+      'restore',
+      msg('platform.versionRestoreMessage', { versionId }),
+    );
     return { ok: true };
   }
 }

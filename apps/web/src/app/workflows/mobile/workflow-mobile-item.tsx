@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Descriptions, Space, Tag, Typography } from 'antd';
 import type { DescriptionsProps } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { WorkflowActions } from '../workflow-actions';
 import { WorkflowNameCell } from '../workflow-name-cell';
 import { DivergenceTag } from '../divergence-tag';
@@ -39,20 +40,23 @@ export function WorkflowMobileItem({
   /** Une action de ligne est passée : la liste se recharge. */
   onChange: () => void;
 }) {
+  const t = useTranslations('workflowsList.shared');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const envColor = useEnvColor();
   const none = <Typography.Text type="secondary">—</Typography.Text>;
   type Item = NonNullable<DescriptionsProps['items']>[number];
   const items = (
     [
-      { key: 'name', label: 'Nom', children: <WorkflowNameCell workflow={workflow} /> },
+      { key: 'name', label: tCommon('columns.name'), children: <WorkflowNameCell workflow={workflow} /> },
       showInstance && {
         key: 'instance',
-        label: 'Instance',
-        children: <Tag color="geekblue">{instanceName(workflow.instanceId)}</Tag>,
+        label: tCommon('columns.instance'),
+        children: <Tag color="blue">{instanceName(workflow.instanceId)}</Tag>,
       },
       {
         key: 'divergence',
-        label: 'Écart prod',
+        label: t('columns.divergence'),
         children: workflow.divergence ? (
           <DivergenceTag workflowId={workflow.id} divergence={workflow.divergence} />
         ) : (
@@ -61,12 +65,12 @@ export function WorkflowMobileItem({
       },
       {
         key: 'active',
-        label: 'Statut',
-        children: workflow.active ? <Tag color="green">actif</Tag> : <Tag>inactif</Tag>,
+        label: tCommon('columns.status'),
+        children: workflow.active ? <Tag color="green">{t('active')}</Tag> : <Tag>{t('inactive')}</Tag>,
       },
       showGroups && {
         key: 'groups',
-        label: 'Groupe',
+        label: t('columns.group'),
         children:
           workflow.groups && workflow.groups.length > 0 ? (
             <Space size={4} wrap>
@@ -82,7 +86,7 @@ export function WorkflowMobileItem({
       },
       workflow.tags.length > 0 && {
         key: 'tags',
-        label: 'Tags',
+        label: t('columns.tags'),
         children: (
           <Space size={4} wrap>
             {workflow.tags.map((tag) => (
@@ -93,15 +97,15 @@ export function WorkflowMobileItem({
       },
       workflow.monitorCount > 0 && {
         key: 'monitoring',
-        label: 'Monitoring',
-        children: (
-          <Tag color="green">
-            {workflow.monitorCount} sonde{workflow.monitorCount > 1 ? 's' : ''}
-          </Tag>
-        ),
+        label: t('columns.monitoring'),
+        children: <Tag color="green">{t('probes', { count: workflow.monitorCount })}</Tag>,
       },
-      { key: 'upstream', label: 'Modifié (n8n)', children: formatDate(workflow.upstreamUpdatedAt) },
-      { key: 'synced', label: 'Synchronisé', children: formatDate(workflow.updatedAt) },
+      {
+        key: 'upstream',
+        label: t('columns.upstreamUpdated'),
+        children: formatDate(workflow.upstreamUpdatedAt, locale),
+      },
+      { key: 'synced', label: t('columns.synced'), children: formatDate(workflow.updatedAt, locale) },
     ] as Array<Item | false>
   ).filter((item): item is Item => Boolean(item));
 

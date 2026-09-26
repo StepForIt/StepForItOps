@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Button, Form, Input, Select, Space, Tag, Typography } from 'antd';
 import type { FormProps } from 'antd';
 import { DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { DiscoveredItem, ResourceDiscoveryBrowser } from './resource-discovery-browser';
 import { EnvDefinition, useEnvs } from '../lib/envs';
 
@@ -73,6 +74,7 @@ function collect(rows: MappingRow[], field: 'v' | 'l'): EnvMap {
 
 /** Bouton + drawer de découverte : injecte les ids trouvés sur n8n dans les lignes du mapping. */
 function DiscoveryPicker() {
+  const t = useTranslations('settings.mappingForm');
   const form = Form.useFormInstance();
   const provider = Form.useWatch<string | undefined>('provider', form);
   const [open, setOpen] = useState(false);
@@ -98,7 +100,7 @@ function DiscoveryPicker() {
   return (
     <>
       <Button icon={<SearchOutlined />} onClick={() => setOpen(true)}>
-        Parcourir depuis n8n
+        {t('browse')}
       </Button>
       <ResourceDiscoveryBrowser
         open={open}
@@ -112,6 +114,7 @@ function DiscoveryPicker() {
 
 /** Formulaire mapping : une ligne par ressource à basculer, une colonne par env déclaré. */
 export function MappingForm({ formProps }: { formProps: FormProps }) {
+  const t = useTranslations('settings.mappingForm');
   const { envs } = useEnvs();
   const initialValues = (formProps.initialValues?.values ?? undefined) as EnvMap | undefined;
   // Un env retiré des réglages dont le mapping porte encore des valeurs : la colonne
@@ -120,7 +123,7 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
     .filter((env) => !envs.some((declared) => declared.id === env))
     .map((env) => ({
       id: env,
-      label: `${env.toUpperCase()} (non déclaré)`,
+      label: t('undeclaredEnv', { env: env.toUpperCase() }),
       color: 'default',
       monitored: false,
       canonicalWebhookPath: false,
@@ -147,7 +150,12 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
       }}
     >
       <Space size="large" wrap>
-        <Form.Item label="Provider" name="provider" rules={[{ required: true }]} style={{ minWidth: 200 }}>
+        <Form.Item
+          label={t('provider')}
+          name="provider"
+          rules={[{ required: true }]}
+          style={{ minWidth: 200 }}
+        >
           <Select
             options={['airtable', 'google-sheets', 'notion', 'nocodb', 'postgres', 'credential'].map((p) => ({
               value: p,
@@ -156,29 +164,25 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
           />
         </Form.Item>
         <Form.Item
-          label="Nom logique"
+          label={t('logicalName')}
           name="logicalName"
           rules={[{ required: true }]}
           style={{ minWidth: 260 }}
         >
-          <Input placeholder="CRM principal" />
+          <Input placeholder={t('logicalNamePlaceholder')} />
         </Form.Item>
-        <Form.Item label="Découverte" colon={false}>
+        <Form.Item label={t('discovery')} colon={false}>
           <DiscoveryPicker />
         </Form.Item>
       </Space>
 
-      <Typography.Paragraph type="secondary">
-        Une ligne par identifiant à basculer (base, table, credential…). Laisse vide les envs non concernés —
-        le remplacement se fait entre les valeurs d&apos;une même ligne. Le nom de la ligne ne sert qu&apos;à
-        s&apos;y retrouver : rien dans n8n ne s&apos;y compare, et laissé vide il est rempli tout seul.
-      </Typography.Paragraph>
+      <Typography.Paragraph type="secondary">{t('help')}</Typography.Paragraph>
 
       <Form.List name="rows">
         {(fields, { add, remove }) => (
           <>
             <Space style={{ marginBottom: 4, fontWeight: 600 }}>
-              <span style={{ display: 'inline-block', width: 180 }}>Nom de la ligne</span>
+              <span style={{ display: 'inline-block', width: 180 }}>{t('rowName')}</span>
               {columns.map((env) => (
                 <span key={env.id} style={{ display: 'inline-block', width: 220 }}>
                   <Tag color={env.color}>{env.label}</Tag>
@@ -190,12 +194,12 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
                 {/* Grille dense sous un en-tête de colonnes : le libellé de chaque
                     input est porté par aria-label, la colonne le rappelant à l'œil. */}
                 <Form.Item name={[field.name, 'key']}>
-                  <Input aria-label="Nom de la ligne" placeholder="facultatif" style={{ width: 180 }} />
+                  <Input aria-label={t('rowName')} placeholder={t('optional')} style={{ width: 180 }} />
                 </Form.Item>
                 {columns.map((env) => (
                   <Form.Item key={env.id} name={[field.name, 'v', env.id]}>
                     <Input
-                      aria-label={`Identifiant ${env.label}`}
+                      aria-label={t('identifier', { env: env.label })}
                       placeholder={`app${env.id.toUpperCase()}…`}
                       style={{ width: 220 }}
                     />
@@ -205,7 +209,7 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
               </Space>
             ))}
             <Button icon={<PlusOutlined />} onClick={() => add({ key: '' })}>
-              Ajouter un champ
+              {t('addField')}
             </Button>
           </>
         )}

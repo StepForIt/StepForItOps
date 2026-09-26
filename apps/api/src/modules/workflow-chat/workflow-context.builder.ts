@@ -131,7 +131,7 @@ export function buildChatContext(
     if (!biggest) break;
     total -= sizeOf(biggest);
     delete biggest.parameters;
-    biggest.parametersOmitted = 'paramètres non fournis (workflow trop volumineux)';
+    biggest.parametersOmitted = 'parameters not provided (workflow too large)';
     truncatedNodes.push(biggest.name);
   }
 

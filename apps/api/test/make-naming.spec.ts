@@ -22,6 +22,7 @@ import { CheckProfilesService } from '../src/infra/check-profiles/check-profiles
 import { recordingBus } from './helpers/fakes';
 import { WorkflowLockService } from '../src/infra/workflow-lock/workflow-lock.service';
 import { resetDb, testPrisma } from './helpers/db';
+import { PlatformLocale } from '../src/infra/i18n/platform-locale';
 
 /**
  * Le naming d'un scénario Make, contre une vraie base.
@@ -118,6 +119,7 @@ function build(opts: { port: RecordingPort; ai?: Partial<AiPort>; synced?: strin
     ai,
     {} as N8nApiPort,
     locks,
+    { run: (fn: () => unknown) => fn() } as unknown as PlatformLocale,
   );
 }
 

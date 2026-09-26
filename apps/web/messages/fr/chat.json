@@ -1,0 +1,302 @@
+{
+  "attachments": {
+    "size": {
+      "bytes": "{size} o",
+      "kilobytes": "{size} ko",
+      "megabytes": "{size} Mo"
+    },
+    "errors": {
+      "readFailed": "Lecture de {name} impossible",
+      "imageFormat": "{name} : format d'image non supporté (PNG, JPEG, WebP ou GIF).",
+      "imageTooLarge": "{name} : {size} Mo, maximum 5 Mo.",
+      "tooManyImages": "{max} images au maximum par message.",
+      "fileTooLarge": "{name} : {size}, maximum {max}.",
+      "emptyFile": "{name} : fichier vide.",
+      "tooManyFiles": "{max} fichiers au maximum par message.",
+      "filesTooHeavy": "Fichiers trop lourds au total : maximum {max} par message.",
+      "unsupported": "{name} : seuls les images et les fichiers texte sont acceptés."
+    },
+    "defaultImageName": "capture",
+    "defaultFileName": "fichier.txt",
+    "remove": "Retirer",
+    "imagesFull": "{max}/{max} images",
+    "filesFull": "{max}/{max} fichiers",
+    "attachedImageAlt": "capture jointe"
+  },
+  "checks": {
+    "title": "Contrôles à jouer",
+    "scopeAuto": "Portée : décidée automatiquement",
+    "saveFor": "Enregistrer pour {target}",
+    "checkAll": "Tout cocher",
+    "run": "Lancer la vérification ({count})",
+    "inheritedFrom": "Configuration héritée de : {source}",
+    "scopeTooltip": "Le périmètre le plus précis l’emporte.",
+    "mode": {
+      "simple": "Simple",
+      "advanced": "Avancé"
+    },
+    "costlyTooltip": "Contrôle coûteux (appel IA ou lecture des exécutions n8n)",
+    "costly": "coûteux",
+    "saved": {
+      "hide": "Masquer les configurations enregistrées",
+      "show": "Voir les configurations enregistrées",
+      "none": "Aucune configuration enregistrée.",
+      "row": "{label} — {count} contrôles actifs",
+      "removeConfirm": "Retirer « {label} » ?",
+      "removeDescription": "Ce périmètre repassera sur la configuration héritée : les contrôles décochés ici se rejoueront.",
+      "remove": "Retirer"
+    },
+    "ask": {
+      "title": "Appliquer cette sélection à…",
+      "justOnce": "Juste pour cette fois",
+      "suggested": "suggéré"
+    }
+  },
+  "commonPhrases": {
+    "explain": "Explique-moi ce que fait ce workflow, étape par étape.",
+    "fragility": "Quels sont les points de fragilité (erreurs non gérées, données manquantes) ?",
+    "annotate": "Ajoute une note explicative sur chaque nœud sans nom clair.",
+    "retryTimeout": "Ajoute un retry et un timeout sur les appels HTTP.",
+    "whyFailing": "Pourquoi ce workflow échoue-t-il en production ?",
+    "rename": "Renomme les nœuds pour que leur rôle soit lisible.",
+    "emptyResponse": "Que se passe-t-il si la réponse est vide ?",
+    "errorHandling": "Propose une gestion d’erreur pour ce nœud : "
+  },
+  "diff": {
+    "noRuntimeEffect": "Sans effet sur l'exécution",
+    "noDifference": "Aucune différence.",
+    "unchangedLines": "{count, plural, one {# ligne inchangée} other {# lignes inchangées}}",
+    "change": {
+      "added": "ajouté",
+      "removed": "supprimé",
+      "modified": "modifié",
+      "renamed": "renommé"
+    },
+    "connections": {
+      "tag": "connexions",
+      "title": "Câblage du workflow"
+    },
+    "settings": {
+      "tag": "réglages",
+      "title": "Settings"
+    },
+    "counts": {
+      "first": {
+        "modified": "{count, plural, one {# nœud modifié} other {# nœuds modifiés}}",
+        "added": "{count, plural, one {# nœud ajouté} other {# nœuds ajoutés}}",
+        "renamed": "{count, plural, one {# nœud renommé} other {# nœuds renommés}}",
+        "removed": "{count, plural, one {# nœud supprimé} other {# nœuds supprimés}}"
+      },
+      "rest": {
+        "modified": "{count, plural, one {# modifié} other {# modifiés}}",
+        "added": "{count, plural, one {# ajouté} other {# ajoutés}}",
+        "renamed": "{count, plural, one {# renommé} other {# renommés}}",
+        "removed": "{count, plural, one {# supprimé} other {# supprimés}}"
+      }
+    },
+    "tabs": {
+      "plain": "Ce que ça change",
+      "json": "Diff JSON"
+    }
+  },
+  "drawer": {
+    "discard": {
+      "title": "Abandonner le message en cours ?",
+      "content": "Le texte saisi et les pièces jointes non envoyées seront perdus.",
+      "ok": "Abandonner",
+      "cancel": "Continuer à écrire"
+    },
+    "titleWithName": "Assistant IA — {name}",
+    "title": "Assistant IA"
+  },
+  "markdown": {
+    "detailsSummary": "Détail"
+  },
+  "memory": {
+    "notStored": "Non retenu",
+    "title": "{count, plural, =0 {Mémoire} other {Mémoire (#)}}",
+    "forgetConfirm": "Oublier ce fait ?",
+    "forget": "Oublier",
+    "forgetTooltip": "Oublier ce fait",
+    "placeholder": "Une contrainte, une règle métier, un nœud à ne pas toucher…",
+    "remember": "Retenir"
+  },
+  "panel": {
+    "stopFailed": "Le tour n’a pas pu être interrompu : il va terminer et répondre.",
+    "exportFailed": "Échec de l'export : {error}",
+    "unavailable": {
+      "title": "Assistant IA indisponible",
+      "description": "Le module <b>Assistant IA workflow</b> est peut-être désactivé (page Modules), ou la clé IA n'est pas renseignée. Détail : {detail}"
+    },
+    "sessionBadge": "{count, plural, =0 {} one {} other {# }}{state, select, pending {à revoir} stale {obsolète} applied {appliquée} discarded {refusée} other {{state}}}",
+    "proposalTag": "modification {state, select, pending {à revoir} stale {obsolète} applied {appliquée} discarded {refusée} other {{state}}}",
+    "proposalHint": {
+      "pending": "Modification proposée : rien n’est écrit tant que le diff n’est pas appliqué.",
+      "stale": "Workflow modifié depuis : redemande-la.",
+      "applied": "Appliquée. Le diff reste consultable.",
+      "discarded": "Refusée : rien n’a été écrit."
+    },
+    "newSession": "Nouvelle",
+    "export": {
+      "session": "Cette conversation",
+      "all": "Toutes les conversations du workflow",
+      "button": "Exporter"
+    },
+    "deleteSession": "Supprimer cette conversation ?",
+    "unanswered": "Envoyée le {date}, sans réponse.",
+    "retry": "Relancer",
+    "leftovers": {
+      "title": "{count, plural, one {Un sous-workflow créé ici est resté vide} other {# sous-workflows créés ici sont restés vides}}",
+      "confirmTitle": "Supprimer ce workflow dans n8n ?",
+      "confirmDescription": "Suppression définitive dans n8n.",
+      "delete": "Supprimer dans n8n"
+    },
+    "empty": "Pose une question sur ce workflow, ou demande une modification.",
+    "suggestions": {
+      "explain": {
+        "label": "Expliquer le workflow",
+        "prompt": "Explique-moi ce que fait ce workflow, étape par étape."
+      },
+      "fragility": {
+        "label": "Points de fragilité",
+        "prompt": "Quels sont les points de fragilité (erreurs non gérées, données manquantes) ?"
+      },
+      "annotate": {
+        "label": "Annoter les nœuds peu clairs",
+        "prompt": "Ajoute une note explicative sur chaque nœud sans nom clair."
+      }
+    },
+    "seeDiff": "Voir le diff",
+    "reviewDiff": "Revoir le diff",
+    "placeholder": "Question ou modification…",
+    "attachTooltip": "Joindre captures ou fichiers texte (glisser-déposer et collage marchent aussi)",
+    "stopTooltip": "Arrêter ce tour et récupérer ma demande (Échap)",
+    "stop": "Arrêter",
+    "sendTooltip": "Entrée : envoyer · Maj+Entrée : nouvelle ligne · Tab : compléter",
+    "imageOnlyRequest": "Voici une capture d’écran. Que montre-t-elle, et que faut-il en faire ?",
+    "fileOnlyRequest": "Voici un ou plusieurs fichiers joints. Que contiennent-ils, et qu’en faire ?"
+  },
+  "review": {
+    "gate": {
+      "suffix": " — {where}",
+      "breaches": "Cette modification casserait le workflow — elle ne sera pas appliquée{suffix}",
+      "rephrase": "Reformule la demande.",
+      "refusals": "n8n refusera d'enregistrer ce workflow{suffix}",
+      "askFix": "Demande la correction dans la conversation.",
+      "tryAnyway": "Tenter quand même",
+      "introducedBlocked": "Cette modification introduit une erreur — elle ne sera pas appliquée{suffix}",
+      "introduced": "Cette modification introduit des problèmes{suffix}",
+      "applyAnyway": "Appliquer quand même"
+    },
+    "done": {
+      "applied": "Appliqué.",
+      "discarded": "Proposition rejetée."
+    },
+    "title": "Revue de la modification proposée",
+    "discard": "Rejeter",
+    "applyTo": "Appliquer à {platform}",
+    "rootUnchanged": "« {name} » n'est pas modifié",
+    "noDifference": {
+      "title": "Aucune différence",
+      "description": "Les opérations proposées ne changent rien par rapport à l'état actuel du workflow."
+    },
+    "stale": {
+      "title": "Proposition obsolète",
+      "description": "Le workflow a changé depuis que cette proposition a été formulée. Relance la demande dans le chat pour repartir de l'état actuel."
+    },
+    "status": {
+      "applied": "Proposition déjà appliquée",
+      "discarded": "Proposition rejetée"
+    },
+    "revert": {
+      "done": "Workflow restauré dans l'état d'avant cette modification.",
+      "losesLaterChanges": "Attention : le workflow a changé dans {platform} depuis cette application. Revenir en arrière emporterait aussi ce qui a été fait après.",
+      "confirmTitle": "Revenir à l'état d'avant ?",
+      "confirmDescription": "Le workflow sera réécrit dans {platform} avec la version du {date}. Cette modification sera défaite.",
+      "confirmDescriptionJustApplied": "Le workflow sera réécrit dans {platform} avec la version du {date}. La modification qu'on vient d'appliquer sera perdue.",
+      "ok": "Restaurer",
+      "button": "Revenir à l'état d'avant",
+      "notArchived": "L'état d'avant n'est pas archivé : le retour arrière se fait à la main dans {platform}.",
+      "doneAfterApply": "Workflow restauré dans l'état d'avant l'application."
+    },
+    "leftovers": {
+      "title": "{count, plural, one {Sous-workflow créé par l'assistant} other {# sous-workflows créés par l'assistant}}",
+      "hint": "Vide et non appelé : supprimer ou garder.",
+      "confirmTitle": "Supprimer ce workflow dans n8n ?",
+      "confirmDescription": "« {name} » sera supprimé dans n8n. Il est vide et personne ne l'appelle ; l'opération est définitive.",
+      "delete": "Supprimer dans n8n"
+    },
+    "active": {
+      "title": "Ce workflow est ACTIF sur {platform}",
+      "description": "La modification part en production dès le prochain déclenchement."
+    },
+    "locked": {
+      "title": "Workflow verrouillé",
+      "description": "Appliquer demandera de forcer le verrou, avec une raison."
+    },
+    "draftWrite": "La modification partira en brouillon",
+    "rename": "Renommage du workflow : « {before} » → « {after} »",
+    "operations": "Opérations demandées ({count})",
+    "parts": {
+      "summary": "{count, plural, one {+ # sous-workflow : {names}} other {+ # sous-workflows : {names}}}",
+      "active": "actif",
+      "written": "déjà écrit",
+      "stale": {
+        "title": "Ce sous-workflow a changé dans n8n depuis la proposition",
+        "description": "L'appliquer écraserait ce changement. Relance la demande dans la conversation pour repartir de l'état actuel."
+      },
+      "where": "« {name} »"
+    },
+    "noRestorePoint": "Aucun point de retour : l'application ne sera pas annulable.",
+    "publish": {
+      "notPublished": "Non publié.",
+      "done": "Workflow publié : la version appliquée est celle qui tourne.",
+      "button": "Publier maintenant"
+    }
+  },
+  "scan": {
+    "unmapped": "non mappé",
+    "mappingCreated": "Mapping « {name} » créé ({env})",
+    "envPlaceholder": "Env des valeurs",
+    "title": "Découvrir depuis un workflow",
+    "mode": {
+      "workflow": "Workflow",
+      "group": "Groupe"
+    },
+    "instancePlaceholder": "Instance n8n",
+    "workflowPlaceholder": "Workflow",
+    "noGroups": "Aucun groupe sur cette instance",
+    "groupPlaceholder": "Groupe",
+    "groupOption": "{name} ({count} wf)",
+    "scan": "Scanner",
+    "intro": "Le scan liste les bases, tables et credentials référencés par le workflow ou le groupe (snapshots locaux, aucun appel n8n), indique ceux déjà couverts par un mapping, et crée les mappings manquants pré-remplis avec les valeurs trouvées — pour un seul env : celui des workflows scannés.",
+    "detectedEnv": "Env détecté via les mappings existants : <env></env>— les valeurs seront rangées dans <select></select>",
+    "noDetectedEnv": "Aucun id de ce workflow n'est connu des mappings — choisis l'env auquel appartiennent ses valeurs : <select></select>",
+    "workflowCount": "{count, plural, one {# workflow scanné.} other {# workflows scannés.}}",
+    "resources": "Ressources ({count})",
+    "noResources": "Aucune ressource externe détectée",
+    "createMapping": "Créer le mapping",
+    "workflows": "Workflows : {list}",
+    "nodes": "Nœuds : {list}",
+    "credentials": "Credentials ({count})",
+    "noCredentials": "Aucun credential détecté"
+  },
+  "switchedResources": {
+    "replaced": "{count} base(s)/table(s) remplacée(s)",
+    "switched": "{count} ressources basculées",
+    "hide": "masquer",
+    "which": "lesquelles ?",
+    "row": "{node} : {from} → <strong>{to}</strong>"
+  },
+  "toolTrace": {
+    "thinking": "raisonnement",
+    "tools": "{count, plural, one {# outil} other {# outils}}",
+    "failures": "{count} en échec",
+    "round": "tour {round}",
+    "truncated": "[…] résultat tronqué à l'affichage"
+  },
+  "turnProgress": {
+    "analysing": "L’assistant analyse le workflow…",
+    "showPrevious": "Voir les {count} étapes précédentes"
+  }
+}

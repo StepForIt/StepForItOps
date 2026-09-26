@@ -1,5 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { EnvChain, EnvChainMode, EnvDefinition, envIds, envsFromChain, normalizeEnvs } from '@nwm/core';
+import {
+  DEFAULT_LOCALE,
+  EnvChain,
+  EnvChainMode,
+  EnvDefinition,
+  Locale,
+  envIds,
+  envsFromChain,
+  isLocale,
+  normalizeEnvs,
+} from '@nwm/core';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ARCHIVED_WORKFLOW_WHERE } from './archived-workflows.where';
@@ -19,14 +29,17 @@ export interface PlatformSettingsView {
   envChain: EnvChain;
   /** Ce qu'on fait d'une promotion qui saute une étape : avertir, ou refuser. */
   envChainMode: EnvChainMode;
+  /** Langue de ce qui s'écrit hors requête : findings, alertes, textes d'un cron. */
+  defaultLocale: Locale;
 }
 
 /**
  * Ce qu'on accepte en écriture : un client qui ne connaît que `envChain` — une
  * chaîne linéaire, l'ancien réglage — reste compris, ses envs étant relus d'elle.
  */
-export type PlatformSettingsInput = Omit<PlatformSettingsView, 'envs'> & {
+export type PlatformSettingsInput = Omit<PlatformSettingsView, 'envs' | 'defaultLocale'> & {
   envs?: EnvDefinition[];
+  defaultLocale?: string;
 };
 
 /**
@@ -41,7 +54,14 @@ export type PlatformSettingsInput = Omit<PlatformSettingsView, 'envs'> & {
  */
 @Injectable()
 export class PlatformSettingsService {
+  /** Relue à chaque `get()` : la langue se demande en synchrone, au moment d'écrire un texte. */
+  private cachedLocale: Locale = DEFAULT_LOCALE;
+
   constructor(private readonly prisma: PrismaService) {}
+
+  defaultLocale(): Locale {
+    return this.cachedLocale;
+  }
 
   async get(): Promise<PlatformSettingsView> {
     const settings = await this.prisma.platformSettings.findUnique({
@@ -50,12 +70,14 @@ export class PlatformSettingsService {
     // Une ligne d'avant les envs déclarés n'a que sa chaîne linéaire : on la relit
     // comme une déclaration, plutôt que de lui imposer dev/preprod/prod.
     const envs = normalizeEnvs(settings?.envs ?? envsFromChain(settings?.envChain ?? []));
+    this.cachedLocale = isLocale(settings?.defaultLocale) ? settings.defaultLocale : DEFAULT_LOCALE;
     return {
       includeArchived: settings?.includeArchived ?? false,
       includeMissing: settings?.includeMissing ?? false,
       envs,
       envChain: envIds(envs),
       envChainMode: settings?.envChainMode === 'block' ? 'block' : 'warn',
+      defaultLocale: this.cachedLocale,
     };
   }
 
@@ -69,6 +91,8 @@ export class PlatformSettingsService {
       envs: envs as unknown as Prisma.InputJsonValue,
       envChain: envIds(envs),
       envChainMode: input.envChainMode === 'block' ? 'block' : 'warn',
+      // Un client qui ne connaît pas ce réglage garde celui en place.
+      ...(isLocale(input.defaultLocale) ? { defaultLocale: input.defaultLocale } : {}),
     };
     await this.prisma.platformSettings.upsert({
       where: { id: PLATFORM_SETTINGS_ID },

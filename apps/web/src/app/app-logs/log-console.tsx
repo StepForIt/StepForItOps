@@ -2,15 +2,17 @@
 
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Empty } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { AppLogEntry, LEVEL_COLORS } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 /** Distance au bas du journal en deçà de laquelle on considère que le lecteur SUIT le flux. */
 const FOLLOW_SLACK_PX = 40;
 
 /** Heure seule : la date se lit dans l'infobulle, et un journal se lit à la seconde. */
-function timeOf(iso: string): string {
+function timeOf(iso: string, locale: string): string {
   const at = new Date(iso);
-  return Number.isNaN(at.getTime()) ? iso : at.toLocaleTimeString('fr-FR', { hour12: false });
+  return Number.isNaN(at.getTime()) ? iso : at.toLocaleTimeString(locale, { hour12: false });
 }
 
 /**
@@ -19,6 +21,8 @@ function timeOf(iso: string): string {
  * DÉJÀ — sinon une nouvelle ligne lui arracherait des yeux celle qu'il lit.
  */
 export function LogConsole({ entries }: { entries: AppLogEntry[] }) {
+  const t = useTranslations('misc.appLogs.console');
+  const locale = useLocale();
   const container = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
 
@@ -52,26 +56,26 @@ export function LogConsole({ entries }: { entries: AppLogEntry[] }) {
       {entries.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span style={{ color: '#8c8c8c' }}>Aucune ligne pour ces filtres</span>}
+          description={<span style={{ color: BRAND.slate }}>{t('empty')}</span>}
           style={{ marginTop: 80 }}
         />
       ) : (
         entries.map((entry) => (
           <div key={entry.seq} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            <span style={{ color: '#595959' }} title={entry.at}>
-              {timeOf(entry.at)}
+            <span style={{ color: BRAND.slate }} title={entry.at}>
+              {timeOf(entry.at, locale)}
             </span>{' '}
-            <span style={{ color: LEVEL_COLORS[entry.level] ?? '#bfbfbf', fontWeight: 600 }}>
+            <span style={{ color: LEVEL_COLORS[entry.level] ?? BRAND.slateLight, fontWeight: 600 }}>
               {entry.level.toUpperCase()}
             </span>{' '}
-            <span style={{ color: '#d48806' }}>[{entry.context}]</span>{' '}
-            <span style={{ color: '#e8e8e8' }}>{entry.message}</span>
+            <span style={{ color: BRAND.warning }}>[{entry.context}]</span>{' '}
+            <span style={{ color: BRAND.craie }}>{entry.message}</span>
             {entry.stack && (
               // Repliée : une pile fait quinze lignes, et on ne les lit que
               // pour l'erreur sur laquelle on s'arrête.
               <details style={{ margin: '2px 0 6px 0' }}>
-                <summary style={{ color: '#8c8c8c', cursor: 'pointer' }}>pile d'appel</summary>
-                <pre style={{ color: '#bfbfbf', margin: '4px 0 0 0', whiteSpace: 'pre-wrap' }}>
+                <summary style={{ color: BRAND.slate, cursor: 'pointer' }}>{t('stack')}</summary>
+                <pre style={{ color: BRAND.slateLight, margin: '4px 0 0 0', whiteSpace: 'pre-wrap' }}>
                   {entry.stack}
                 </pre>
               </details>

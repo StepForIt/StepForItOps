@@ -1,3 +1,5 @@
+import { msg } from '../../i18n';
+
 /**
  * Les n8n 2.x séparent le BROUILLON de la version PUBLIÉE : « Enregistrer » garde
  * l'édition de côté, « Publier » la met en production, et `activeVersionId` désigne
@@ -44,11 +46,7 @@ export function detectPublishModel(raw: N8nWorkflow): PublishModel {
  */
 export function describeWriteEffect(model: PublishModel, workflowName: string): string | undefined {
   if (model !== 'versioned-unpublished') return undefined;
-  return (
-    `« ${workflowName} » n'a jamais été publié sur cette instance. La modification sera ` +
-    `enregistrée comme brouillon : elle ne s'exécutera pas tant que le workflow n'est pas publié. ` +
-    `Tu pourras le faire d'ici une fois le diff appliqué.`
-  );
+  return msg('env.writeEffectDraft', { name: workflowName });
 }
 
 /** Le workflow tourne-t-il vraiment le contenu qu'on vient d'écrire ? */

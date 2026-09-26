@@ -3,19 +3,10 @@
 import React from 'react';
 import { Progress, Space, Tag, Tooltip, Typography } from 'antd';
 import { Table } from '../../components/resizable-table';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEnvColor } from '../../lib/envs';
 import { WorkflowExecutions } from './workflow-executions';
 import { WorkflowCost, WorkflowCostFamily, formatTokens, formatUsd } from './types';
-
-/** Coût, avec la mention « plancher » dès qu'un appel n'a pas de tarif. */
-function cost(value: number, unpricedCalls: number): React.ReactNode {
-  if (unpricedCalls === 0) return formatUsd(value);
-  return (
-    <Tooltip title={`${unpricedCalls} appel(s) sans tarif : coût plancher`}>
-      <span>≥ {formatUsd(value)}</span>
-    </Tooltip>
-  );
-}
 
 /**
  * Le classement des coûts, à deux lectures. Groupé, une ligne par workflow
@@ -41,6 +32,20 @@ export function WorkflowCostTable({
   totalCost: number;
 }) {
   const envColor = useEnvColor();
+  const t = useTranslations('health.llmCosts');
+  const tc = useTranslations('common');
+  const locale = useLocale();
+  const tokens = (row: { promptTokens: number; completionTokens: number }) =>
+    `${formatTokens(row.promptTokens, locale)} / ${formatTokens(row.completionTokens, locale)}`;
+  /** Coût, avec la mention « plancher » dès qu'un appel n'a pas de tarif. */
+  const cost = (value: number, unpricedCalls: number): React.ReactNode => {
+    if (unpricedCalls === 0) return formatUsd(value, locale);
+    return (
+      <Tooltip title={t('unpricedFloor', { count: unpricedCalls })}>
+        <span>≥ {formatUsd(value, locale)}</span>
+      </Tooltip>
+    );
+  };
   /** Niveau 2 : un exemplaire par env, ses exécutions repliées dessous. */
   const members = (family: WorkflowCostFamily) => (
     <Table<WorkflowCost>
@@ -59,29 +64,31 @@ export function WorkflowCostTable({
       }}
       columns={[
         {
-          title: 'Env',
+          title: tc('columns.env'),
           dataIndex: 'env',
           width: 90,
           render: (env: WorkflowCost['env']) => (env ? <Tag color={envColor(env)}>{env}</Tag> : <Tag>?</Tag>),
         },
-        { title: 'Workflow', dataIndex: 'name', ellipsis: true },
-        { title: 'Exécutions', dataIndex: 'executions', align: 'right', width: 100 },
-        { title: 'Appels', dataIndex: 'calls', align: 'right', width: 80 },
+        { title: tc('columns.workflow'), dataIndex: 'name', ellipsis: true },
+        { title: t('columns.executions'), dataIndex: 'executions', align: 'right', width: 100 },
+        { title: t('columns.calls'), dataIndex: 'calls', align: 'right', width: 80 },
         {
-          title: 'Tokens in / out',
+          key: 'tokens',
+          title: t('columns.tokens'),
           align: 'right',
           width: 150,
-          render: (_, row) => `${formatTokens(row.promptTokens)} / ${formatTokens(row.completionTokens)}`,
+          render: (_, row) => tokens(row),
         },
         {
-          title: 'Coût',
+          title: t('columns.cost'),
           dataIndex: 'costUsd',
           align: 'right',
           width: 110,
           render: (_: number, row) => cost(row.costUsd, row.unpricedCalls),
         },
         {
-          title: '% de la famille',
+          key: 'familyShare',
+          title: t('columns.familyShare'),
           width: 140,
           render: (_, row) => (
             <Progress
@@ -106,7 +113,7 @@ export function WorkflowCostTable({
         expandable={{ expandedRowRender: members }}
         columns={[
           {
-            title: 'Workflow',
+            title: tc('columns.workflow'),
             dataIndex: 'name',
             ellipsis: true,
             render: (name: string, row) => (
@@ -121,16 +128,17 @@ export function WorkflowCostTable({
               </Space>
             ),
           },
-          { title: 'Exécutions', dataIndex: 'executions', align: 'right', width: 100 },
-          { title: 'Appels', dataIndex: 'calls', align: 'right', width: 80 },
+          { title: t('columns.executions'), dataIndex: 'executions', align: 'right', width: 100 },
+          { title: t('columns.calls'), dataIndex: 'calls', align: 'right', width: 80 },
           {
-            title: 'Tokens in / out',
+            key: 'tokens',
+            title: t('columns.tokens'),
             align: 'right',
             width: 150,
-            render: (_, row) => `${formatTokens(row.promptTokens)} / ${formatTokens(row.completionTokens)}`,
+            render: (_, row) => tokens(row),
           },
           {
-            title: 'Coût',
+            title: t('columns.cost'),
             dataIndex: 'costUsd',
             align: 'right',
             width: 110,
@@ -138,7 +146,8 @@ export function WorkflowCostTable({
             render: (_: number, row) => cost(row.costUsd, row.unpricedCalls),
           },
           {
-            title: '% du total',
+            key: 'totalShare',
+            title: t('columns.totalShare'),
             width: 140,
             render: (_, row) => (
               <Progress
@@ -170,23 +179,24 @@ export function WorkflowCostTable({
         ),
       }}
       columns={[
-        { title: 'Workflow', dataIndex: 'name', ellipsis: true },
+        { title: tc('columns.workflow'), dataIndex: 'name', ellipsis: true },
         {
-          title: 'Env',
+          title: tc('columns.env'),
           dataIndex: 'env',
           width: 90,
           render: (env: WorkflowCost['env']) => (env ? <Tag color={envColor(env)}>{env}</Tag> : <Tag>?</Tag>),
         },
-        { title: 'Exécutions', dataIndex: 'executions', align: 'right', width: 100 },
-        { title: 'Appels', dataIndex: 'calls', align: 'right', width: 80 },
+        { title: t('columns.executions'), dataIndex: 'executions', align: 'right', width: 100 },
+        { title: t('columns.calls'), dataIndex: 'calls', align: 'right', width: 80 },
         {
-          title: 'Tokens in / out',
+          key: 'tokens',
+          title: t('columns.tokens'),
           align: 'right',
           width: 150,
-          render: (_, row) => `${formatTokens(row.promptTokens)} / ${formatTokens(row.completionTokens)}`,
+          render: (_, row) => tokens(row),
         },
         {
-          title: 'Coût',
+          title: t('columns.cost'),
           dataIndex: 'costUsd',
           align: 'right',
           width: 110,
@@ -194,7 +204,8 @@ export function WorkflowCostTable({
           render: (_: number, row) => cost(row.costUsd, row.unpricedCalls),
         },
         {
-          title: '% du total',
+          key: 'totalShare',
+          title: t('columns.totalShare'),
           width: 140,
           render: (_, row) => (
             <Progress

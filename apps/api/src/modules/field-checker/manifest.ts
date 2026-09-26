@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const FIELD_CHECKER_MANIFEST: ModuleManifest = {
   id: 'field-checker',
-  name: 'Champs vs exécutions',
-  description: 'Champs référencés confrontés aux exécutions réelles',
+  get name() {
+    return msg('analysis.moduleFieldCheckerName');
+  },
+  get description() {
+    return msg('analysis.moduleFieldCheckerDescription');
+  },
 };

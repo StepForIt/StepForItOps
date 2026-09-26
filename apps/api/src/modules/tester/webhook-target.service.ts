@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { N8N_API_PORT, N8nApiPort, N8nInstanceConfig, N8nWorkflow } from '@nwm/core';
+import { N8N_API_PORT, N8nApiPort, N8nInstanceConfig, N8nWorkflow, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { findWebhookOwners } from './webhook-finder';
 
@@ -37,7 +37,7 @@ export class WebhookTargetService {
       const live = await this.n8n.getWorkflow(config, workflow.externalId);
       active = live.active === true;
     } catch (error) {
-      this.logger.warn(`État n8n illisible pour ${workflow.name} : ${(error as Error).message}`);
+      this.logger.warn(`Unreadable n8n state for ${workflow.name}: ${(error as Error).message}`);
       return { ok: true }; // n8n muet : on ne bloque pas sur une incertitude technique.
     }
     if (active) return { ok: true };
@@ -46,17 +46,17 @@ export class WebhookTargetService {
     if (holder) {
       return {
         ok: false,
-        reason:
-          `« ${workflow.name} » est inactif, mais son webhook ${webhook.method} /${webhook.path} est enregistré par ` +
-          `« ${holder.name} », qui est actif : l'appel aurait déclenché CE workflow-là, pas celui-ci. ` +
-          `Active « ${workflow.name} » (n8n désactivera l'autre, le path est unique) ou donne-lui son propre path.`,
+        reason: msg('platform.webhookHeldByOther', {
+          name: workflow.name,
+          method: webhook.method,
+          path: webhook.path,
+          holder: holder.name,
+        }),
       };
     }
     return {
       ok: false,
-      reason:
-        `« ${workflow.name} » est inactif dans n8n : le webhook de production /${webhook.path} n'y est pas enregistré ` +
-        `et l'appel repartirait en 404. Active le workflow pour rejouer ce cas.`,
+      reason: msg('platform.webhookInactive', { name: workflow.name, path: webhook.path }),
     };
   }
 

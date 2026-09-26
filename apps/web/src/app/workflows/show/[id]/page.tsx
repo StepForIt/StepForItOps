@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useOne } from '@refinedev/core';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Alert,
   Button,
@@ -70,6 +71,7 @@ import {
 } from '../../../../components/check-selection-modal';
 import { useWorkflowChat } from '../../../../components/workflow-chat-drawer';
 import { useEnvColor } from '../../../../lib/envs';
+import { BRAND } from '../../../../lib/brand/colors';
 
 interface Finding {
   id: string;
@@ -89,20 +91,23 @@ interface Finding {
 }
 
 /** Étapes de « Vérifier », dans l'ordre où elles sont jouées. */
-const VERIFY_STEPS: Array<{ key: string; label: string; path: (id: string) => string }> = [
-  { key: 'structure', label: 'Structure', path: (id) => `/verifier/run/${id}?ai=1` },
-  { key: 'js', label: 'JS', path: (id) => `/js-checker/run/${id}?ai=1` },
-  { key: 'naming', label: 'Naming', path: (id) => `/optimizer/analyze/${id}` },
-  { key: 'champs', label: 'Champs', path: (id) => `/field-checker/run/${id}` },
+const VERIFY_STEPS: Array<{ key: 'structure' | 'js' | 'naming' | 'champs'; path: (id: string) => string }> = [
+  { key: 'structure', path: (id) => `/verifier/run/${id}?ai=1` },
+  { key: 'js', path: (id) => `/js-checker/run/${id}?ai=1` },
+  { key: 'naming', path: (id) => `/optimizer/analyze/${id}` },
+  { key: 'champs', path: (id) => `/field-checker/run/${id}` },
 ];
+
+/** Exemple du champ de payload : des accolades, donc passé en variable au message ICU. */
+const PAYLOAD_EXAMPLE = '{"orderId": 42}';
 
 type StepStatus = 'pending' | 'running' | 'done' | 'skipped';
 
 const stepIcon: Record<StepStatus, React.ReactNode> = {
-  pending: <ClockCircleOutlined style={{ color: '#bfbfbf' }} />,
+  pending: <ClockCircleOutlined style={{ color: BRAND.slateLight }} />,
   running: <LoadingOutlined />,
-  done: <CheckCircleTwoTone twoToneColor="#52c41a" />,
-  skipped: <MinusCircleOutlined style={{ color: '#bfbfbf' }} />,
+  done: <CheckCircleTwoTone twoToneColor={BRAND.success} />,
+  skipped: <MinusCircleOutlined style={{ color: BRAND.slateLight }} />,
 };
 
 interface CurrentEnv {
@@ -128,6 +133,9 @@ interface AiCost {
 }
 
 export default function WorkflowShow() {
+  const t = useTranslations('workflowShow.page');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const mobile = useIsMobile();
   const envColor = useEnvColor();
   const params = useParams<{ id: string }>();
@@ -286,7 +294,9 @@ export default function WorkflowShow() {
       const all = await apiGet<Finding[]>(`/findings?workflowId=${workflowId}&_start=0&_end=500`);
       setFindings(all);
       message.success(
-        `${all.length} findings` + (skipped.length ? ` — modules sautés : ${skipped.join(', ')}` : ''),
+        skipped.length
+          ? t('verifyDoneSkipped', { count: all.length, modules: skipped.join(', ') })
+          : t('verifyDone', { count: all.length }),
       );
     });
 
@@ -313,7 +323,7 @@ export default function WorkflowShow() {
       // croyait que le renommage n'avait rien changé, alors que l'analyse
       // n'avait simplement pas été relancée.
       await apiPost(`/optimizer/analyze/${workflowId}`).catch((error: unknown) =>
-        message.error(`Analyse non relancée — ${(error as Error).message}`),
+        message.error(t('analysisNotRerun', { error: (error as Error).message })),
       );
       const all = await apiGet<Finding[]>(`/findings?workflowId=${workflowId}&_start=0&_end=500`);
       setFindings(all);
@@ -325,14 +335,14 @@ export default function WorkflowShow() {
         `/doc-schema/generate/${workflowId}?ai=1`,
       );
       setDoc(result);
-      message.success('Documentation générée');
+      message.success(t('docGenerated'));
     });
 
   const loadDoc = () =>
     run('doc-load', async () => {
       const result = await apiGet<{ mermaid: string; summary?: string } | null>(`/doc-schema/${workflowId}`);
       if (result) setDoc(result);
-      else message.info('Pas encore de doc — génère-la');
+      else message.info(t('noDocYet'));
     });
 
   const openAssistant = React.useCallback(
@@ -361,8 +371,8 @@ export default function WorkflowShow() {
         `/workflows/${workflowId}/resync`,
       );
       await refetch();
-      if (result.missing) message.warning('n8n ne connaît plus ce workflow : marqué comme absent');
-      else message.success(result.changed ? 'Workflow mis à jour depuis n8n' : 'Déjà à jour');
+      if (result.missing) message.warning(t('resyncMissing'));
+      else message.success(result.changed ? t('resyncUpdated') : t('upToDate'));
     });
 
   /**
@@ -374,18 +384,14 @@ export default function WorkflowShow() {
     run('publish', async () => {
       const result = await apiPost<{ alreadyPublished: boolean }>(`/workflows/${workflowId}/publish`);
       await refetch();
-      message.success(
-        result.alreadyPublished
-          ? 'Ce workflow était déjà publié.'
-          : 'Workflow publié : n8n l’ouvre et l’exécute désormais.',
-      );
+      message.success(result.alreadyPublished ? t('alreadyPublished') : t('published'));
     });
 
   const testWebhook = () =>
     run('test', async () => {
       const payload = JSON.parse(testPayload || '{}');
       const result = await apiPost<{ status: string }>(`/tester/webhook/${workflowId}`, payload);
-      message.success(`Test terminé : ${result.status}`);
+      message.success(t('testDone', { status: result.status }));
     });
 
   return (
@@ -399,21 +405,21 @@ export default function WorkflowShow() {
         extra={
           <Space size={4}>
             {can('assistant') && (
-              <Tooltip title="Assistant IA — ouvrable aussi d'un glissé vers la gauche sur mobile">
+              <Tooltip title={t('assistantTooltip')}>
                 <Button
                   type="text"
                   icon={<RobotOutlined />}
-                  aria-label="Assistant IA"
+                  aria-label={t('assistant')}
                   onClick={openAssistant}
                 />
               </Tooltip>
             )}
-            <Tooltip title="Recharger depuis n8n">
+            <Tooltip title={t('reload')}>
               <Button
                 type="text"
                 icon={<ReloadOutlined />}
                 loading={busy === 'resync'}
-                aria-label="Recharger depuis n8n"
+                aria-label={t('reload')}
                 onClick={resync}
               />
             </Tooltip>
@@ -422,20 +428,23 @@ export default function WorkflowShow() {
         title={
           <Space wrap>
             {workflow?.name}
-            {workflow?.instanceId && <Tag color="geekblue">{instanceName(workflow.instanceId)}</Tag>}
-            {workflow?.active ? <Tag color="green">actif</Tag> : <Tag>inactif</Tag>}
+            {workflow?.instanceId && <Tag color="blue">{instanceName(workflow.instanceId)}</Tag>}
+            {workflow?.active ? <Tag color="green">{t('active')}</Tag> : <Tag>{t('inactive')}</Tag>}
             <WorkflowLockTag workflowId={workflowId} />
             {/* Posée par la promotion, jamais par une édition : c'est la mise en
                 production qui fait la version, pas le fait d'avoir touché au workflow. */}
             {(workflow as { version?: string | null } | undefined)?.version && (
-              <Tooltip title="Posée par la dernière promotion.">
-                <Tag color="purple">v{(workflow as { version?: string }).version}</Tag>
+              <Tooltip title={t('versionTooltip')}>
+                <Tag color="purple">
+                  {t('version', { version: (workflow as { version?: string }).version ?? '' })}
+                </Tag>
               </Tooltip>
             )}
             {currentEnv?.env && (
               <Tag color={currentEnv.mixed ? 'volcano' : envColor(currentEnv.env)}>
-                branché : {currentEnv.env}
-                {currentEnv.mixed ? ' (mixte !)' : ''}
+                {currentEnv.mixed
+                  ? t('pluggedMixed', { env: currentEnv.env })
+                  : t('plugged', { env: currentEnv.env })}
               </Tag>
             )}
           </Space>
@@ -443,16 +452,22 @@ export default function WorkflowShow() {
       >
         <Descriptions size="small" column={mobile ? 1 : 2}>
           {aiCost && aiCost.calls > 0 && (
-            <Descriptions.Item label={`Coût IA (${aiCost.days} j)`}>
+            <Descriptions.Item label={t('aiCostLabel', { days: aiCost.days })}>
               <Link href="/llm-costs">
                 <Tooltip
-                  title={`${aiCost.calls} appel(s) LLM sur ${aiCost.executions} exécution(s)${
-                    aiCost.unpricedCalls > 0 ? ` — ${aiCost.unpricedCalls} sans tarif : coût plancher` : ''
-                  }`}
+                  title={
+                    aiCost.unpricedCalls > 0
+                      ? t('aiCostTooltipUnpriced', {
+                          calls: aiCost.calls,
+                          executions: aiCost.executions,
+                          unpriced: aiCost.unpricedCalls,
+                        })
+                      : t('aiCostTooltip', { calls: aiCost.calls, executions: aiCost.executions })
+                  }
                 >
                   <span>
                     {aiCost.unpricedCalls > 0 ? '≥ ' : ''}
-                    {aiCost.costUsd.toLocaleString('fr-FR', {
+                    {aiCost.costUsd.toLocaleString(locale, {
                       minimumFractionDigits: aiCost.costUsd >= 1 ? 2 : 4,
                       maximumFractionDigits: aiCost.costUsd >= 1 ? 2 : 4,
                     })}{' '}
@@ -467,28 +482,30 @@ export default function WorkflowShow() {
             ouvert dans la fiche, il se lisait comme un temps réellement mesuré. */}
         <Popover
           trigger="click"
-          title="Temps gagné par exécution réussie"
+          title={t('timeSaved.title')}
           content={
             <Space direction="vertical" size={8} style={{ maxWidth: 260 }}>
               <InputNumber
                 autoFocus
                 min={0}
                 step={0.5}
-                placeholder={timeSavedEstimate ? `${timeSavedEstimate.minutes} (estimé)` : '—'}
+                placeholder={
+                  timeSavedEstimate ? t('timeSaved.placeholder', { minutes: timeSavedEstimate.minutes }) : '—'
+                }
                 value={minutesSaved}
                 onChange={(value) => setMinutesSaved(value)}
                 onBlur={saveMinutesSaved}
-                addonAfter="min / exéc."
+                addonAfter={t('timeSaved.addon')}
                 style={{ width: '100%' }}
               />
               <Space size={4}>
                 <Button size="small" type="link" loading={estimating} onClick={reestimate}>
-                  Réestimer (IA)
+                  {t('timeSaved.reestimate')}
                 </Button>
                 {timeSavedEstimate?.why && (
                   <Tooltip title={timeSavedEstimate.why}>
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      pourquoi ?
+                      {t('timeSaved.why')}
                     </Typography.Text>
                   </Tooltip>
                 )}
@@ -498,13 +515,13 @@ export default function WorkflowShow() {
         >
           <Typography.Link style={{ fontSize: 12 }}>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Temps gagné :{' '}
+              {t('timeSaved.label')}{' '}
             </Typography.Text>
             {minutesSaved != null
-              ? `${minutesSaved} min / exéc.`
+              ? t('timeSaved.value', { minutes: minutesSaved })
               : timeSavedEstimate
-                ? `${timeSavedEstimate.minutes} min / exéc. (estimé)`
-                : 'à renseigner'}
+                ? t('timeSaved.estimatedValue', { minutes: timeSavedEstimate.minutes })
+                : t('timeSaved.toFill')}
           </Typography.Link>
         </Popover>
         <PublishRunBanner workflowId={workflowId} pushed={publishRun} />
@@ -526,7 +543,7 @@ export default function WorkflowShow() {
             primary={
               <>
                 <Button type="primary" loading={busy === 'verify'} onClick={() => verifyAll()}>
-                  Vérifier
+                  {t('actions.verify')}
                 </Button>
                 {workflow?.n8nUrl && (
                   <Button
@@ -535,7 +552,7 @@ export default function WorkflowShow() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Ouvrir dans n8n
+                    {tCommon('openInN8n')}
                   </Button>
                 )}
               </>
@@ -548,8 +565,8 @@ export default function WorkflowShow() {
                 ? [
                     {
                       key: 'publish',
-                      label: 'Publier',
-                      hint: 'Aucune version publiée',
+                      label: t('actions.publish'),
+                      hint: t('actions.publishHint'),
                       danger: true,
                       loading: busy === 'publish',
                       onClick: publishWorkflow,
@@ -559,31 +576,33 @@ export default function WorkflowShow() {
               {
                 key: 'checks',
                 label:
-                  'Contrôles' +
-                  (checkCatalog && checks && checks.disabled.length > 0
-                    ? ` (${checkCatalog.checks.length - checks.disabled.length}/${checkCatalog.checks.length})`
-                    : ''),
+                  checkCatalog && checks && checks.disabled.length > 0
+                    ? t('actions.checksCount', {
+                        enabled: checkCatalog.checks.length - checks.disabled.length,
+                        total: checkCatalog.checks.length,
+                      })
+                    : t('actions.checks'),
                 icon: <SettingOutlined />,
                 hint: checks?.source
-                  ? `Contrôles à jouer — configuration héritée de : ${checks.source.label}`
-                  : 'Choisir les contrôles à jouer',
+                  ? t('actions.checksHintInherited', { source: checks.source.label })
+                  : t('actions.checksHint'),
                 onClick: () => setChecksModalOpen(true),
               },
               ...(can('remoteSchema') && (!enabledModules || enabledModules.includes('remote-schema'))
                 ? [
                     {
                       key: 'remote',
-                      label: 'Vérifier le distant',
-                      hint: 'Les tables Airtable, NocoDB, Notion, Sheets et Postgres portent-elles les colonnes que ce workflow lit ou écrit ?',
+                      label: t('actions.remote'),
+                      hint: t('actions.remoteHint'),
                       onClick: () => setRemoteModalOpen(true),
                     },
                   ]
                 : []),
               ...(can('naming')
-                ? [{ key: 'naming', label: 'Suggérer des noms', onClick: () => setRenameModalOpen(true) }]
+                ? [{ key: 'naming', label: t('actions.naming'), onClick: () => setRenameModalOpen(true) }]
                 : []),
               ...(can('envSwitch')
-                ? [{ key: 'envs', label: 'Environnements', onClick: () => setEnvModalOpen(true) }]
+                ? [{ key: 'envs', label: t('actions.envs'), onClick: () => setEnvModalOpen(true) }]
                 : []),
               ...(can('export')
                 ? [
@@ -604,8 +623,7 @@ export default function WorkflowShow() {
           <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>
             <Tooltip title={unavailable.join(' ')}>
               <span style={{ textDecoration: 'underline dotted', cursor: 'help' }}>
-                {unavailable.length} action{unavailable.length > 1 ? 's' : ''} indisponible
-                {unavailable.length > 1 ? 's' : ''} sur Make
+                {t('unavailable', { count: unavailable.length })}
               </span>
             </Tooltip>
           </Typography.Paragraph>
@@ -618,10 +636,11 @@ export default function WorkflowShow() {
                 <Space key={step.key} size={6}>
                   {stepIcon[status]}
                   <span
-                    style={{ color: status === 'pending' || status === 'skipped' ? '#8c8c8c' : undefined }}
+                    style={{ color: status === 'pending' || status === 'skipped' ? BRAND.slate : undefined }}
                   >
-                    {step.label}
-                    {status === 'skipped' ? ' (module désactivé)' : ''}
+                    {status === 'skipped'
+                      ? t('stepSkipped', { label: t(`verifySteps.${step.key}`) })
+                      : t(`verifySteps.${step.key}`)}
                   </span>
                 </Space>
               );
@@ -633,7 +652,12 @@ export default function WorkflowShow() {
       {/* Bouton flottant : sur mobile, l'icône du coin est loin du pouce une fois
           la page défilée, et un geste seul ne s'apprend pas tout seul. */}
       {mobile && can('assistant') && (
-        <FloatButton icon={<RobotOutlined />} type="primary" tooltip="Assistant IA" onClick={openAssistant} />
+        <FloatButton
+          icon={<RobotOutlined />}
+          type="primary"
+          tooltip={t('assistant')}
+          onClick={openAssistant}
+        />
       )}
       <Tabs
         style={{ marginTop: 16 }}
@@ -642,7 +666,7 @@ export default function WorkflowShow() {
         items={[
           {
             key: 'graph',
-            label: 'Schéma',
+            label: t('tabs.graph'),
             children: structure.error ? (
               <Alert type="error" showIcon message={structure.error} />
             ) : structure.view ? (
@@ -653,41 +677,43 @@ export default function WorkflowShow() {
           },
           {
             key: 'nodes',
-            label: `Nœuds${structure.view ? ` (${countNodes(structure.view)})` : ''}`,
+            label: structure.view
+              ? t('tabs.nodesCount', { count: countNodes(structure.view) })
+              : t('tabs.nodes'),
             children: structure.view ? <WorkflowNodes view={structure.view} /> : <Skeleton active />,
           },
           ...(can('fields')
             ? [
                 {
                   key: 'samples',
-                  label: 'Données réelles',
+                  label: t('tabs.samples'),
                   children: <ExecutionSamplesPanel workflowId={workflowId} active={tab === 'samples'} />,
                 },
               ]
             : []),
           {
             key: 'findings',
-            label: `Findings (${findings.length})`,
+            label: t('tabs.findings', { count: findings.length }),
             children: (
               <>
                 <Space wrap style={{ marginBottom: 12 }}>
                   <Select
                     allowClear
-                    placeholder="Type de vérif"
+                    placeholder={t('filters.module')}
                     style={{ width: mobile ? '100%' : 180 }}
                     value={moduleFilter}
                     onChange={setModuleFilter}
                     options={[
-                      { value: 'verifier', label: 'Structure' },
-                      { value: 'js-checker', label: 'JS' },
-                      { value: 'optimizer', label: 'Naming' },
-                      { value: 'field-checker', label: 'Champs (exécutions)' },
-                      { value: 'remote-schema', label: 'Tables distantes' },
+                      { value: 'verifier', label: t('filters.structure') },
+                      { value: 'js-checker', label: t('filters.js') },
+                      { value: 'optimizer', label: t('filters.naming') },
+                      { value: 'field-checker', label: t('filters.fields') },
+                      { value: 'remote-schema', label: t('filters.remote') },
                     ]}
                   />
                   <Select
                     allowClear
-                    placeholder="Sévérité"
+                    placeholder={t('filters.severity')}
                     style={{ width: mobile ? '100%' : 150 }}
                     value={severityFilter}
                     onChange={setSeverityFilter}
@@ -716,16 +742,16 @@ export default function WorkflowShow() {
           },
           {
             key: 'doc',
-            label: 'Documentation',
+            label: t('tabs.doc'),
             children: doc ? (
               <div>
                 <Space style={{ marginBottom: 12 }}>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Documentation enregistrée
+                    {t('doc.saved')}
                   </Typography.Text>
                   {can('doc') && (
                     <Button size="small" type="link" loading={busy === 'doc'} onClick={generateDoc}>
-                      Régénérer (IA)
+                      {t('doc.regenerate')}
                     </Button>
                   )}
                 </Space>
@@ -739,13 +765,10 @@ export default function WorkflowShow() {
             ) : busy === 'doc-load' ? (
               <Skeleton active />
             ) : (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="Pas encore de documentation pour ce workflow"
-              >
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('doc.empty')}>
                 {can('doc') && (
                   <Button type="primary" loading={busy === 'doc'} onClick={generateDoc}>
-                    Générer la documentation (IA)
+                    {t('doc.generate')}
                   </Button>
                 )}
               </Empty>
@@ -753,22 +776,22 @@ export default function WorkflowShow() {
           },
           {
             key: 'test',
-            label: 'Test',
+            label: t('tabs.test'),
             children: (
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Input.TextArea
                   rows={6}
                   value={testPayload}
                   onChange={(e) => setTestPayload(e.target.value)}
-                  placeholder='Payload JSON envoyé au webhook, ex: {"orderId": 42}'
+                  placeholder={t('test.payloadPlaceholder', { example: PAYLOAD_EXAMPLE })}
                 />
                 <Space wrap>
                   <Button type="primary" loading={busy === 'test'} onClick={testWebhook}>
-                    Déclencher via webhook
+                    {t('test.trigger')}
                   </Button>
                   {can('test') && (
-                    <Tooltip title="Rejoue le workflow avec des réponses simulées : rien n'est écrit ni envoyé au dehors.">
-                      <Button onClick={() => setMockModalOpen(true)}>Tester sans rien envoyer</Button>
+                    <Tooltip title={t('test.mockTooltip')}>
+                      <Button onClick={() => setMockModalOpen(true)}>{t('test.mock')}</Button>
                     </Tooltip>
                   )}
                 </Space>
@@ -842,7 +865,7 @@ export default function WorkflowShow() {
         <GroupDuplicateModal
           groupId={groupDuplicateId}
           groupName={
-            (workflow?.groups ?? []).find((group) => group.id === groupDuplicateId)?.name ?? 'ce groupe'
+            (workflow?.groups ?? []).find((group) => group.id === groupDuplicateId)?.name ?? t('thisGroup')
           }
           open
           onClose={() => setGroupDuplicateId(null)}

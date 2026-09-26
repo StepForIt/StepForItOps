@@ -5,6 +5,8 @@
  * écartée, en attente), qui est ce qu'on cherche des mois plus tard.
  */
 
+import { msg } from '../i18n';
+
 export interface ChatExportProposal {
   summary: string;
   status: string;
@@ -36,12 +38,6 @@ export interface ChatExportWorkflow {
   instanceName?: string;
 }
 
-const PROPOSAL_STATUS: Record<string, string> = {
-  pending: 'en attente',
-  applied: 'appliquée',
-  discarded: 'écartée',
-};
-
 /** Horodatage stable, indépendant du fuseau du serveur qui exporte. */
 function stamp(date: Date): string {
   return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 16)} UTC`;
@@ -64,25 +60,19 @@ export function expandChatDetails(content: string): string {
 }
 
 function messageBlock(message: ChatExportMessage): string {
-  const who = message.role === 'assistant' ? 'Assistant' : 'Vous';
+  const who = message.role === 'assistant' ? 'Assistant' : msg('chat.exportYou');
   const lines = [`### ${who} — ${stamp(message.createdAt)}`, '', expandChatDetails(message.content).trim()];
   const attachments = message.attachments ?? 0;
   if (attachments > 0) {
-    lines.push(
-      '',
-      `_${attachments} capture${attachments > 1 ? 's' : ''} d'écran jointe${attachments > 1 ? 's' : ''} (non exportée${attachments > 1 ? 's' : ''})._`,
-    );
+    lines.push('', msg('chat.exportScreenshots', { count: attachments }));
   }
   const files = message.files ?? [];
   if (files.length > 0) {
-    lines.push(
-      '',
-      `_Fichier${files.length > 1 ? 's' : ''} joint${files.length > 1 ? 's' : ''} (contenu non exporté) : ${files.join(', ')}._`,
-    );
+    lines.push('', msg('chat.exportFiles', { count: files.length, names: files.join(', ') }));
   }
   if (message.proposal) {
-    const status = PROPOSAL_STATUS[message.proposal.status] ?? message.proposal.status;
-    lines.push('', `> **Modification proposée** (${status}) : ${message.proposal.summary}`);
+    const status = msg('chat.exportProposalStatus', { status: message.proposal.status });
+    lines.push('', msg('chat.exportProposal', { status, summary: message.proposal.summary }));
   }
   return lines.join('\n');
 }
@@ -91,9 +81,9 @@ export function chatSessionToMarkdown(workflow: ChatExportWorkflow, session: Cha
   const header = [
     `# ${session.title}`,
     '',
-    `- Workflow : **${workflow.name}**${workflow.instanceName ? ` (${workflow.instanceName})` : ''}`,
-    `- Conversation ouverte le ${stamp(session.createdAt)}`,
-    `- ${session.messages.length} message${session.messages.length > 1 ? 's' : ''}`,
+    `- ${msg('chat.exportWorkflowLine', { name: workflow.name })}${workflow.instanceName ? ` (${workflow.instanceName})` : ''}`,
+    `- ${msg('chat.exportOpenedAt', { date: stamp(session.createdAt) })}`,
+    `- ${msg('chat.exportMessageCount', { count: session.messages.length })}`,
   ].join('\n');
   const body = session.messages.map(messageBlock).join('\n\n');
   return `${[header, body].filter(Boolean).join('\n\n')}\n`;
@@ -102,10 +92,12 @@ export function chatSessionToMarkdown(workflow: ChatExportWorkflow, session: Cha
 /** Toutes les conversations d'un workflow dans un seul fichier, la plus récente en tête. */
 export function chatSessionsToMarkdown(workflow: ChatExportWorkflow, sessions: ChatExportSession[]): string {
   const header = [
-    `# Conversations IA — ${workflow.name}`,
+    `# ${msg('chat.exportAllTitle', { name: workflow.name })}`,
     '',
-    `- ${sessions.length} conversation${sessions.length > 1 ? 's' : ''}`,
-    ...(workflow.instanceName ? [`- Instance : ${workflow.instanceName}`] : []),
+    `- ${msg('chat.exportConversationCount', { count: sessions.length })}`,
+    ...(workflow.instanceName
+      ? [`- ${msg('chat.exportInstanceLine', { name: workflow.instanceName })}`]
+      : []),
   ].join('\n');
   const body = sessions
     .map((session) => chatSessionToMarkdown(workflow, session).trim().replace(/^# /, '## '))

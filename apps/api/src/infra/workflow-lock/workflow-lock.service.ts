@@ -1,5 +1,5 @@
 import { HttpException, Injectable } from '@nestjs/common';
-import { LockedWorkflow, WORKFLOW_LOCKED_CODE, lockRefusalMessage, lockVerdict } from '@nwm/core';
+import { LockedWorkflow, WORKFLOW_LOCKED_CODE, lockRefusalMessage, lockVerdict, msg } from '@nwm/core';
 import { WorkflowLock, WorkflowLockOverride } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { currentLockContext } from './lock-context';
@@ -99,7 +99,7 @@ export class WorkflowLockService {
     await this.prisma.workflowLockOverride.createMany({
       data: fresh.map((workflow) => ({
         workflowId: workflow.id,
-        action: context?.action ?? 'hors requête',
+        action: context?.action ?? msg('env.lockOutsideRequest'),
         reason: context?.override?.reason ?? '',
         author: context?.author ?? null,
       })),

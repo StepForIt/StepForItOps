@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Input, List, Modal, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost, apiPut } from '../../lib/api';
 
 /** Credential NocoDB vu dans les workflows, avec le host déjà renseigné. */
@@ -43,6 +44,7 @@ interface Props {
  * n8n qui la porte n'est pas lisible) ; le token, lui, ne quitte jamais n8n.
  */
 export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Props) {
+  const t = useTranslations('inventory.resources.nocodb');
   const [endpoints, setEndpoints] = useState<NocoDbEndpoint[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -71,7 +73,7 @@ export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Prop
     try {
       await apiPut('/resource-discovery/nocodb/endpoints', { credentialId, host });
       load();
-      message.success('Host enregistré');
+      message.success(t('saved'));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -100,23 +102,21 @@ export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Prop
     <Modal
       open={open}
       onCancel={onClose}
-      title="Retrouver les vrais noms (NocoDB)"
+      title={t('title')}
       width={720}
       footer={[
         <Button key="close" onClick={onClose}>
-          Fermer
+          {t('close')}
         </Button>,
         <Button key="run" type="primary" loading={busy} disabled={!ready} onClick={refresh}>
-          Lancer la découverte
+          {t('run')}
         </Button>,
       ]}
     >
-      <Typography.Paragraph type="secondary">
-        URL de chaque instance NocoDB (le token reste dans n8n).
-      </Typography.Paragraph>
+      <Typography.Paragraph type="secondary">{t('intro')}</Typography.Paragraph>
 
       {endpoints.length === 0 ? (
-        <Alert type="info" showIcon message="Aucun nœud NocoDB dans les workflows de cette instance." />
+        <Alert type="info" showIcon message={t('noNodes')} />
       ) : (
         <List
           dataSource={endpoints}
@@ -127,18 +127,17 @@ export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Prop
                 title={
                   <Space size={4} wrap>
                     <span>{endpoint.credentialName ?? endpoint.credentialId}</span>
-                    {!endpoint.host && <Tag color="orange">host manquant</Tag>}
+                    {!endpoint.host && <Tag color="orange">{t('missingHost')}</Tag>}
                   </Space>
                 }
                 description={
                   <Space direction="vertical" size={6} style={{ width: '100%' }}>
                     <Typography.Text type="secondary">
-                      {endpoint.nodeCount} nœuds · {endpoint.projectIds.length} base
-                      {endpoint.projectIds.length > 1 ? 's' : ''}
+                      {t('counts', { nodes: endpoint.nodeCount, bases: endpoint.projectIds.length })}
                     </Typography.Text>
                     <Space.Compact style={{ width: '100%', maxWidth: 460 }}>
                       <Input
-                        placeholder="https://nocodb.exemple.fr"
+                        placeholder={t('hostPlaceholder')}
                         value={drafts[endpoint.credentialId] ?? ''}
                         onChange={(event) =>
                           setDrafts((current) => ({
@@ -149,16 +148,20 @@ export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Prop
                         onPressEnter={() => saveHost(endpoint.credentialId)}
                       />
                       <Button onClick={() => saveHost(endpoint.credentialId)} loading={busy}>
-                        Enregistrer
+                        {t('save')}
                       </Button>
                     </Space.Compact>
                     {!endpoint.host && endpoint.hostCandidates.length > 0 && (
                       <Space size={4} wrap>
-                        <Typography.Text type="secondary">Vu dans tes workflows :</Typography.Text>
+                        <Typography.Text type="secondary">{t('seenIn')}</Typography.Text>
                         {endpoint.hostCandidates.map((hint) => (
                           <Tooltip
                             key={hint.host}
-                            title={`${hint.workflowName ?? 'un workflow'} / ${hint.nodeName ?? 'un nœud'} appelle ${hint.sourceUrl}`}
+                            title={t('hint', {
+                              workflow: hint.workflowName ?? t('aWorkflow'),
+                              node: hint.nodeName ?? t('aNode'),
+                              url: hint.sourceUrl,
+                            })}
                           >
                             <Tag
                               color="blue"
@@ -187,13 +190,13 @@ export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Prop
       {result && (
         <Space direction="vertical" size={8} style={{ width: '100%', marginTop: 12 }}>
           {result.resolved > 0 && (
-            <Typography.Text type="secondary">{result.resolved} noms retrouvés</Typography.Text>
+            <Typography.Text type="secondary">{t('resolved', { count: result.resolved })}</Typography.Text>
           )}
           {result.missingHost.length > 0 && (
             <Alert
               type="warning"
               showIcon
-              message="Credentials ignorés faute de host"
+              message={t('ignored')}
               description={result.missingHost
                 .map((entry) => entry.credentialName ?? entry.credentialId)
                 .join(', ')}
@@ -204,7 +207,9 @@ export function NocoDbNamesModal({ open, instanceId, onClose, onResolved }: Prop
               key={`${failure.credentialId}:${failure.projectId ?? ''}:${index}`}
               type="error"
               showIcon
-              message={`Échec ${failure.projectId ? `sur la base ${failure.projectId}` : 'au listing des bases'}`}
+              message={
+                failure.projectId ? t('failedOnBase', { base: failure.projectId }) : t('failedListing')
+              }
               description={failure.reason}
             />
           ))}

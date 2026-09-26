@@ -9,24 +9,26 @@ import { WorkflowGroupForm } from '../../../../components/workflow-group-form';
 import { GroupCredentials } from '../../../../components/group-credentials';
 import { GroupDuplicateModal } from '../../../../components/group-duplicate-modal';
 import { formFooterButtons } from '../../../../components/form-cancel-button';
+import { useTranslations } from 'next-intl';
 
 export default function WorkflowGroupEdit() {
+  const t = useTranslations('settings.workflowGroupEdit');
   const params = useParams<{ id: string }>();
   const { formProps, saveButtonProps, queryResult } = useForm({
     resource: 'workflow-groups',
     action: 'edit',
   });
   const [duplicateOpen, setDuplicateOpen] = useState(false);
-  const groupName = (queryResult?.data?.data as { name?: string } | undefined)?.name ?? 'ce groupe';
+  const groupName = (queryResult?.data?.data as { name?: string } | undefined)?.name ?? t('thisGroup');
 
   return (
     <Edit saveButtonProps={saveButtonProps} footerButtons={formFooterButtons}>
       <WorkflowGroupForm formProps={formProps} />
       <Divider />
-      <Typography.Title level={5}>Actions sur tout le groupe</Typography.Title>
+      <Typography.Title level={5}>{t('groupActions')}</Typography.Title>
       <Space wrap>
         <Button icon={<CopyOutlined />} onClick={() => setDuplicateOpen(true)}>
-          Dupliquer vers un env…
+          {t('duplicate')}
         </Button>
       </Space>
       {params?.id && (
@@ -38,11 +40,8 @@ export default function WorkflowGroupEdit() {
         />
       )}
       <Divider />
-      <Typography.Title level={5}>Credentials utilisés par le groupe</Typography.Title>
-      <Typography.Paragraph type="secondary">
-        Récoltés dans les snapshots des workflows membres. Pour découvrir et créer les mappings du groupe,
-        utilise « Découvrir depuis un workflow » sur la page Mappings env (mode Groupe).
-      </Typography.Paragraph>
+      <Typography.Title level={5}>{t('credentials')}</Typography.Title>
+      <Typography.Paragraph type="secondary">{t('credentialsHint')}</Typography.Paragraph>
       {params?.id && <GroupCredentials groupId={params.id} />}
     </Edit>
   );

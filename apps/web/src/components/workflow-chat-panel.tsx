@@ -23,6 +23,7 @@ import {
   SendOutlined,
   StopOutlined,
 } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { Markdown } from './markdown';
 import { ProposalReviewModal } from './proposal-review-modal';
@@ -39,7 +40,8 @@ import {
 } from './chat-attachments';
 import { ChatGhostInput } from './chat-ghost-input';
 import { useWorkflowChat } from './workflow-chat-drawer';
-import { CompletionSources } from '../lib/chat-completion';
+import { BRAND } from '../lib/brand/colors';
+import { COMMON_PHRASE_KEYS, CompletionSources, withCommonPhrases } from '../lib/chat-completion';
 
 /** État d'une modification proposée, calculé par l'API (`proposalState`). */
 type ProposalState = 'pending' | 'stale' | 'applied' | 'discarded';
@@ -85,27 +87,11 @@ interface SessionDetail extends ChatSession {
  * coup d'œil laquelle est partie en production, laquelle a été refusée, et
  * laquelle ne s'applique plus au workflow d'aujourd'hui.
  */
-const PROPOSAL_BADGE: Record<ProposalState, { color: string; label: string; hint: string }> = {
-  pending: {
-    color: 'gold',
-    label: 'à revoir',
-    hint: 'Modification proposée : rien n’est écrit tant que le diff n’est pas appliqué.',
-  },
-  stale: {
-    color: 'orange',
-    label: 'obsolète',
-    hint: 'Workflow modifié depuis : redemande-la.',
-  },
-  applied: {
-    color: 'green',
-    label: 'appliquée',
-    hint: 'Appliquée. Le diff reste consultable.',
-  },
-  discarded: {
-    color: 'default',
-    label: 'refusée',
-    hint: 'Refusée : rien n’a été écrit.',
-  },
+const PROPOSAL_BADGE_COLOR: Record<ProposalState, string> = {
+  pending: 'gold',
+  stale: 'orange',
+  applied: 'green',
+  discarded: 'default',
 };
 
 /**
@@ -132,21 +118,8 @@ async function downloadExport(path: string) {
   URL.revokeObjectURL(url);
 }
 
-const SUGGESTIONS = [
-  { label: 'Expliquer le workflow', prompt: 'Explique-moi ce que fait ce workflow, étape par étape.' },
-  {
-    label: 'Points de fragilité',
-    prompt: 'Quels sont les points de fragilité (erreurs non gérées, données manquantes) ?',
-  },
-  {
-    label: 'Annoter les nœuds peu clairs',
-    prompt: 'Ajoute une note explicative sur chaque nœud sans nom clair.',
-  },
-];
-
-/** Une pièce jointe seule est une demande valable ; l'API pose alors la question. */
-const IMAGE_ONLY_PLACEHOLDER = 'Voici une capture d’écran. Que montre-t-elle, et que faut-il en faire ?';
-const FILE_ONLY_PLACEHOLDER = 'Voici un ou plusieurs fichiers joints. Que contiennent-ils, et qu’en faire ?';
+/** Libellé et demande envoyée à l'IA, traduits au rendu (`chat.panel.suggestions.<clé>`). */
+const SUGGESTIONS = ['explain', 'fragility', 'annotate'] as const;
 
 /** Message utilisateur : texte brut. Réponse IA : Markdown interprété. */
 function MessageBody({ role, content }: { role: string; content: string }) {
@@ -165,6 +138,10 @@ export function WorkflowChatPanel({
   initialSessionId?: string;
   onWorkflowChanged?: () => void;
 }) {
+  const t = useTranslations('chat.panel');
+  const tPhrases = useTranslations('chat.commonPhrases');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [sessions, setSessions] = React.useState<ChatSession[]>([]);
   const [leftovers, setLeftovers] = React.useState<ChatLeftover[]>([]);
   const [removingLeftover, setRemovingLeftover] = React.useState<string | null>(null);
@@ -185,6 +162,16 @@ export function WorkflowChatPanel({
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
   const attachments = useChatAttachments();
+  // Le catalogue de demandes courantes suit la langue affichée : c'est un texte
+  // que l'humain enverra à l'IA tel quel.
+  const completionSources = React.useMemo(
+    () =>
+      withCommonPhrases(
+        completions,
+        COMMON_PHRASE_KEYS.map((key) => tPhrases(key)),
+      ),
+    [completions, tPhrases],
+  );
 
   // Le tiroir qui héberge ce panneau le DÉTRUIT à la fermeture : sans ce signal,
   // il ne saurait pas qu'il y a une saisie à perdre. Hors tiroir (page `view`),
@@ -282,7 +269,8 @@ export function WorkflowChatPanel({
     const pending: ChatMessage = {
       id: `local-${Date.now()}`,
       role: 'user',
-      content: content || (attached.files.length > 0 ? FILE_ONLY_PLACEHOLDER : IMAGE_ONLY_PLACEHOLDER),
+      // Une pièce jointe seule est une demande valable : l'API pose alors la même question, dans la même langue.
+      content: content || t(attached.files.length > 0 ? 'fileOnlyRequest' : 'imageOnlyRequest'),
       createdAt: new Date().toISOString(),
     };
     setSession((previous) =>
@@ -337,7 +325,7 @@ export function WorkflowChatPanel({
       // Un tour introuvable ici tourne peut-être ailleurs (API redémarrée, autre
       // réplique) : il ira au bout, et le dire vaut mieux qu'un bouton muet.
       if (!stopped) {
-        message.info('Le tour n’a pas pu être interrompu : il va terminer et répondre.');
+        message.info(t('stopFailed'));
         setStopping(false);
       }
     } catch (error) {
@@ -392,7 +380,7 @@ export function WorkflowChatPanel({
     try {
       await downloadExport(path);
     } catch (error) {
-      message.error(`Échec de l'export : ${(error as Error).message}`);
+      message.error(t('exportFailed', { error: (error as Error).message }));
     }
   };
 
@@ -409,13 +397,11 @@ export function WorkflowChatPanel({
       <Alert
         type="warning"
         showIcon
-        message="Assistant IA indisponible"
-        description={
-          <>
-            Le module <b>Assistant IA workflow</b> est peut-être désactivé (page Modules), ou la clé IA
-            n&apos;est pas renseignée. Détail : {unavailable}
-          </>
-        }
+        message={t('unavailable.title')}
+        description={t.rich('unavailable.description', {
+          b: (chunks) => <b>{chunks}</b>,
+          detail: unavailable,
+        })}
       />
     );
   }
@@ -441,11 +427,13 @@ export function WorkflowChatPanel({
                   <span>{item.title}</span>
                   {item.proposalSummary && (
                     <Tag
-                      color={PROPOSAL_BADGE[item.proposalSummary.state].color}
+                      color={PROPOSAL_BADGE_COLOR[item.proposalSummary.state]}
                       style={{ marginInlineEnd: 0 }}
                     >
-                      {item.proposalSummary.count > 1 ? `${item.proposalSummary.count} ` : ''}
-                      {PROPOSAL_BADGE[item.proposalSummary.state].label}
+                      {t('sessionBadge', {
+                        state: item.proposalSummary.state,
+                        count: item.proposalSummary.count,
+                      })}
                     </Tag>
                   )}
                 </Space>
@@ -453,13 +441,13 @@ export function WorkflowChatPanel({
             }))}
           />
           <Button size="small" icon={<PlusOutlined />} onClick={() => newSession()}>
-            Nouvelle
+            {t('newSession')}
           </Button>
           <Dropdown
             menu={{
               items: [
-                { key: 'session', label: 'Cette conversation', disabled: !session },
-                { key: 'all', label: 'Toutes les conversations du workflow' },
+                { key: 'session', label: t('export.session'), disabled: !session },
+                { key: 'all', label: t('export.all') },
               ],
               onClick: ({ key }) =>
                 exportConversations(
@@ -470,15 +458,15 @@ export function WorkflowChatPanel({
             }}
           >
             <Button size="small" icon={<DownloadOutlined />}>
-              Exporter
+              {t('export.button')}
             </Button>
           </Dropdown>
           {session && (
             <Popconfirm
-              title="Supprimer cette conversation ?"
+              title={t('deleteSession')}
               onConfirm={() => removeSession(session.id)}
-              okText="Supprimer"
-              cancelText="Annuler"
+              okText={tCommon('delete')}
+              cancelText={tCommon('cancel')}
             >
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
@@ -491,10 +479,12 @@ export function WorkflowChatPanel({
           type="warning"
           showIcon
           style={{ marginBottom: 8 }}
-          message={`Envoyée le ${new Date(session.unanswered.createdAt).toLocaleString('fr-FR')}, sans réponse.`}
+          message={t('unanswered', {
+            date: new Date(session.unanswered.createdAt).toLocaleString(locale),
+          })}
           action={
             <Button size="small" type="primary" onClick={retryLast}>
-              Relancer
+              {t('retry')}
             </Button>
           }
         />
@@ -505,11 +495,7 @@ export function WorkflowChatPanel({
           type="warning"
           showIcon
           style={{ marginBottom: 8 }}
-          message={
-            leftovers.length > 1
-              ? `${leftovers.length} sous-workflows créés ici sont restés vides`
-              : 'Un sous-workflow créé ici est resté vide'
-          }
+          message={t('leftovers.title', { count: leftovers.length })}
           description={
             <Space direction="vertical" size={6} style={{ width: '100%' }}>
               {leftovers.map((leftover) => (
@@ -518,10 +504,10 @@ export function WorkflowChatPanel({
                     {leftover.name}
                   </Typography.Link>
                   <Popconfirm
-                    title="Supprimer ce workflow dans n8n ?"
-                    description="Suppression définitive dans n8n."
-                    okText="Supprimer"
-                    cancelText="Annuler"
+                    title={t('leftovers.confirmTitle')}
+                    description={t('leftovers.confirmDescription')}
+                    okText={tCommon('delete')}
+                    cancelText={tCommon('cancel')}
                     onConfirm={async () => {
                       setRemovingLeftover(leftover.workflowId);
                       try {
@@ -535,7 +521,7 @@ export function WorkflowChatPanel({
                     }}
                   >
                     <Button size="small" danger loading={removingLeftover === leftover.workflowId}>
-                      Supprimer dans n8n
+                      {t('leftovers.delete')}
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -549,15 +535,12 @@ export function WorkflowChatPanel({
 
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
         {session && session.messages.length === 0 && !sending && (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="Pose une question sur ce workflow, ou demande une modification."
-          >
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('empty')}>
             <Space direction="vertical" style={{ width: '100%' }}>
               {SUGGESTIONS.map((suggestion) => (
-                <Tooltip key={suggestion.label} title={suggestion.prompt} placement="right">
-                  <Button size="small" onClick={() => send(suggestion.prompt)}>
-                    {suggestion.label}
+                <Tooltip key={suggestion} title={t(`suggestions.${suggestion}.prompt`)} placement="right">
+                  <Button size="small" onClick={() => send(t(`suggestions.${suggestion}.prompt`))}>
+                    {t(`suggestions.${suggestion}.label`)}
                   </Button>
                 </Tooltip>
               ))}
@@ -577,7 +560,7 @@ export function WorkflowChatPanel({
             <div
               style={{
                 maxWidth: '88%',
-                background: item.role === 'user' ? '#e6f4ff' : '#fafafa',
+                background: item.role === 'user' ? BRAND.primarySoft : BRAND.papier,
                 border: '1px solid #f0f0f0',
                 borderRadius: 8,
                 padding: '8px 10px',
@@ -594,20 +577,19 @@ export function WorkflowChatPanel({
                   // Proposition inconnue du lot (fil d'avant ce champ) : on retombe
                   // sur « à revoir », l'état qu'elle avait toujours affiché.
                   const state = proposalStates.get(item.proposalId) ?? 'pending';
-                  const badge = PROPOSAL_BADGE[state];
                   const decided = state === 'applied' || state === 'discarded';
                   return (
                     <div style={{ marginTop: 8 }}>
                       <Space>
-                        <Tooltip title={badge.hint}>
-                          <Tag color={badge.color}>modification {badge.label}</Tag>
+                        <Tooltip title={t(`proposalHint.${state}`)}>
+                          <Tag color={PROPOSAL_BADGE_COLOR[state]}>{t('proposalTag', { state })}</Tag>
                         </Tooltip>
                         <Button
                           size="small"
                           type={decided ? 'default' : 'primary'}
                           onClick={() => setReviewing(item.proposalId!)}
                         >
-                          {decided ? 'Voir le diff' : 'Revoir le diff'}
+                          {decided ? t('seeDiff') : t('reviewDiff')}
                         </Button>
                       </Space>
                     </div>
@@ -626,12 +608,12 @@ export function WorkflowChatPanel({
           value={draft}
           onChange={setDraft}
           onSubmit={() => send(draft)}
-          sources={completions}
+          sources={completionSources}
           disabled={sending || !session}
           onFiles={(files) => attachments.add(files)}
-          placeholder="Question ou modification…"
+          placeholder={t('placeholder')}
         />
-        <Tooltip title="Joindre captures ou fichiers texte (glisser-déposer et collage marchent aussi)">
+        <Tooltip title={t('attachTooltip')}>
           <Button
             icon={<PaperClipOutlined />}
             disabled={sending || !session}
@@ -641,13 +623,13 @@ export function WorkflowChatPanel({
         {sending ? (
           // Le bouton d'envoi CÈDE la place à l'arrêt, il ne s'y ajoute pas : ce
           // qu'on peut faire pendant un tour, c'est l'arrêter, rien d'autre.
-          <Tooltip title="Arrêter ce tour et récupérer ma demande (Échap)">
+          <Tooltip title={t('stopTooltip')}>
             <Button danger icon={<StopOutlined />} loading={stopping} onClick={stop}>
-              Arrêter
+              {t('stop')}
             </Button>
           </Tooltip>
         ) : (
-          <Tooltip title="Entrée : envoyer · Maj+Entrée : nouvelle ligne · Tab : compléter">
+          <Tooltip title={t('sendTooltip')}>
             <Button
               type="primary"
               icon={<SendOutlined />}

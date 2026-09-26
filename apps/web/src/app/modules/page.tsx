@@ -11,7 +11,9 @@ import { AiSettingsModal } from '../../components/ai-settings-modal';
 import { PlatformSettingsCard } from '../../components/platform-settings-card';
 import { EnvChainCard } from '../../components/env-chain-card';
 import { NodeCatalogCard } from '../../components/node-catalog-card';
+import { CommunityPackageDocsCard } from '../../components/community-package-docs-card';
 import { useEnabledModules } from '../../lib/enabled-modules';
+import { useTranslations } from 'next-intl';
 
 interface ModuleView {
   id: string;
@@ -27,40 +29,40 @@ interface ModuleView {
  * effet immédiat côté serveur (crons, écoute d'événements) : l'énoncer évite de
  * l'apprendre après coup. Sans entrée dédiée, on retombe sur un effet générique.
  */
-const MODULE_DISABLE_EFFECTS: Record<string, string> = {
-  monitoring:
-    "La surveillance des erreurs d'exécution et les heartbeats s'arrêtent : plus aucune alerte tant que le module reste coupé.",
-  performance:
-    "L'historisation des durées et statuts d'exécution s'arrête ; la page Performance et les alertes de dérive ne sont plus alimentées.",
-  notifier:
-    'Plus aucune alerte ne part vers Slack ou les webhooks (nouveaux problèmes, rechutes, dérives de durée, budget IA).',
-  versioning: "Les snapshots de workflows et l'export GitHub / Google Drive s'arrêtent.",
-  verifier: 'La vérification structurelle, les checks de fiabilité et la revue logique IA ne tournent plus.',
-  'js-checker': "L'analyse des nœuds Code (syntaxe + revue IA) s'arrête.",
-  'field-checker': "Le contrôle des champs référencés dans les expressions s'arrête.",
-  'remote-schema':
-    'La vérification des colonnes des tables distantes (Airtable, NocoDB, Notion, Sheets, PostgreSQL) s’arrête.',
-  tester: 'Les tests de workflows et le bouchonnage guidé ne sont plus disponibles.',
-  'env-switcher': "La bascule de ressources entre environnements et la promotion inter-instances s'arrêtent.",
-  organizer: 'Le plan de rangement / naming (IA) et son application ne sont plus disponibles.',
-  'doc-schema': "La génération de schéma Mermaid et de résumé IA s'arrête.",
-  'dep-graph': 'La carte des workflows et la page Ressources externes disparaissent.',
-  optimizer: "La détection de naming / nœuds inutiles et le renommage sûr s'arrêtent.",
-  'model-audit': "L'audit continu des modèles LLM (adéquation, cycle de vie, surdimensionnement) s'arrête.",
-  'ai-cost': "Le suivi des coûts LLM s'arrête ; la page Coûts IA n'est plus alimentée.",
-  'app-logs': 'La page des logs applicatifs disparaît (la capture des logs, hors du module, continue).',
-  'resource-discovery': "La découverte des bases / tables réelles s'arrête.",
-  'config-transfer': "L'export / import de la configuration n'est plus disponible.",
-  dashboard: 'La home agrégée retombe sur la grille de raccourcis.',
-  'assistant-learning': "L'assistant n'apprend plus de tes corrections.",
-  'workflow-chat': "L'assistant IA (chat, correctifs, création guidée) n'est plus disponible.",
-};
+const MODULE_DISABLE_EFFECTS = {
+  monitoring: 'monitoring',
+  performance: 'performance',
+  notifier: 'notifier',
+  versioning: 'versioning',
+  verifier: 'verifier',
+  'js-checker': 'jsChecker',
+  'field-checker': 'fieldChecker',
+  'remote-schema': 'remoteSchema',
+  tester: 'tester',
+  'env-switcher': 'envSwitcher',
+  organizer: 'organizer',
+  'doc-schema': 'docSchema',
+  'dep-graph': 'depGraph',
+  optimizer: 'optimizer',
+  'model-audit': 'modelAudit',
+  'ai-cost': 'aiCost',
+  'app-logs': 'appLogs',
+  'resource-discovery': 'resourceDiscovery',
+  'config-transfer': 'configTransfer',
+  dashboard: 'dashboard',
+  'assistant-learning': 'assistantLearning',
+  'workflow-chat': 'workflowChat',
+} as const;
 
-function disableEffect(module: ModuleView): string {
-  return MODULE_DISABLE_EFFECTS[module.id] ?? 'Ses fonctions et sa page disparaissent de la console.';
+type DisableEffectKey = (typeof MODULE_DISABLE_EFFECTS)[keyof typeof MODULE_DISABLE_EFFECTS] | 'default';
+
+function disableEffectKey(module: ModuleView): DisableEffectKey {
+  return (MODULE_DISABLE_EFFECTS as Record<string, DisableEffectKey>)[module.id] ?? 'default';
 }
 
 export default function ModulesPage() {
+  const t = useTranslations('settings.modules');
+  const tc = useTranslations('common');
   const { tableProps } = useTable<ModuleView>({ resource: 'modules', pagination: { mode: 'off' } });
   const { mutate } = useUpdate();
   const invalidate = useInvalidate();
@@ -82,41 +84,44 @@ export default function ModulesPage() {
 
   return (
     <List
-      title="Modules de la plateforme"
+      title={t('title')}
       headerButtons={
         <Button icon={<RobotOutlined />} onClick={() => setAiModalOpen(true)}>
-          Réglages IA
+          {t('aiSettings')}
         </Button>
       }
     >
       <PlatformSettingsCard />
       <EnvChainCard />
       <NodeCatalogCard />
+      <CommunityPackageDocsCard />
       <Table {...tableProps} rowKey="id" pagination={false}>
         <Table.Column<ModuleView>
           dataIndex="name"
-          title="Module"
+          title={t('columns.module')}
           sorter={(a, b) => a.name.localeCompare(b.name)}
           defaultSortOrder="ascend"
         />
-        <Table.Column dataIndex="description" title="Description" />
+        <Table.Column dataIndex="description" title={t('columns.description')} />
         <Table.Column
           dataIndex="core"
-          title="Type"
-          render={(core: boolean) => (core ? <Tag color="purple">core</Tag> : <Tag>optionnel</Tag>)}
+          title={tc('columns.type')}
+          render={(core: boolean) => (core ? <Tag color="purple">core</Tag> : <Tag>{t('optional')}</Tag>)}
         />
         <Table.Column<ModuleView>
           dataIndex="enabled"
-          title="Activé"
+          title={t('columns.enabled')}
           render={(enabled: boolean, record) => (
             // Activer est direct ; DÉSACTIVER passe par une confirmation qui nomme
             // l'effet — l'interrupteur reste sur ON tant qu'elle n'est pas validée
             // (onChange ignore la valeur `false`, seul onConfirm coupe vraiment).
             <Popconfirm
-              title={`Désactiver « ${record.name} » ?`}
-              description={<div style={{ maxWidth: 320 }}>{disableEffect(record)}</div>}
-              okText="Désactiver"
-              cancelText="Annuler"
+              title={t('disableConfirm', { name: record.name })}
+              description={
+                <div style={{ maxWidth: 320 }}>{t(`disableEffects.${disableEffectKey(record)}`)}</div>
+              }
+              okText={t('disable')}
+              cancelText={tc('cancel')}
               okButtonProps={{ danger: true }}
               disabled={record.core || !enabled}
               onConfirm={() => toggle(record, false)}

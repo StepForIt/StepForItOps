@@ -17,6 +17,7 @@
  */
 import { CheckFinding } from '../check-finding';
 import { FlatModule, MakeModule, moduleLabel } from './blueprint';
+import { msg } from '../../i18n/translate';
 
 export interface MakeFieldSpec {
   name?: string;
@@ -82,7 +83,7 @@ function checkSection(
       findings.push({
         severity: 'warning',
         code: 'make-unknown-field',
-        message: `« ${label} » déclare « ${key} », que ce module ne connaît pas : Make l'ignore, et la valeur n'arrivera jamais.`,
+        message: msg('checks.makeUnknownField', { module: label, field: key }),
         nodeName: label,
         data: { field: key, section },
       });
@@ -98,7 +99,7 @@ function checkSection(
       findings.push({
         severity: 'error',
         code: 'make-required-field-missing',
-        message: `« ${label} » n'a pas de valeur pour « ${spec.label ?? spec.name} », que le module exige : il échouera à l'exécution.`,
+        message: msg('checks.makeRequiredFieldMissing', { module: label, field: spec.label ?? spec.name }),
         nodeName: label,
         data: { field: spec.name, section },
       });
@@ -117,9 +118,12 @@ function checkValue(label: string, key: string, value: unknown, spec: MakeFieldS
       {
         severity: 'error',
         code: 'make-value-not-allowed',
-        message:
-          `« ${label} » met « ${String(value)} » dans « ${spec.label ?? key} », qui n'admet que ` +
-          `${allowed.map((option) => `« ${String(option)} »`).join(', ')}.`,
+        message: msg('checks.makeValueNotAllowed', {
+          module: label,
+          value: String(value),
+          field: spec.label ?? key,
+          allowed: allowed.map((option) => msg('checks.quoted', { value: String(option) })).join(', '),
+        }),
         nodeName: label,
         data: { field: key, value, allowed },
       },
@@ -132,9 +136,12 @@ function checkValue(label: string, key: string, value: unknown, spec: MakeFieldS
       {
         severity: 'warning',
         code: 'make-field-type',
-        message:
-          `« ${label} » met ${describe(value)} dans « ${spec.label ?? key} », que le module attend en ` +
-          `${expected}.`,
+        message: msg('checks.makeFieldType', {
+          module: label,
+          got: describe(value),
+          field: spec.label ?? key,
+          expected: msg('checks.makeKind', { kind: expected }),
+        }),
         nodeName: label,
         data: { field: key, expected, got: actualKind(value) },
       },
@@ -149,22 +156,21 @@ function checkValue(label: string, key: string, value: unknown, spec: MakeFieldS
  * dire quelque chose.
  */
 function expectedKind(type: string | undefined): string | undefined {
-  if (type === 'boolean') return 'booléen';
-  if (type === 'number' || type === 'uinteger' || type === 'integer') return 'nombre';
-  if (type === 'array') return 'liste';
-  if (type === 'collection') return 'objet';
+  if (type === 'boolean') return 'boolean';
+  if (type === 'number' || type === 'uinteger' || type === 'integer') return 'number';
+  if (type === 'array') return 'list';
+  if (type === 'collection') return 'object';
   return undefined;
 }
 
 function actualKind(value: unknown): string {
-  if (Array.isArray(value)) return 'liste';
-  if (typeof value === 'boolean') return 'booléen';
-  if (typeof value === 'number') return 'nombre';
-  if (value !== null && typeof value === 'object') return 'objet';
-  return 'texte';
+  if (Array.isArray(value)) return 'list';
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'number') return 'number';
+  if (value !== null && typeof value === 'object') return 'object';
+  return 'text';
 }
 
 function describe(value: unknown): string {
-  const kind = actualKind(value);
-  return kind === 'texte' ? `le texte « ${String(value)} »` : `${kind === 'liste' ? 'une' : 'un'} ${kind}`;
+  return msg('checks.makeValueDescribed', { kind: actualKind(value), value: String(value) });
 }

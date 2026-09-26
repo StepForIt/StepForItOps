@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs, Tag, Tooltip, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../../../../lib/api';
 import { useInstanceScope } from '../../../../lib/instance-scope';
 import { WorkflowRow } from '../../workflow-row';
@@ -26,6 +27,7 @@ export function EnvLinks({
   /** Env déclaré, sans exemplaire : on propose la copie. */
   onCopyTo: (envId: string) => void;
 }) {
+  const t = useTranslations('workflowShow.envLinks');
   const { envs } = useEnvs();
   const router = useRouter();
   const [siblings, setSiblings] = useState<WorkflowRow[]>([]);
@@ -43,9 +45,9 @@ export function EnvLinks({
     [
       row.name,
       instanceName(row.instanceId),
-      row.active ? 'actif' : 'inactif',
-      ...(row.archived ? ['archivé'] : []),
-      ...(row.missingInN8n ? ['supprimé dans n8n'] : []),
+      row.active ? t('active') : t('inactive'),
+      ...(row.archived ? [t('archived')] : []),
+      ...(row.missingInN8n ? [t('missing')] : []),
     ].join(' · ');
 
   // Les envs déclarés donnent l'ordre ; un exemplaire sans env déclaré garde le sien
@@ -63,9 +65,9 @@ export function EnvLinks({
           </span>
         </Tooltip>
       ) : (
-        <Tooltip title={`Aucun exemplaire en ${env.id.toUpperCase()} — cliquer pour y copier celui-ci`}>
+        <Tooltip title={t('noCopyTooltip', { env: env.id.toUpperCase() })}>
           <Typography.Text type="secondary">
-            {env.id.toUpperCase()} <Tag style={{ marginInlineEnd: 0 }}>à créer</Tag>
+            {env.id.toUpperCase()} <Tag style={{ marginInlineEnd: 0 }}>{t('toCreate')}</Tag>
           </Typography.Text>
         </Tooltip>
       ),
@@ -73,7 +75,7 @@ export function EnvLinks({
   });
   const unknown = all.filter((row) => !row.env);
   if (unknown.some((row) => row.id === workflow.id))
-    items.push({ key: UNKNOWN_ENV, label: <Tooltip title={hint(workflow)}>env ?</Tooltip> });
+    items.push({ key: UNKNOWN_ENV, label: <Tooltip title={hint(workflow)}>{t('unknownEnv')}</Tooltip> });
 
   if (items.length === 0) return null;
 

@@ -8,7 +8,9 @@ import {
   HistoryOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../../lib/api';
+import { BRAND } from '../../lib/brand/colors';
 
 interface SyncResult {
   synced: number;
@@ -16,24 +18,10 @@ interface SyncResult {
 }
 
 const STEPS = [
-  {
-    icon: <CloudDownloadOutlined />,
-    title: 'Lecture des workflows sur n8n',
-    detail: "Un simple GET /workflows sur l'API n8n de l'instance, page par page.",
-  },
-  {
-    icon: <DatabaseOutlined />,
-    title: 'Mise à jour du miroir local',
-    detail:
-      'Nom, statut actif, tags et JSON du workflow sont enregistrés dans la base de la plateforme. Les workflows déjà connus sont mis à jour, les nouveaux sont ajoutés.',
-  },
-  {
-    icon: <HistoryOutlined />,
-    title: 'Nouvelle version pour les workflows modifiés',
-    detail:
-      "Si le contenu a changé depuis la dernière synchro, le module versioning crée une version. Si une cible d'export (GitHub / Google Drive) est activée, cette version y est aussi poussée.",
-  },
-];
+  { icon: <CloudDownloadOutlined />, key: 'read' },
+  { icon: <DatabaseOutlined />, key: 'mirror' },
+  { icon: <HistoryOutlined />, key: 'version' },
+] as const;
 
 /** Explique ce que fait la synchro avant de la lancer, puis affiche le résultat. */
 export function SyncModal({
@@ -45,6 +33,8 @@ export function SyncModal({
   instanceName?: string;
   onClose: () => void;
 }) {
+  const t = useTranslations('settings.syncModal');
+  const tc = useTranslations('common');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,20 +59,20 @@ export function SyncModal({
 
   return (
     <Modal
-      title={`Synchroniser — ${instanceName ?? ''}`}
+      title={t('title', { name: instanceName ?? '' })}
       open={instanceId !== null}
       onCancel={onClose}
       width={640}
       footer={
         result ? (
           <Button type="primary" onClick={onClose}>
-            Fermer
+            {tc('close')}
           </Button>
         ) : (
           <>
-            <Button onClick={onClose}>Annuler</Button>
+            <Button onClick={onClose}>{tc('cancel')}</Button>
             <Button type="primary" loading={running} onClick={run}>
-              Synchroniser
+              {t('sync')}
             </Button>
           </>
         )
@@ -92,23 +82,23 @@ export function SyncModal({
         type="success"
         showIcon
         icon={<SafetyCertificateOutlined />}
-        message="Rien n'est modifié dans n8n"
-        description="La synchronisation lit l'API n8n en lecture seule : aucun workflow n'est créé, modifié, activé, désactivé ni exécuté sur l'instance."
+        message={t('readOnly')}
+        description={t('readOnlyHint')}
         style={{ marginBottom: 16 }}
       />
 
-      <Typography.Text strong>Ce qui se passe côté plateforme</Typography.Text>
+      <Typography.Text strong>{t('whatHappens')}</Typography.Text>
       <List
         size="small"
-        dataSource={STEPS}
+        dataSource={[...STEPS]}
         renderItem={(step) => (
           <List.Item>
             <List.Item.Meta
-              avatar={<span style={{ fontSize: 18, color: '#1677ff' }}>{step.icon}</span>}
-              title={step.title}
+              avatar={<span style={{ fontSize: 18, color: BRAND.primary }}>{step.icon}</span>}
+              title={t(`steps.${step.key}.title`)}
               description={
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {step.detail}
+                  {t(`steps.${step.key}.detail`)}
                 </Typography.Text>
               }
             />
@@ -117,21 +107,16 @@ export function SyncModal({
       />
 
       <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginTop: 12 }}>
-        À noter : le graphe de dépendances et la carte des workflows ne se mettent pas à jour tout seuls —
-        reconstruis le graphe depuis la page Dépendances après une synchro.
+        {t('note')}
       </Typography.Paragraph>
 
-      {error && <Alert type="error" showIcon message="Synchronisation échouée" description={error} />}
+      {error && <Alert type="error" showIcon message={t('failed')} description={error} />}
       {result && (
         <Alert
           type="success"
           showIcon
-          message={`${result.synced} workflows synchronisés`}
-          description={
-            result.changed > 0
-              ? `${result.changed} ont changé depuis la dernière synchro : une nouvelle version a été créée pour chacun.`
-              : 'Aucun changement détecté : aucune nouvelle version créée.'
-          }
+          message={t('synced', { count: result.synced })}
+          description={result.changed > 0 ? t('changed', { count: result.changed }) : t('unchanged')}
         />
       )}
     </Modal>

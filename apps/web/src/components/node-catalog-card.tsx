@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { ResponsiveCard } from './mobile/responsive-card';
 import { Table } from './resizable-table';
 import { CloudDownloadOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -28,7 +29,7 @@ interface CatalogStatus {
   }>;
 }
 
-const date = (value?: string) => (value ? new Date(value).toLocaleString('fr-FR') : '—');
+const formatDate = (locale: string, value?: string) => (value ? new Date(value).toLocaleString(locale) : '—');
 
 /**
  * Le catalogue des types de nœuds (page Modules).
@@ -39,6 +40,10 @@ const date = (value?: string) => (value ? new Date(value).toLocaleString('fr-FR'
  * l'échec montré tant qu'un succès ne l'a pas remplacé.
  */
 export function NodeCatalogCard() {
+  const t = useTranslations('settings.nodeCatalog');
+  const tc = useTranslations('common');
+  const locale = useLocale();
+  const date = (value?: string) => formatDate(locale, value);
   const [status, setStatus] = useState<CatalogStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -65,14 +70,14 @@ export function NodeCatalogCard() {
   return (
     <ResponsiveCard
       size="small"
-      title="Catalogue des types de nœuds"
+      title={t('title')}
       style={{ marginBottom: 16 }}
       extra={
         <Space>
           <Button size="small" icon={<ReloadOutlined />} onClick={load}>
-            Rafraîchir
+            {tc('refresh')}
           </Button>
-          <Tooltip title="Retélécharge le catalogue mutualisé si sa version amont a changé. Rien n'est téléchargé si elle n'a pas bougé.">
+          <Tooltip title={t('updateTooltip')}>
             <Button
               size="small"
               type="primary"
@@ -84,12 +89,12 @@ export function NodeCatalogCard() {
                   '/node-catalog/sync',
                   (result) =>
                     result.skipped
-                      ? 'Catalogue déjà à jour — rien à télécharger.'
-                      : `Catalogue mis à jour : ${result.added} ajoutés, ${result.updated} actualisés.`,
+                      ? t('upToDate')
+                      : t('updated', { added: result.added, updated: result.updated }),
                 )
               }
             >
-              Mettre à jour
+              {t('update')}
             </Button>
           </Tooltip>
         </Space>
@@ -97,14 +102,14 @@ export function NodeCatalogCard() {
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {status?.nodeTypes === 0 && (
-          <Alert type="warning" showIcon message="Catalogue vide" description="Lance « Mettre à jour »." />
+          <Alert type="warning" showIcon message={t('empty')} description={t('emptyHint')} />
         )}
 
         {status?.lastError && (
           <Alert
             type="error"
             showIcon
-            message={`Dernière tentative en échec (${date(status.lastError.at)})`}
+            message={t('lastError', { date: date(status.lastError.at) })}
             description={status.lastError.message}
           />
         )}
@@ -112,28 +117,28 @@ export function NodeCatalogCard() {
         <Space size="large" wrap>
           <span>
             <Typography.Text strong>{status?.nodeTypes ?? '—'}</Typography.Text>{' '}
-            <Typography.Text type="secondary">types de nœuds</Typography.Text>
+            <Typography.Text type="secondary">{t('nodeTypes')}</Typography.Text>
           </span>
           <span>
-            <Typography.Text type="secondary">source </Typography.Text>
+            <Typography.Text type="secondary">{t('source')} </Typography.Text>
             <Tag>{status?.source ?? '—'}</Tag>
           </span>
           <span>
-            <Typography.Text type="secondary">dernière mise à jour </Typography.Text>
+            <Typography.Text type="secondary">{t('lastUpdate')} </Typography.Text>
             <Typography.Text>{date(status?.lastSync?.at)}</Typography.Text>
           </span>
           {status?.lastSync?.n8nVersion && (
             <span>
-              <Typography.Text type="secondary">décrit n8n </Typography.Text>
+              <Typography.Text type="secondary">{t('describes')} </Typography.Text>
               <Tag color="blue">{status.lastSync.n8nVersion}</Tag>
             </span>
           )}
         </Space>
 
         <div>
-          <Tooltip title="Avec un compte n8n (fiche de l'instance), l'instance prime sur le catalogue mutualisé.">
+          <Tooltip title={t('perInstanceTooltip')}>
             <Typography.Text strong style={{ cursor: 'help' }}>
-              Par instance
+              {t('perInstance')}
             </Typography.Text>
           </Tooltip>
           <Table
@@ -143,20 +148,24 @@ export function NodeCatalogCard() {
             pagination={false}
             dataSource={status?.instances ?? []}
             columns={[
-              { title: 'Instance', dataIndex: 'name' },
+              { title: tc('columns.instance'), dataIndex: 'name' },
               {
-                title: 'Compte n8n',
+                title: t('columns.account'),
                 dataIndex: 'hasLogin',
                 render: (hasLogin: boolean) =>
-                  hasLogin ? 'enregistré' : <Typography.Text type="secondary">mutualisé</Typography.Text>,
+                  hasLogin ? (
+                    t('accountStored')
+                  ) : (
+                    <Typography.Text type="secondary">{t('accountShared')}</Typography.Text>
+                  ),
               },
               {
-                title: 'Types lus',
+                title: t('columns.types'),
                 dataIndex: 'nodeTypes',
                 render: (count: number) => (count > 0 ? count : '—'),
               },
               {
-                title: 'Dernière lecture',
+                title: t('columns.lastRead'),
                 dataIndex: 'lastSyncAt',
                 render: (value?: string) => date(value),
               },
@@ -173,12 +182,17 @@ export function NodeCatalogCard() {
                         row.instanceId,
                         `/node-catalog/sync/${row.instanceId}`,
                         (result) =>
-                          `${result.imported} types lus sur ${row.name}.` +
-                          (result.versionsError ? ` Schémas datés incomplets : ${result.versionsError}` : ''),
+                          result.versionsError
+                            ? t('instanceReadPartial', {
+                                count: result.imported,
+                                name: row.name,
+                                error: result.versionsError,
+                              })
+                            : t('instanceRead', { count: result.imported, name: row.name }),
                       )
                     }
                   >
-                    Lire les nœuds
+                    {t('readNodes')}
                   </Button>
                 ),
               },

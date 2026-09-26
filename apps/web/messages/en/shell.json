@@ -1,0 +1,92 @@
+{
+  "resizableTable": {
+    "resizeHandle": "Drag to resize · double-click to restore the original width"
+  },
+  "commandPalette": {
+    "placeholder": "Search a workflow, an instance, an action…",
+    "groups": {
+      "workflows": "Workflows",
+      "actions": "Actions",
+      "instances": "Instances",
+      "pages": "Pages",
+      "tips": "Tips"
+    },
+    "keyboardHint": "↑↓ navigate · ↵ open · esc close",
+    "grouped": "Grouped by env",
+    "flat": "One per n8n workflow",
+    "empty": {
+      "syncing": "Nothing local: syncing with n8n…",
+      "loading": "Searching…",
+      "moreChars": "{count, plural, one {# more character…} other {# more characters…}}",
+      "noResult": "No results"
+    },
+    "opensMain": "opens the main copy",
+    "opensEnv": "opens {env}",
+    "openMember": "Open {name}",
+    "commands": {
+      "createWorkflow": "Create a workflow",
+      "createWorkflowKeywords": "create new workflow blank assistant",
+      "tip": "Tip",
+      "tipKeywords": "help tip how {text} {keywords}",
+      "pageKeywords": "go open page {parent}",
+      "createResource": "Create — {label}",
+      "createResourceKeywords": "create new add {label}",
+      "instance": "n8n instance",
+      "instanceKeywords": "instance n8n"
+    }
+  },
+  "commandSearch": {
+    "tooltip": "Search"
+  },
+  "actionBar": {
+    "more": "More actions"
+  },
+  "columnsMenu": {
+    "title": "Columns",
+    "moveUp": "Move {label} up",
+    "moveDown": "Move {label} down",
+    "resetColumns": "Default columns",
+    "resetViewHint": "Filters, sorting, page, columns and widths of this page",
+    "resetView": "Reset view"
+  },
+  "menuNavProgress": {
+    "loading": "Loading page"
+  },
+  "mobileTopBar": {
+    "openMenu": "Open menu"
+  },
+  "securityWarnings": {
+    "title": "Incomplete security configuration",
+    "codes": {
+      "authOpen": "Access without authentication — create the admin via /setup.",
+      "apiOpen": "API_ACCESS_TOKEN missing: anonymous API.",
+      "noSessionSecret": "SESSION_SECRET missing."
+    }
+  },
+  "installApp": {
+    "button": "Install the app",
+    "iosTitle": "Add to Home Screen",
+    "iosOk": "Got it",
+    "iosIntro": "Safari doesn't offer installation automatically: it takes two steps.",
+    "iosStep1": "1. Tap the <b>Share</b> button in the browser bar.",
+    "iosStep2": "2. Choose <b>Add to Home Screen</b>."
+  },
+  "instanceScope": {
+    "tooltipAll": "Instance: all",
+    "tooltipOne": "Instance: {name}",
+    "all": "All instances"
+  },
+  "license": {
+    "summary": "StepForIt Ops — Business Source License 1.1. Free to use, including commercially, including to run your clients' n8n instances. Offering it as a hosted service or reselling it is not covered: mathieu@stepforit.fr."
+  },
+  "mobileFilterBar": {
+    "filters": "Filters",
+    "reset": "Reset"
+  },
+  "api": {
+    "unreachableStatus": "{path} → API unreachable ({status}) — it may be restarting, try again.",
+    "unreachableNetwork": "{path} → API unreachable (network) — it may be restarting, try again.",
+    "writeCancelled": "Write cancelled: {names} locked.",
+    "quotedName": "“{name}”"
+  }
+}

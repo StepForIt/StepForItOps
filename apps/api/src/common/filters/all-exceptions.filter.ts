@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { Request, Response } from 'express';
 import { N8nAuthRefusedException, httpExceptionFromN8n } from './n8n-error.mapper';
 import { httpExceptionFromPrisma } from './prisma-error.mapper';
@@ -41,7 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const status = translated ? translated.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const payload = translated
       ? translated.getResponse()
-      : { statusCode: status, message: 'Internal server error' };
+      : { statusCode: status, message: msg('common.internalError') };
     const body: Record<string, unknown> =
       typeof payload === 'string' ? { statusCode: status, message: payload } : { ...payload };
 

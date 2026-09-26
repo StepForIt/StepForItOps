@@ -9,6 +9,7 @@
  */
 
 import { N8nNode } from './workflow.types';
+import { msg } from '../../i18n/translate';
 
 type Params = Record<string, unknown>;
 
@@ -58,7 +59,7 @@ function resourceMapperBranches(value: unknown, path: string): InertBranch[] {
     ? [
         {
           path: `${path}.value`,
-          reason: `mapping « ${mode} » : les colonnes viennent de l'entrée, ce mapping manuel n'est plus appliqué`,
+          reason: msg('checks.inertMapper', { mode }),
         },
       ]
     : [];
@@ -72,18 +73,18 @@ function resourceMapperBranches(value: unknown, path: string): InertBranch[] {
 /** Nœud Set / « Edit Fields » : `manual` (défaut) et `raw` s'excluent. */
 function setNodeBranches(params: Params): InertBranch[] {
   if (stringAt(params, 'mode') === 'raw') {
-    const reason = 'nœud Set en mode « JSON » : les affectations champ par champ ne sont plus appliquées';
+    const reason = msg('checks.inertSetRaw');
     return ['assignments', 'fields', 'values'].flatMap((key) => branch(ROOT, key, reason, params));
   }
-  return branch(ROOT, 'jsonOutput', "nœud Set en mode « Fields » : le JSON brut n'est plus appliqué", params);
+  return branch(ROOT, 'jsonOutput', msg('checks.inertSetFields'), params);
 }
 
 /** Nœud Code : le langage choisi décide quel bloc est exécuté. */
 function codeNodeBranches(params: Params): InertBranch[] {
   const language = stringAt(params, 'language') ?? 'javaScript';
   return language.startsWith('python')
-    ? branch(ROOT, 'jsCode', "nœud Code en Python : le code JavaScript n'est plus exécuté", params)
-    : branch(ROOT, 'pythonCode', "nœud Code en JavaScript : le code Python n'est plus exécuté", params);
+    ? branch(ROOT, 'jsCode', msg('checks.inertCode', { language: 'python' }), params)
+    : branch(ROOT, 'pythonCode', msg('checks.inertCode', { language: 'javaScript' }), params);
 }
 
 /**
@@ -93,32 +94,38 @@ function codeNodeBranches(params: Params): InertBranch[] {
  */
 function httpRequestBranches(params: Params): InertBranch[] {
   const sections = [
-    { toggle: 'sendBody', specify: 'specifyBody', pairs: 'bodyParameters', json: 'jsonBody', label: 'corps' },
+    {
+      toggle: 'sendBody',
+      specify: 'specifyBody',
+      pairs: 'bodyParameters',
+      json: 'jsonBody',
+      section: 'body',
+    },
     {
       toggle: 'sendQuery',
       specify: 'specifyQuery',
       pairs: 'queryParameters',
       json: 'jsonQuery',
-      label: 'query',
+      section: 'query',
     },
     {
       toggle: 'sendHeaders',
       specify: 'specifyHeaders',
       pairs: 'headerParameters',
       json: 'jsonHeaders',
-      label: 'en-têtes',
+      section: 'headers',
     },
   ];
 
-  return sections.flatMap(({ toggle, specify, pairs, json, label }) => {
+  return sections.flatMap(({ toggle, specify, pairs, json, section }) => {
     if (!isOn(params, toggle)) {
-      const reason = `« ${toggle} » désactivé : le ${label} n'est plus envoyé`;
+      const reason = msg('checks.inertHttpOff', { toggle, section });
       return [pairs, json].flatMap((key) => branch(ROOT, key, reason, params));
     }
     const useJson = stringAt(params, specify) === 'json';
     const reason = useJson
-      ? `${label} saisi en JSON : la saisie clé/valeur n'est plus envoyée`
-      : `${label} saisi en clé/valeur : le JSON brut n'est plus envoyé`;
+      ? msg('checks.inertHttpJson', { section })
+      : msg('checks.inertHttpPairs', { section });
     return branch(ROOT, useJson ? pairs : json, reason, params);
   });
 }

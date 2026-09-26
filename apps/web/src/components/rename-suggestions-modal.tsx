@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Checkbox, Input, Modal, Segmented, Space, Tag, Tooltip, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Table } from './resizable-table';
 import { apiGet, apiPost } from '../lib/api';
 import { AiSettings, AiSettingsModal } from './ai-settings-modal';
@@ -31,6 +32,7 @@ const keyOf = (suggestion: RenameSuggestion): React.Key => suggestion.moduleId ?
  * l'optimizer. Sert n8n et Make ; une suggestion Make se reconnaît à son `moduleId`.
  */
 export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }: Props) {
+  const t = useTranslations('reviewTools.renameSuggestions');
   const [suggestions, setSuggestions] = useState<RenameSuggestion[]>([]);
   const [selected, setSelected] = useState<React.Key[]>([]);
   const [aiSource, setAiSource] = useState<AiSettings['source'] | null>(null);
@@ -74,7 +76,7 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
         note: note?.trim() || undefined,
       }));
     if (renames.length === 0) {
-      message.info('Aucun renommage sélectionné');
+      message.info(t('noneSelected'));
       return;
     }
     setApplying(true);
@@ -83,9 +85,7 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
         renames,
       });
       message.success(
-        isMake
-          ? `${result.renamed} module(s) renommé(s) dans Make`
-          : `${result.renamed} nœud(s) renommé(s) — connexions et expressions mises à jour`,
+        isMake ? t('renamedMake', { count: result.renamed }) : t('renamedN8n', { count: result.renamed }),
       );
       onClose();
       onApplied();
@@ -98,11 +98,11 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
 
   return (
     <Modal
-      title="Suggestions de renommage"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={800}
-      okText={`Renommer (${selected.length})`}
+      okText={t('ok', { count: selected.length })}
       okButtonProps={{ disabled: suggestions.length === 0, loading: applying }}
       onOk={apply}
     >
@@ -112,8 +112,8 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
           onChange={(value) => setLanguage(value as 'en' | 'fr')}
           disabled={loading}
           options={[
-            { label: 'Anglais', value: 'en' },
-            { label: 'Français', value: 'fr' },
+            { label: t('english'), value: 'en' },
+            { label: t('french'), value: 'fr' },
           ]}
         />
         <Checkbox
@@ -121,17 +121,17 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
           disabled={loading}
           onChange={(e) => setWholeWorkflow(e.target.checked)}
         >
-          Uniformiser tout le workflow
+          {t('wholeWorkflow')}
         </Checkbox>
       </Space>
       {aiSource === 'none' && (
         <Alert
           type="warning"
           showIcon
-          message="IA non configurée"
+          message={t('aiNotConfigured')}
           action={
             <Button type="primary" onClick={() => setAiModalOpen(true)}>
-              Configurer l'IA
+              {t('configureAi')}
             </Button>
           }
         />
@@ -139,12 +139,8 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
       {aiSource !== null && aiSource !== 'none' && !loading && suggestions.length === 0 && (
         <Alert
           type="info"
-          message="Aucune suggestion"
-          description={
-            wholeWorkflow
-              ? 'Le naming du workflow est déjà cohérent.'
-              : 'Aucun nœud avec un nom par défaut, ni module laissé sans nom.'
-          }
+          message={t('noSuggestion')}
+          description={wholeWorkflow ? t('alreadyConsistent') : t('noDefaultName')}
         />
       )}
       {(loading || suggestions.length > 0) && (
@@ -158,7 +154,7 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
         >
           <Table.Column<RenameSuggestion>
             dataIndex="oldName"
-            title="Nom actuel"
+            title={t('currentName')}
             render={(name: string, record) => (
               <Tag>
                 {name}
@@ -168,7 +164,7 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
           />
           <Table.Column<RenameSuggestion>
             dataIndex="newName"
-            title="Nouveau nom"
+            title={t('newName')}
             render={(newName: string, record) => (
               <Tooltip title={record.reason}>
                 <Input
@@ -185,12 +181,12 @@ export function RenameSuggestionsModal({ workflowId, open, onClose, onApplied }:
           {!isMake && (
             <Table.Column<RenameSuggestion>
               dataIndex="note"
-              title="Note (FR, panneau du nœud)"
+              title={t('noteColumn')}
               render={(note: string | undefined, record) => (
                 <Input.TextArea
                   value={note}
                   autoSize={{ minRows: 1, maxRows: 4 }}
-                  placeholder="Description posée en note sur le nœud"
+                  placeholder={t('notePlaceholder')}
                   onChange={(e) =>
                     setSuggestions((all) =>
                       all.map((s) => (keyOf(s) === keyOf(record) ? { ...s, note: e.target.value } : s)),

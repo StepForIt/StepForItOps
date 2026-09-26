@@ -1,3 +1,4 @@
+import { BRAND } from '../../lib/brand/colors';
 /** Miroir du modèle `app-log` de @nwm/core : le web ne dépend pas du domaine. */
 export type AppLogLevel = 'fatal' | 'error' | 'warn' | 'log' | 'debug' | 'verbose';
 
@@ -19,14 +20,14 @@ export interface AppLogsResponse {
   lastSeq: number;
 }
 
-/** Couleur du niveau, et ordre du filtre : du plus grave au plus bavard. */
-export const LEVELS: Array<{ value: AppLogLevel; label: string; color: string }> = [
-  { value: 'fatal', label: 'Fatal', color: '#a8071a' },
-  { value: 'error', label: 'Erreur', color: '#cf1322' },
-  { value: 'warn', label: 'Avert.', color: '#d46b08' },
-  { value: 'log', label: 'Info', color: '#389e0d' },
-  { value: 'debug', label: 'Debug', color: '#c41d7f' },
-  { value: 'verbose', label: 'Verbose', color: '#08979c' },
+/** Couleur du niveau, et ordre du filtre : du plus grave au plus bavard. Libellé : `misc.appLogs.levels.<value>`. */
+export const LEVELS: Array<{ value: AppLogLevel; color: string }> = [
+  { value: 'fatal', color: BRAND.danger },
+  { value: 'error', color: BRAND.danger },
+  { value: 'warn', color: BRAND.warning },
+  { value: 'log', color: BRAND.success },
+  { value: 'debug', color: BRAND.marine },
+  { value: 'verbose', color: '#08979c' },
 ];
 
 export const LEVEL_COLORS: Record<AppLogLevel, string> = LEVELS.reduce(

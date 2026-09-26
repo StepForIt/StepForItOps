@@ -25,11 +25,11 @@ export interface MakeChatToolContext extends SharedChatToolContext {
 }
 
 function renderFindings(findings: CheckFinding[]): string {
-  if (findings.length === 0) return 'aucun';
+  if (findings.length === 0) return 'none';
   return findings
     .map(
       (finding) =>
-        `- [${finding.severity}] ${finding.code}${finding.nodeName ? ` (${finding.nodeName})` : ''} : ${finding.message}`,
+        `- [${finding.severity}] ${finding.code}${finding.nodeName ? ` (${finding.nodeName})` : ''}: ${finding.message}`,
     )
     .join('\n');
 }
@@ -43,35 +43,35 @@ export function buildMakeChatTools(context: MakeChatToolContext): AiTool[] {
   const readModule: AiTool = {
     name: 'read_module',
     description:
-      'Renvoie la configuration COMPLÈTE d’un module du scénario (mapper, parameters, filtre) et la ' +
-      'description que Make embarque de ses champs (types, valeurs admises, champs requis). À appeler ' +
-      'avant de retoucher un module, plutôt que de deviner une valeur.',
+      'Returns the COMPLETE configuration of a module of the scenario (mapper, parameters, filter) and the ' +
+      'description Make embeds of its fields (types, allowed values, required fields). Call it before ' +
+      'touching a module, rather than guessing a value.',
     input: {
       type: 'object',
-      properties: { moduleId: { type: 'number', description: 'Id entier du module' } },
+      properties: { moduleId: { type: 'number', description: 'Integer id of the module' } },
       required: ['moduleId'],
     },
     async run(input) {
       const moduleId = Number(input.moduleId);
-      if (!isMakeBlueprint(context.blueprint)) throw new Error('Scénario illisible.');
+      if (!isMakeBlueprint(context.blueprint)) throw new Error('Unreadable scenario.');
       const found = flattenModules(context.blueprint).find((flat) => flat.module.id === moduleId);
       if (!found) {
         const ids = flattenModules(context.blueprint)
           .map((flat) => `#${flat.module.id} ${moduleLabel(flat.module)}`)
           .join(', ');
-        throw new Error(`Module #${moduleId} introuvable. Modules du scénario : ${ids}`);
+        throw new Error(`Module #${moduleId} not found. Modules of the scenario: ${ids}`);
       }
       // Ce que le module porte (routes, branches) se lit module par module : le
       // recopier ici ferait relire tout un sous-arbre pour un seul module.
       const { routes, branches, onerror, ...own } = found.module;
       return [
-        `Module #${moduleId} — ${moduleLabel(found.module)} (${found.module.module ?? 'type inconnu'}), ` +
-          `dans ${found.scope === 'main' ? 'le flow principal' : `une ${found.scope === 'route' ? 'route' : found.scope === 'branch' ? 'branche' : 'gestion d’erreur'} du module #${found.parentId}`}.`,
+        `Module #${moduleId} — ${moduleLabel(found.module)} (${found.module.module ?? 'unknown type'}), ` +
+          `in ${found.scope === 'main' ? 'the main flow' : `${found.scope === 'route' ? 'a route' : found.scope === 'branch' ? 'a branch' : 'an error handler'} of module #${found.parentId}`}.`,
         found.upstreamIds.length > 0
-          ? `Modules qui ont tourné avant lui (lisibles par {{id.…}}) : ${found.upstreamIds.map((id) => `#${id}`).join(', ')}`
-          : 'Aucun module ne tourne avant lui.',
+          ? `Modules that ran before it (readable through {{id.…}}): ${found.upstreamIds.map((id) => `#${id}`).join(', ')}`
+          : 'No module runs before it.',
         routes?.length || branches?.length || onerror?.length
-          ? `Il porte ${routes?.length ?? 0} route(s), ${branches?.length ?? 0} branche(s), ${onerror?.length ?? 0} gestionnaire(s) d’erreur.`
+          ? `It carries ${routes?.length ?? 0} route(s), ${branches?.length ?? 0} branch(es), ${onerror?.length ?? 0} error handler(s).`
           : '',
         JSON.stringify(redactSecrets(own)),
       ]
@@ -83,17 +83,17 @@ export function buildMakeChatTools(context: MakeChatToolContext): AiTool[] {
   const checkScenario: AiTool = {
     name: 'check_scenario',
     description:
-      'Applique un brouillon d’opérations à une COPIE du scénario (rien n’est écrit dans Make) et renvoie ' +
-      'ce qu’il introduit, avec le verdict de la porte. À appeler avant de proposer, et à nouveau après ' +
-      'avoir corrigé. Vérifier n’est pas proposer : les opérations validées ici doivent être reprises ' +
-      'dans la proposition finale.',
+      'Applies a draft of operations to a COPY of the scenario (nothing is written to Make) and returns ' +
+      'what it introduces, with the verdict of the gate. Call it before proposing, and again after ' +
+      'fixing. Checking is not proposing: the operations validated here must be copied into the final ' +
+      'proposal.',
     input: {
       type: 'object',
       properties: {
         operations: {
           type: 'array',
           items: { type: 'object' },
-          description: 'Opérations d’édition du scénario',
+          description: 'Edit operations of the scenario',
         },
       },
       required: ['operations'],
@@ -103,12 +103,12 @@ export function buildMakeChatTools(context: MakeChatToolContext): AiTool[] {
       const { gate, warnings } = await context.evaluate(operations);
       context.draftChecked({ operations, clean: !gate.blocked });
       return [
-        `Brouillon vérifié — opérations appliquées : ${operations.length}`,
-        warnings.length > 0 ? `Avertissements : ${warnings.join(' ; ')}` : 'Avertissements : aucun',
-        `Problèmes INTRODUITS par ce brouillon :\n${renderFindings(gate.introduced)}`,
+        `Draft checked — operations applied: ${operations.length}`,
+        warnings.length > 0 ? `Warnings: ${warnings.join('; ')}` : 'Warnings: none',
+        `Problems INTRODUCED by this draft:\n${renderFindings(gate.introduced)}`,
         gate.blocked
-          ? `REFUSÉ — ${gate.reason ?? 'la porte refuse ce brouillon'} Corrige et revérifie avant de proposer.`
-          : 'La porte laisse passer ce brouillon.',
+          ? `REFUSED — ${gate.reason ?? 'the gate refuses this draft'} Fix it and check again before proposing.`
+          : 'The gate lets this draft through.',
       ].join('\n\n');
     },
   };

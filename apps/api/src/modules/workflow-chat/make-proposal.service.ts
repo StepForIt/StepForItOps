@@ -17,6 +17,7 @@ import {
   diffBlueprintsForReview,
   evaluateMakeProposalGate,
   hashContent,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EnvChainGuardService } from '../../infra/settings/env-chain-guard.service';
@@ -25,6 +26,7 @@ import { WorkflowWithEnv, WorkflowsService } from '../workflows/workflows.servic
 import { WorkflowSyncService } from '../workflows/workflow-sync.service';
 import { InstancesService } from '../instances/instances.service';
 import { RestorePointService } from './restore-point.service';
+import { chatDate } from './chat-date';
 import type { ApplyResult, ProposalReview } from './proposal.service';
 import { WorkflowLockService } from '../../infra/workflow-lock/workflow-lock.service';
 
@@ -94,7 +96,7 @@ export class MakeProposalService {
     try {
       warnings = applyBlueprintEdits(raw, operations).warnings;
     } catch (error) {
-      warnings = [`Opérations non rejouables sur l'état actuel : ${(error as Error).message}`];
+      warnings = [msg('chat.proposalReplayFailed', { detail: (error as Error).message })];
     }
     return {
       id: proposal.id,
@@ -135,29 +137,23 @@ export class MakeProposalService {
     await this.envChain.assertDirectWriteAllowed(proposal.workflowId);
     await this.locks.assertWritable(proposal.workflowId);
     if (proposal.status !== 'pending') {
-      throw new BadRequestException(
-        `Proposition déjà ${proposal.status === 'applied' ? 'appliquée' : 'rejetée'}`,
-      );
+      throw new BadRequestException(msg('chat.proposalAlreadyDone', { status: proposal.status }));
     }
     // Le blueprint est écrit EN ENTIER : tout ce que la copie locale ignore serait
     // écrasé sans être vu. D'où la relecture avant de comparer les empreintes.
     const { workflow, raw, missing } = await this.workflows.getFreshRawAny(proposal.workflowId);
     if (missing) {
-      throw new BadRequestException('Make ne connaît plus ce scénario : rien ne peut y être écrit.');
+      throw new BadRequestException(msg('chat.makeScenarioMissing'));
     }
     if (workflow.hash !== proposal.baseHash) {
-      throw new ConflictException(
-        `« ${workflow.name} » a changé dans Make depuis que cette modification a été préparée. ` +
-          "L'appliquer maintenant écraserait ce changement : relance la demande dans la conversation " +
-          'pour repartir de cet état.',
-      );
+      throw new ConflictException(msg('chat.makeStale', { name: workflow.name }));
     }
 
     const gate = await this.gateFor(workflow, raw, proposal.raw, force);
     if (gate.blocked) {
       await this.noteInSession(
         proposal.sessionId,
-        `**Application refusée** — ${proposal.summary}\n\n${gate.reason ?? ''}`,
+        msg('chat.proposalNoteRefused', { summary: proposal.summary, reason: gate.reason ?? '' }),
       );
       throw new BadRequestException(gate.reason);
     }
@@ -175,39 +171,35 @@ export class MakeProposalService {
       where: { id: proposal.id },
       data: { status: 'applied', appliedAt: new Date() },
     });
-    this.logger.log(`Proposition ${proposal.id} appliquée au scénario « ${workflow.name} »`);
+    this.logger.log(`Proposal ${proposal.id} applied to scenario "${workflow.name}"`);
 
-    const fallback = restorePoint
-      ? `\n\nSi ça tourne mal, l'état d'avant est archivé (version du ${restorePoint.createdAt.toLocaleString('fr-FR')}) et se restaure depuis la revue ou la page Versions.`
-      : "\n\nAucun point de retour archivé pour l'état d'avant : préviens-le avant de proposer autre chose.";
+    const fallback = msg('chat.makeRestoreHint', {
+      hasRestore: Boolean(restorePoint),
+      restoredAt: restorePoint ? chatDate(restorePoint.createdAt) : '',
+    });
     try {
       const synced = await this.sync.syncWorkflow(proposal.workflowId);
       await this.noteInSession(
         proposal.sessionId,
-        `**Modification appliquée dans Make** — ${proposal.summary}\n\n` +
-          `« ${workflow.name} » est à jour côté Make` +
-          (synced.changed ? ', et une nouvelle version a été enregistrée' : '') +
-          '. Tout ce qui suit repart de cet état.' +
-          fallback,
+        msg('chat.makeNoteApplied', {
+          summary: proposal.summary,
+          name: workflow.name,
+          versioned: synced.changed,
+        }) + fallback,
       );
       return { ok: true, versionCreated: synced.changed, restorePoint };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Proposition ${proposal.id} appliquée dans Make, mais resynchro KO : ${detail}`);
+      this.logger.error(`Proposal ${proposal.id} applied in Make, but resync failed: ${detail}`);
       await this.noteInSession(
         proposal.sessionId,
-        `**Modification appliquée dans Make** — ${proposal.summary}\n\n` +
-          `L'écriture a abouti, mais la plateforme n'a pas réussi à relire « ${workflow.name} » juste après : ` +
-          'relis-le avant de proposer autre chose.' +
-          fallback,
+        msg('chat.makeNoteAppliedSyncFailed', { summary: proposal.summary, name: workflow.name }) + fallback,
       );
       return {
         ok: true,
         versionCreated: false,
         restorePoint,
-        syncError:
-          "La modification est bien enregistrée dans Make, mais la plateforme n'a pas réussi à relire le " +
-          "scénario juste après : aucune version n'a été archivée pour ce changement. La synchro horaire le rattrapera.",
+        syncError: msg('chat.makeSyncError'),
       };
     }
   }
@@ -229,8 +221,11 @@ export class MakeProposalService {
   private writeRefused(error: unknown, workflowName: string): Error {
     if (!(error instanceof MakeApiError) || error.status >= 500) return error as Error;
     return new UnprocessableEntityException(
-      `Make a refusé d'enregistrer « ${workflowName} » (erreur ${error.status}). Rien n'a été modifié. ` +
-        `Ce qu'il répond : ${error.message}`,
+      msg('chat.makeWriteRejected', {
+        name: workflowName,
+        status: String(error.status),
+        detail: error.message,
+      }),
     );
   }
 
@@ -239,7 +234,7 @@ export class MakeProposalService {
     try {
       await this.prisma.workflowChatMessage.create({ data: { sessionId, role: 'assistant', content } });
     } catch (error) {
-      this.logger.warn(`Note de proposition non écrite (session ${sessionId}) : ${(error as Error).message}`);
+      this.logger.warn(`Proposal note not written (session ${sessionId}): ${(error as Error).message}`);
     }
   }
 }

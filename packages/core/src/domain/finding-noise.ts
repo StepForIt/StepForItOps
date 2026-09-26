@@ -28,7 +28,7 @@ export function looksLikePlaceholder(text: string): boolean {
 }
 
 /** La remarque reproche-t-elle une valeur codée en dur ? */
-const HARDCODED_CLAIM = /\b(?:en dur|cod(?:é|ee?|e)s? en dur|hard-?cod(?:e|é|ing|ed))\b/i;
+const HARDCODED_CLAIM = /\b(?:en dur|cod(?:é|ee?|e)s? en dur|hard[\s-]?cod(?:e|é|ing|ed))\b/i;
 
 /**
  * Remarques que n8n résout tout seul : le nœud Code accepte un objet nu, un tableau
@@ -40,6 +40,10 @@ const N8N_NORMALIZED = [
   /\[\s*\{\s*json/i,
   /doit\s+(?:être|retourner)\s+un\s+tableau\s+d[’']items/i,
   /retour(?:ne|ner)?\s+(?:pas\s+)?(?:un\s+)?tableau\s+d[’']items/i,
+  // La revue écrit dans la langue de la plateforme : mêmes motifs en anglais.
+  /(?:return|expected)\s+format/i,
+  /must\s+(?:be|return)\s+an\s+array\s+of\s+items/i,
+  /returns?\s+(?:not\s+)?(?:an\s+)?array\s+of\s+items/i,
 ];
 
 /**

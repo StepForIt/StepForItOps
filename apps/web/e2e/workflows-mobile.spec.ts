@@ -31,15 +31,23 @@ test('la liste des workflows tient sur un téléphone', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Facturation/, expanded: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Facturation - DEV/ })).toBeVisible();
 
-  // Appui long : mode sélection, barre des gestes d'environnement.
-  const header = page.getByRole('button', { name: /Facturation/, expanded: true });
-  const box = await header.boundingBox();
-  if (!box) throw new Error('ligne introuvable');
-  await page.mouse.move(box.x + 40, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(800);
-  await page.mouse.up();
-  await expect(page.getByText('1 workflow métier sélectionné')).toBeVisible();
+  // Appui long : mode sélection, barre des gestes d'environnement. Rejoué tant qu'il n'a pas pris :
+  // sur un runner chargé, le relâché peut passer avant le minuteur de l'appui long et compter
+  // pour un tap (la ligne se replie). Un appui long cassé échoue quand même, au bout du délai.
+  const selected = page.getByText('1 workflow métier sélectionné');
+  await expect(async () => {
+    // Le premier bouton « Facturation » est l'en-tête du workflow métier, ses exemplaires suivent.
+    const box = await page
+      .getByRole('button', { name: /Facturation/ })
+      .first()
+      .boundingBox();
+    if (!box) throw new Error('ligne introuvable');
+    await page.mouse.move(box.x + 40, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(800);
+    await page.mouse.up();
+    await expect(selected).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Tout décocher' }).click();
   await expect(page.getByText('1 workflow métier sélectionné')).toHaveCount(0);
 

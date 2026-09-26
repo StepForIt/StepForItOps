@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Space, Tag, Tooltip, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from './resizable-table';
 import { MermaidView } from './mermaid-view';
 import { apiGet } from '../lib/api';
@@ -100,17 +101,23 @@ export function useWorkflowStructure(workflowId: string, enabled: boolean) {
 
 /** Le schéma, précédé de ce qu'on lit d'un coup d'œil : nœuds désactivés, orphelins, taille. */
 export function WorkflowGraph({ view }: { view: WorkflowView }) {
+  const t = useTranslations('reviewTools.structure');
+  const locale = useLocale();
   return (
     <Space direction="vertical" size={8} style={{ width: '100%' }}>
       <Space wrap size={4}>
-        {view.stats.disabled > 0 && <Tag color="orange">{view.stats.disabled} désactivé(s)</Tag>}
+        {view.stats.disabled > 0 && <Tag color="orange">{t('disabled', { count: view.stats.disabled })}</Tag>}
         {view.stats.orphans.length > 0 && (
-          <Tag color="volcano">orphelins : {view.stats.orphans.join(', ')}</Tag>
+          <Tag color="volcano">{t('orphans', { nodes: view.stats.orphans.join(', ') })}</Tag>
         )}
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {view.stats.nodes} nœuds · {view.stats.connections} connexions
-          {view.stats.stickies > 0 ? ` · ${view.stats.stickies} sticky` : ''} · synchro{' '}
-          {new Date(view.updatedAt).toLocaleString('fr-FR')} · <code>{view.hash.slice(0, 10)}</code>
+          {t.rich('stats', {
+            nodes: view.stats.nodes,
+            connections: view.stats.connections,
+            stickies: view.stats.stickies,
+            synced: new Date(view.updatedAt).toLocaleString(locale),
+            hash: () => <code>{view.hash.slice(0, 10)}</code>,
+          })}
         </Typography.Text>
       </Space>
       <MermaidView code={view.mermaid} />
@@ -120,6 +127,8 @@ export function WorkflowGraph({ view }: { view: WorkflowView }) {
 
 /** L'inventaire des nœuds : ordre, enchaînement, type, credentials, notes. */
 export function WorkflowNodes({ view }: { view: WorkflowView }) {
+  const t = useTranslations('reviewTools.structure');
+  const tCommon = useTranslations('common');
   const nodes = view.nodes.filter((node) => !node.sticky);
   // Findings déjà en base, pour pastiller les nœuds qui en portent.
   const findingsByNode = new Map<string, ViewFinding[]>();
@@ -150,7 +159,7 @@ export function WorkflowNodes({ view }: { view: WorkflowView }) {
         render={(order: number) => <Typography.Text type="secondary">{order}</Typography.Text>}
       />
       <Table.Column<ViewNode>
-        title="Nœud"
+        title={tCommon('columns.node')}
         dataIndex="name"
         width={260}
         render={(name: string, node) => {
@@ -160,8 +169,8 @@ export function WorkflowNodes({ view }: { view: WorkflowView }) {
               <Typography.Text ellipsis={{ tooltip: name }} style={{ maxWidth: 175 }}>
                 {name}
               </Typography.Text>
-              {node.entry && <Tag color="blue">départ</Tag>}
-              {node.disabled && <Tag color="orange">off</Tag>}
+              {node.entry && <Tag color="blue">{t('entry')}</Tag>}
+              {node.disabled && <Tag color="orange">{t('off')}</Tag>}
               {nodeFindings.length > 0 && (
                 <Tooltip title={nodeFindings.map((f) => `${f.severity} — ${f.message}`).join('\n')}>
                   <Tag color={severityColor[nodeFindings[0].severity]}>{nodeFindings.length}</Tag>
@@ -172,18 +181,18 @@ export function WorkflowNodes({ view }: { view: WorkflowView }) {
         }}
       />
       <Table.Column<ViewNode>
-        title="Suivant"
+        title={t('next')}
         dataIndex="next"
         width={240}
         render={(next: NextLink[]) =>
           next.length === 0 ? (
-            <Typography.Text type="secondary">fin</Typography.Text>
+            <Typography.Text type="secondary">{t('end')}</Typography.Text>
           ) : (
             <Space size={4} wrap>
               {next.map((link) => (
                 <Tag
                   key={`${link.branch ?? ''}${link.node}`}
-                  color="geekblue"
+                  color="blue"
                   title={`${link.branch ? `${link.branch} → ` : '→ '}${link.node}`}
                   style={{ maxWidth: 230, overflow: 'hidden', textOverflow: 'ellipsis' }}
                 >
@@ -196,17 +205,17 @@ export function WorkflowNodes({ view }: { view: WorkflowView }) {
         }
       />
       <Table.Column
-        title="Type"
+        title={tCommon('columns.type')}
         dataIndex="type"
         render={(type: string) => <Typography.Text type="secondary">{shortType(type)}</Typography.Text>}
       />
       <Table.Column
-        title="Credentials"
+        title={t('credentials')}
         dataIndex="credentials"
         render={(credentials: string[]) => (credentials.length > 0 ? credentials.join(', ') : '—')}
       />
       <Table.Column
-        title="Note"
+        title={t('note')}
         dataIndex="notes"
         width={220}
         render={(notes?: string) =>

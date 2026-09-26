@@ -11,6 +11,7 @@
  */
 
 import { WorkflowEditOperation } from './workflow-edit';
+import { msg } from '../../i18n';
 
 /**
  * Un autre workflow du périmètre touché par la même proposition : un
@@ -242,7 +243,7 @@ export function parseAssistantTurn(text: string): AssistantTurn {
         proposal:
           proposal && (operations.length > 0 || targets.length > 0)
             ? {
-                summary: proposal.summary?.trim() || 'Modification proposée',
+                summary: proposal.summary?.trim() || msg('chat.proposalDefaultSummary'),
                 operations,
                 targets,
               }
@@ -257,9 +258,7 @@ export function parseAssistantTurn(text: string): AssistantTurn {
   // tronqué n'apprend rien à celui qui lit et fait passer le bug pour une réponse.
   if (looksLikeEnvelope(candidate)) {
     return {
-      reply:
-        salvageReply(candidate) ??
-        'La réponse est revenue dans un format que je n’ai pas su relire, et rien n’en a été retenu.',
+      reply: salvageReply(candidate) ?? msg('chat.replyUnreadable'),
       proposal: null,
       malformed: true,
     };

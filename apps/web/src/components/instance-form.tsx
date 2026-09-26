@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, Collapse, Form, Input, Select, message } from 'antd';
 import type { FormInstance, FormProps } from 'antd';
 import { ApiOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../lib/api';
 
 interface InstanceFormProps {
@@ -26,15 +27,13 @@ const MAKE_ZONES = [
 
 /** Rattachement client — accessoire, partagé par les deux plateformes. */
 function ClientField({ clients }: { clients: Array<{ id: string; name: string }> }) {
+  const t = useTranslations('settings.instanceForm');
+  const tc = useTranslations('common');
   return (
-    <Form.Item
-      label="Client"
-      name="clientId"
-      extra="Rattachement pour les vues agrégées (dashboard, coûts, temps gagné). Les clients se créent dans Paramètres → Clients."
-    >
+    <Form.Item label={t('client')} name="clientId" extra={t('clientHint')}>
       <Select
         allowClear
-        placeholder="Aucun"
+        placeholder={tc('none')}
         options={clients.map((client) => ({ value: client.id, label: client.name }))}
       />
     </Form.Item>
@@ -43,6 +42,7 @@ function ClientField({ clients }: { clients: Array<{ id: string; name: string }>
 
 /** Formulaire commun create/edit d'une instance, avec test de connexion avant sauvegarde. */
 export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
+  const t = useTranslations('settings.instanceForm');
   const [testing, setTesting] = useState(false);
   const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
   const [platform, setPlatform] = useState<'n8n' | 'make'>(
@@ -62,11 +62,11 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
     const baseUrl = isMake ? `https://${zone ?? ''}` : form?.getFieldValue('baseUrl');
     const apiKey = form?.getFieldValue('apiKey');
     if (isMake && !zone) {
-      message.warning('Choisis la zone Make avant de tester');
+      message.warning(t('zoneFirst'));
       return;
     }
     if (!baseUrl || (!apiKey && !isEdit)) {
-      message.warning("Renseigne l'URL et la clé API avant de tester");
+      message.warning(t('urlAndKeyFirst'));
       return;
     }
     setTesting(true);
@@ -85,9 +85,9 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
       );
       if (result.ok)
         message.success(
-          `Connexion OK — ${result.workflowCount} ${isMake ? 'scénarios' : 'workflows'} visibles`,
+          t(isMake ? 'connectionOkMake' : 'connectionOkN8n', { count: result.workflowCount ?? 0 }),
         );
-      else message.error(`Connexion KO : ${result.error}`);
+      else message.error(t('connectionKo', { error: result.error ?? '' }));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -106,18 +106,14 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
         formProps.onValuesChange?.(changed, all);
       }}
     >
-      <Form.Item label="Nom" name="name" rules={[{ required: true }]}>
-        <Input placeholder={isMake ? 'Make — équipe principale' : 'n8n principal'} />
+      <Form.Item label={t('name')} name="name" rules={[{ required: true }]}>
+        <Input placeholder={isMake ? t('namePlaceholderMake') : t('namePlaceholderN8n')} />
       </Form.Item>
       <Form.Item
-        label="Plateforme"
+        label={t('platform')}
         name="platform"
         initialValue="n8n"
-        extra={
-          isEdit
-            ? "La plateforme ne se change pas après coup : les workflows déjà en base sont du format de l'ancienne, et rien ne saurait les relire."
-            : "n8n (auto-hébergé) ou Make (SaaS). Ce choix décide de la façon dont le contenu des workflows est lu — il n'est jamais deviné."
-        }
+        extra={isEdit ? t('platformLocked') : t('platformHint')}
       >
         <Select
           disabled={isEdit}
@@ -132,49 +128,38 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
       {/* L'ESSENTIEL d'abord : ce qu'il faut pour que la plateforme lise les workflows. */}
       {isMake ? (
         <>
-          <Form.Item
-            label="Zone"
-            name="zone"
-            rules={[{ required: true }]}
-            extra="Celle qui figure dans l'URL quand tu es connecté à Make. Un jeton d'une zone est refusé par les autres, avec le même message qu'un droit manquant : c'est la première chose à vérifier si la connexion échoue."
-          >
+          <Form.Item label={t('zone')} name="zone" rules={[{ required: true }]} extra={t('zoneHint')}>
             <Select placeholder="eu1.make.com" options={MAKE_ZONES.map((z) => ({ value: z, label: z }))} />
           </Form.Item>
           <Form.Item name="baseUrl" hidden>
             <Input />
           </Form.Item>
           <Form.Item
-            label="Jeton d'API"
+            label={t('makeToken')}
             name="apiKey"
             rules={[{ required: !isEdit }]}
-            extra={
-              isEdit
-                ? 'Laisser vide pour conserver le jeton actuel.'
-                : 'Créé dans Make : profil → API access → Add token. La lecture suffit : scenarios:read, teams:read, organizations:read.'
-            }
+            extra={isEdit ? t('keepToken') : t('makeTokenHint')}
           >
-            <Input.Password placeholder={isEdit ? 'Jeton enregistré — non affiché' : 'Jeton Make'} />
+            <Input.Password placeholder={isEdit ? t('tokenStored') : t('makeTokenPlaceholder')} />
           </Form.Item>
         </>
       ) : (
         <>
           <Form.Item
-            label="URL de base"
+            label={t('baseUrl')}
             name="baseUrl"
             rules={[{ required: true }]}
-            extra="L'environnement n'est pas lié à l'instance : il est déduit par workflow (tag env:dev ou suffixe « - DEV » dans le nom)."
+            extra={t('baseUrlHint')}
           >
             <Input placeholder="https://n8n.mondomaine.tld" />
           </Form.Item>
           <Form.Item
-            label="Clé API"
+            label={t('apiKey')}
             name="apiKey"
             rules={[{ required: !isEdit }]}
-            extra={isEdit ? 'Laisser vide pour conserver la clé actuelle.' : undefined}
+            extra={isEdit ? t('keepKey') : undefined}
           >
-            <Input.Password
-              placeholder={isEdit ? 'Clé enregistrée — non affichée' : 'Créée dans n8n : Settings → n8n API'}
-            />
+            <Input.Password placeholder={isEdit ? t('keyStored') : t('apiKeyPlaceholder')} />
           </Form.Item>
         </>
       )}
@@ -187,48 +172,30 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
         items={[
           {
             key: 'advanced',
-            label: 'Options avancées',
+            label: t('advanced'),
             forceRender: true,
             children: isMake ? (
               <>
-                <Form.Item
-                  label="Team"
-                  name="externalTeamId"
-                  extra="L'id numérique de la team dont on liste les scénarios — il est dans l'URL de Make. Make refuse de lister sans team ni organisation ; la team est la plus précise des deux."
-                >
+                <Form.Item label={t('team')} name="externalTeamId" extra={t('teamHint')}>
                   <Input placeholder="2648401" />
                 </Form.Item>
-                <Form.Item
-                  label="Organisation (à défaut de team)"
-                  name="externalOrgId"
-                  extra="À ne renseigner que pour couvrir toutes les teams d'une organisation."
-                >
+                <Form.Item label={t('org')} name="externalOrgId" extra={t('orgHint')}>
                   <Input placeholder="8875044" />
                 </Form.Item>
                 <ClientField clients={clients} />
               </>
             ) : (
               <>
-                <Form.Item
-                  label="Compte n8n (facultatif)"
-                  name="n8nEmail"
-                  extra={
-                    "La clé API n'ouvre que l'API publique. La description des nœuds — leurs paramètres et " +
-                    'les valeurs admises — est servie ailleurs, derrière la session du navigateur. Avec ce ' +
-                    'compte, les contrôles portent sur TA version de n8n et tes nœuds communautaires ; sans ' +
-                    'lui, la plateforme se rabat sur un catalogue mutualisé, plus générique. Laisser vide ' +
-                    'pour retirer le compte.'
-                  }
-                >
+                <Form.Item label={t('n8nAccount')} name="n8nEmail" extra={t('n8nAccountHint')}>
                   <Input placeholder="admin@mondomaine.tld" autoComplete="off" />
                 </Form.Item>
                 <Form.Item
-                  label="Mot de passe n8n"
+                  label={t('n8nPassword')}
                   name="n8nPassword"
-                  extra={isEdit ? 'Laisser vide pour conserver le mot de passe actuel.' : undefined}
+                  extra={isEdit ? t('keepPassword') : undefined}
                 >
                   <Input.Password
-                    placeholder={isEdit ? 'Enregistré — non affiché' : 'Le mot de passe de ce compte n8n'}
+                    placeholder={isEdit ? t('passwordStored') : t('passwordPlaceholder')}
                     autoComplete="new-password"
                   />
                 </Form.Item>
@@ -239,7 +206,7 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
         ]}
       />
       <Button icon={<ApiOutlined />} loading={testing} onClick={() => testConnection(formProps.form)}>
-        Tester la connexion
+        {t('testConnection')}
       </Button>
     </Form>
   );

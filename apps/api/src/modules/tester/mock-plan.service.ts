@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { N8nWorkflow, SideEffectNode, detectSideEffects, extractSubWorkflowRefs } from '@nwm/core';
+import { N8nWorkflow, SideEffectNode, detectSideEffects, extractSubWorkflowRefs, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowsService } from '../workflows/workflows.service';
 
@@ -44,7 +44,7 @@ export class MockPlanService {
       return {
         ...node,
         suggested: !mapped,
-        exemption: mapped ? 'ressource mappée : bascule l’env plutôt que de bouchonner' : undefined,
+        exemption: mapped ? msg('platform.mockMappedExemption') : undefined,
         targetName: subNames.get(node.nodeName),
       };
     });

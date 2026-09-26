@@ -23,6 +23,7 @@ import {
   resumePublicationRun,
   skipPublicationStep,
   startPublicationRun,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowSyncService } from '../workflows/workflow-sync.service';
@@ -110,7 +111,7 @@ export class PromotionPublishService {
 
   async get(runId: string): Promise<PublishRunView> {
     const row = await this.prisma.promotionPublishRun.findUnique({ where: { id: runId } });
-    if (!row) throw new NotFoundException('Chaîne de publication introuvable.');
+    if (!row) throw new NotFoundException(msg('env.pubRunNotFound'));
     return toView(row);
   }
 
@@ -121,7 +122,7 @@ export class PromotionPublishService {
    */
   async resume(runId: string): Promise<PublishRunView> {
     const run = await this.load(runId);
-    if (run.status !== 'paused') throw new ConflictException('Cette chaîne n’est pas en pause.');
+    if (run.status !== 'paused') throw new ConflictException(msg('env.pubRunNotPaused'));
     const failed = run.steps.find((step) => step.state === 'failed');
     const localId = failed?.externalId
       ? await this.localIdOf(failed.instanceId, failed.externalId)
@@ -133,7 +134,7 @@ export class PromotionPublishService {
 
   async skip(runId: string): Promise<PublishRunView> {
     const run = await this.load(runId);
-    if (run.status !== 'paused') throw new ConflictException('Cette chaîne n’est pas en pause.');
+    if (run.status !== 'paused') throw new ConflictException(msg('env.pubRunNotPaused'));
     await this.save(runId, skipPublicationStep(run));
     return this.advance(runId);
   }
@@ -146,7 +147,7 @@ export class PromotionPublishService {
 
   /** Publie les étapes restantes une à une, jusqu'à la fin ou au premier refus. */
   private async advance(runId: string): Promise<PublishRunView> {
-    if (this.running.has(runId)) throw new ConflictException('Cette chaîne est déjà en cours.');
+    if (this.running.has(runId)) throw new ConflictException(msg('env.pubRunRunning'));
     this.running.add(runId);
     try {
       let run = await this.load(runId);
@@ -169,11 +170,7 @@ export class PromotionPublishService {
     const externalId = step.externalId!;
     const localId = await this.localIdOf(step.instanceId, externalId);
     if (localId && !(await this.locks.canWrite(localId))) {
-      return recordPublishFailure(
-        run,
-        index,
-        'verrouillé : lève le verrou pour le publier, ou passe l’étape',
-      );
+      return recordPublishFailure(run, index, msg('env.pubStepLocked'));
     }
     try {
       // Relu juste avant : une reprise ne doit pas republier ce qu'un humain a publié entre-temps.
@@ -182,10 +179,10 @@ export class PromotionPublishService {
       if (detectPublishModel(live) === 'direct') await this.n8n.activateWorkflow(config, externalId, true);
       else await this.n8n.publishWorkflow(config, externalId);
       await this.sync.upsertWorkflow(step.instanceId, await this.n8n.getWorkflow(config, externalId));
-      this.logger.log(`« ${step.name} » publié comme sa source`);
+      this.logger.log(`"${step.name}" published like its source`);
       return recordPublished(run, index);
     } catch (error) {
-      this.logger.warn(`Publication de « ${step.name} » refusée : ${(error as Error).message}`);
+      this.logger.warn(`Publishing "${step.name}" refused: ${(error as Error).message}`);
       return recordPublishFailure(run, index, refusal(error));
     }
   }
@@ -293,5 +290,8 @@ function refusal(error: unknown): string {
   } catch {
     // Pas du JSON : le texte tel quel.
   }
-  return `n8n a refusé (${error.status}) : ${detail.slice(0, 400) || 'aucun détail'}`;
+  return msg('env.pubN8nRefused', {
+    status: error.status,
+    detail: detail.slice(0, 400) || msg('env.pubNoDetail'),
+  });
 }

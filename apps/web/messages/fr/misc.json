@@ -1,0 +1,644 @@
+{
+  "aide": {
+    "page": {
+      "title": "Aide",
+      "moduleOff": "Module désactivé",
+      "searchPlaceholder": "Chercher : promouvoir, colonne, erreur…",
+      "all": "Tout · {count}",
+      "groupCount": "{label} · {count}",
+      "empty": "Aucune astuce pour « {query} »",
+      "previous": "Astuce précédente",
+      "next": "Astuce suivante",
+      "position": "{index} / {total}",
+      "enableModule": "Activer le module",
+      "tryIt": "Essayer"
+    },
+    "groups": {
+      "workflows": "Workflows",
+      "quality": "Qualité",
+      "assistant": "Assistant IA",
+      "environments": "Environnements",
+      "health": "Santé",
+      "history": "Versions et ressources"
+    },
+    "tips": {
+      "families": {
+        "title": "Un workflow métier, une ligne",
+        "text": "« X - DEV » et « X - PROD » se regroupent en une ligne, dépliable par env.",
+        "where": "Workflows → Par métier",
+        "keywords": "groupe famille regrouper environnement dev prod vue"
+      },
+      "divergence": {
+        "title": "Voir ce qui diffère de la prod",
+        "text": "Cliquez le tag « à déployer » : le diff avec la prod s’ouvre.",
+        "where": "Workflows → colonne Écart prod",
+        "keywords": "ecart difference comparer deployer diff prod"
+      },
+      "palette": {
+        "title": "⌘K pour tout retrouver",
+        "text": "Un workflow, une page, une instance : tapez quelques lettres.",
+        "where": "Partout · ⌘K ou Ctrl+K",
+        "keywords": "recherche raccourci clavier commande chercher ctrl k"
+      },
+      "bulk": {
+        "title": "Agir sur plusieurs workflows",
+        "text": "Cochez des lignes : analyser, archiver ou promouvoir en une fois.",
+        "where": "Workflows → cases à cocher",
+        "keywords": "masse lot groupe selection multiple cocher archiver analyser"
+      },
+      "list-memory": {
+        "title": "Les listes se souviennent",
+        "text": "Filtres, tri, page et colonnes sont retenus. ⚙ pour masquer ou réordonner.",
+        "where": "En-tête d’une liste → ⚙",
+        "keywords": "colonnes masquer cacher ordre tri filtre memoire largeur reinitialiser vue preferences"
+      },
+      "checks": {
+        "title": "Choisir ses contrôles",
+        "text": "Décochez une famille de contrôles ; le choix est retenu pour ce workflow.",
+        "where": "Page d’un workflow → Contrôles",
+        "keywords": "profil verification analyse regles decocher revue ia"
+      },
+      "findings-fix": {
+        "title": "Corriger d’un clic avec l’IA",
+        "text": "Sur un nœud à problèmes, l’IA propose un correctif relu en diff.",
+        "where": "Findings → Corriger (IA)",
+        "keywords": "correction corriger finding ia automatique proposition"
+      },
+      "ignore": {
+        "title": "Déclarer un finding normal",
+        "text": "Ignoré une fois, pour tous les envs du workflow.",
+        "where": "Findings → Ignorer",
+        "keywords": "ignorer exclure masquer faux positif normal voulu"
+      },
+      "stub": {
+        "title": "Tester sans rien envoyer",
+        "text": "Mails, messages et appels sortants sont bouchonnés d’office.",
+        "where": "Page d’un workflow → Tester sans rien envoyer",
+        "keywords": "test essai bouchon pin pindata simuler envoi mail"
+      },
+      "remote": {
+        "title": "Le distant a-t-il vos colonnes ?",
+        "text": "Airtable, Notion, Sheets, NocoDB, Postgres : chaque colonne attendue est vérifiée.",
+        "where": "Page d’un workflow → Vérifier le distant",
+        "keywords": "colonne table schema airtable notion sheets nocodb postgres manquante"
+      },
+      "assistant": {
+        "title": "Demander une modification",
+        "text": "Décrivez le changement ; l’assistant propose, vous relisez, vous appliquez.",
+        "where": "Page d’un workflow → Assistant IA",
+        "keywords": "chat ia assistant modifier ajouter noeud claude"
+      },
+      "error-fix": {
+        "title": "D’une erreur à son correctif",
+        "text": "L’IA lit le problème et propose un correctif, ou dit que ça se règle hors du workflow.",
+        "where": "Erreurs → Proposer un correctif (IA)",
+        "keywords": "erreur correctif diagnostic credential ia"
+      },
+      "promote": {
+        "title": "Promouvoir vers la prod",
+        "text": "Tests, findings et colonnes distantes sont vérifiés avant d’écrire ; la version suit.",
+        "where": "Page d’un workflow → Environnements",
+        "keywords": "promotion deployer prod preprod version semver release"
+      },
+      "mapping": {
+        "title": "Rebrancher les ressources",
+        "text": "Bases, tables et credentials passent de dev à prod, noms affichés compris.",
+        "where": "Mappings env",
+        "keywords": "mapping bascule ressource base table credential dev prod"
+      },
+      "errors": {
+        "title": "Des erreurs regroupées en problèmes",
+        "text": "Même nœud, même message : un seul problème. Traité, il se rouvre s’il revient.",
+        "where": "Erreurs → Problèmes",
+        "keywords": "erreur probleme groupe rechute traite execution"
+      },
+      "drift": {
+        "title": "Alerte quand un workflow ralentit",
+        "text": "Une durée qui dérive par rapport à la semaine passée déclenche une alerte.",
+        "where": "Performance",
+        "keywords": "lent lenteur duree derive performance alerte slack"
+      },
+      "costs": {
+        "title": "Coûts IA par workflow",
+        "text": "Les tokens sont lus dans les exécutions, avec un budget quotidien.",
+        "where": "Coûts IA",
+        "keywords": "cout prix token llm budget openai anthropic depense"
+      },
+      "restore": {
+        "title": "Revenir à une version",
+        "text": "Chaque synchro garde une version ; on restaure après avoir vu le diff.",
+        "where": "Versions → Restaurer",
+        "keywords": "version historique restaurer retour arriere snapshot sauvegarde"
+      },
+      "resources": {
+        "title": "Qui utilise cette table ?",
+        "text": "Partez d’une table ou d’une API : les workflows qui la touchent, et ce qu’ils en font.",
+        "where": "Ressources externes",
+        "keywords": "table base ressource impact colonne dependance api"
+      }
+    },
+    "scenes": {
+      "sample": {
+        "billing": "Facturation",
+        "reminders": "Relances",
+        "quotes": "Devis"
+      },
+      "shared": {
+        "workflows": "Workflows",
+        "equalProd": "= prod",
+        "toDeploy": "à déployer",
+        "apply": "Appliquer",
+        "assistant": "✦ Assistant IA",
+        "slackAccounting": "{sign} Slack · #compta",
+        "slackFinance": "{sign} Slack · #finance"
+      },
+      "families": {
+        "byWorkflow": "Par workflow",
+        "byFamily": "Par métier",
+        "counts": "4 workflows · 2 métiers"
+      },
+      "divergence": {
+        "title": "{name} : DEV → PROD",
+        "wait": "+ Wait · 5 min"
+      },
+      "palette": {
+        "typed": "relan",
+        "group": "WORKFLOWS",
+        "open": "↵ ouvrir"
+      },
+      "bulk": {
+        "selected": "2 sélectionnés",
+        "analyze": "Analyser",
+        "archive": "Archiver"
+      },
+      "checks": {
+        "title": "Contrôles à lancer",
+        "launched": "4 lancés",
+        "structure": "Structure",
+        "reliability": "Fiabilité",
+        "aiReview": "Revue IA",
+        "jsCode": "Code JS",
+        "naming": "Naming",
+        "launch": "Lancer"
+      },
+      "findingsFix": {
+        "title": "Findings · {name} - DEV",
+        "fix": "✦ Corriger (IA)",
+        "noTimeout": "Pas de timeout",
+        "noRetry": "Pas de retry",
+        "swallowed": "Erreur avalée",
+        "proposal": "Proposition",
+        "timeout": "+ timeout: 10 s",
+        "retry": "+ retry: 3 fois",
+        "seeDiff": "Voir le diff"
+      },
+      "ignore": {
+        "ignore": "Ignorer",
+        "placeholder": "Valeur d'exemple · example.com",
+        "unnamed": "Nœud sans nom",
+        "missingRef": "Référence vers un nœud absent",
+        "ignoreFor": "Ignorer pour…",
+        "thisWorkflow": "○ ce workflow",
+        "allEnvs": "tous ses envs",
+        "everywhere": "○ partout",
+        "done": "Ignoré dans tous les envs"
+      },
+      "stub": {
+        "title": "Tester sans rien envoyer",
+        "input": "entrée",
+        "out": "sort",
+        "gmail": "Gmail · envoyer",
+        "slack": "Slack · poster",
+        "summary": "0 envoi réel · 3 bouchons",
+        "run": "Lancer l'essai"
+      },
+      "remote": {
+        "title": "Airtable · Clients",
+        "check": "Vérifier le distant",
+        "name": "Nom",
+        "absent": "absente",
+        "phone": "Téléphone",
+        "status": "Statut",
+        "missing": "1 colonne manquante ({column})"
+      },
+      "assistant": {
+        "ask": "Ajoute un retry sur l'appel HTTP",
+        "ready": "Prêt : 1 nœud modifié",
+        "detail": "HTTP · 3 essais, 5 s",
+        "applied": "Appliqué",
+        "typing": "Ajoute un retry sur l'appel…"
+      },
+      "errorFix": {
+        "title": "Erreurs · Problèmes",
+        "fix": "✦ Correctif IA",
+        "expired": "Credential Stripe expirée.",
+        "renew": "À renouveler dans n8n : rien à changer au workflow."
+      },
+      "promote": {
+        "title": "Promouvoir · {name}",
+        "inProd": "1.3.0 en prod",
+        "testsGreen": "Tests verts",
+        "noBlocking": "Aucun finding bloquant",
+        "columnsPresent": "Colonnes distantes présentes",
+        "version": "Version",
+        "promote": "Promouvoir"
+      },
+      "mapping": {
+        "title": "Nœud Airtable",
+        "base": "Base",
+        "table": "Table",
+        "prospects": "Prospects ({env})",
+        "summary": "3 bascules · ids et noms",
+        "switch": "Basculer vers PROD"
+      },
+      "errors": {
+        "title": "Erreurs",
+        "grouped": "1 problème, 3 exécutions",
+        "resolve": "Traité",
+        "resolved": "traité",
+        "reopened": "rouvert · 1 rechute"
+      },
+      "drift": {
+        "title": "Performance · {name} - PROD",
+        "ratio": "durée ×1,8",
+        "channel": "# alertes",
+        "message": "{name} ralentit : ×1,8 vs semaine passée"
+      },
+      "costs": {
+        "title": "Coûts IA · aujourd'hui",
+        "total": "5,40 $",
+        "mailSorting": "Tri des mails",
+        "ticketSummary": "Résumé tickets",
+        "aiQuotes": "Devis IA",
+        "overBudget": "Budget du jour dépassé (5 $)"
+      },
+      "restore": {
+        "title": "Versions · {name}",
+        "current": "courante",
+        "today": "aujourd'hui",
+        "yesterday": "hier",
+        "monday": "lundi",
+        "restore": "Restaurer",
+        "confirm": "Revenir à v12 ?",
+        "done": "v15 · restaurée depuis v12"
+      },
+      "resources": {
+        "title": "Ressources externes",
+        "writes": "écrit Nom, Email",
+        "readsAll": "lit tout",
+        "reopen": "à rouvrir"
+      },
+      "listMemory": {
+        "name": "Nom",
+        "tags": "Tags",
+        "kept": "Retrouvée telle quelle au retour"
+      }
+    }
+  },
+  "appLogs": {
+    "title": "Logs de la plateforme",
+    "follow": "Suivre",
+    "clear": "Vider",
+    "downloaded": "{count} ligne(s) téléchargée(s)",
+    "cleared": "Tampon vidé",
+    "clearModal": {
+      "title": "Vider le tampon ?",
+      "body": "Les lignes affichées ici disparaissent. La sortie du conteneur, elle, garde tout."
+    },
+    "info": {
+      "title": "Les dernières lignes de l'API, gardées en mémoire du process",
+      "body": "Un redémarrage de l'api les efface, et chaque process ne voit que les siennes. Pour l'historique complet, la sortie du conteneur reste la source : <code>docker compose logs -f api</code>. Les secrets reconnaissables (clés d'API, jetons) sont masqués avant affichage."
+    },
+    "levels": {
+      "fatal": "Fatal",
+      "error": "Erreur",
+      "warn": "Avert.",
+      "log": "Info",
+      "debug": "Debug",
+      "verbose": "Verbose"
+    },
+    "allContexts": "Tous les contextes",
+    "searchPlaceholder": "Chercher (message, contexte, pile)",
+    "shown": "{count} ligne(s) affichée(s)",
+    "buffer": " · tampon : {held}/{capacity}",
+    "dropped": " · {count} ligne(s) déjà sorties du tampon",
+    "console": {
+      "empty": "Aucune ligne pour ces filtres",
+      "stack": "pile d'appel"
+    }
+  },
+  "assistantLessons": {
+    "origins": {
+      "humanAnswer": {
+        "label": "Réponse humaine",
+        "help": "Quelqu'un a expliqué une correction qu'il avait faite à la main. Le signal le plus fiable."
+      },
+      "humanCorrection": {
+        "label": "Correction à la main",
+        "help": "Déduite d'un écart de FORME entre ce que l'assistant a écrit et ce qui a été laissé."
+      },
+      "gateRefusal": {
+        "label": "Refus de porte",
+        "help": "Un contrôle déterministe a refusé un brouillon, que l’assistant a ensuite corrigé."
+      }
+    },
+    "statuses": {
+      "active": "Servie",
+      "candidate": "En attente",
+      "retired": "Retirée"
+    },
+    "toast": {
+      "activated": "Leçon activée — elle sera servie",
+      "retired": "Leçon retirée",
+      "reworded": "Formulation corrigée",
+      "deleted": "Leçon supprimée",
+      "learned": "Règle apprise : {rule}",
+      "nothingToLearn": "Réponse enregistrée — rien à généraliser"
+    },
+    "pending": {
+      "title": "Corrections inexpliquées ({count})",
+      "intro": "Une modification a été reprise à la main après une proposition de l’assistant, et rien ne dit s’il s’était trompé ou si l’intention a changé. Les deux ont exactement la même forme dans le JSON — seule une réponse les distingue.",
+      "placeholder": "Ce qui n’allait pas, en une phrase — ou « rien, j’ai changé d’avis »",
+      "answer": "Répondre",
+      "skip": "Passer"
+    },
+    "learned": {
+      "title": "Ce que l’assistant a appris"
+    },
+    "failed": {
+      "title": "Leçons illisibles",
+      "body": "{error} — le module « Assistant auto-apprenant » est peut-être désactivé (page Modules). Ce n’est pas un corpus vide : rien ne peut être affiché tant que cet appel échoue."
+    },
+    "budget": {
+      "title": "Six règles au plus atteignent le prompt à chaque tour",
+      "body": "{active} règle(s) servie(s), {candidate} en attente. Une règle « en attente » vient d’un seul incident et n’est jamais servie : elle s’active à la deuxième occurrence, ou d’un clic ici. Le nombre de règles peut grossir sans coût — c’est le nombre SERVI qui est borné, et il est choisi par type de nœud du workflow puis par les mots de la question."
+    },
+    "filter": {
+      "all": "Toutes",
+      "active": "Servies",
+      "candidate": "En attente",
+      "retired": "Retirées"
+    },
+    "empty": {
+      "failed": "Rien ne peut être affiché : voir l’avertissement ci-dessus.",
+      "none": "Rien encore appris — les règles apparaissent quand une proposition de l’assistant est corrigée à la main, ou refusée puis corrigée."
+    },
+    "columns": {
+      "rule": "Règle",
+      "scope": "Portée",
+      "source": "Source",
+      "status": "État"
+    },
+    "general": "générale",
+    "generalHelp": "Règle générale : ne remonte que par les mots de la question.",
+    "seen": "Vue {occurrences} fois, servie {recalls} fois",
+    "activate": "Activer",
+    "retire": "Retirer",
+    "deleteConfirm": {
+      "title": "Supprimer cette règle ?",
+      "body": "Elle pourra être réapprise si le cas se reproduit."
+    }
+  },
+  "configTransfer": {
+    "sections": {
+      "instances": "Instances",
+      "exportTargets": "Cibles export (GitHub / Drive)",
+      "resourceMappings": "Mappings d'environnement",
+      "monitors": "Monitors",
+      "monitoringSettings": "Réglages monitoring (Uptime Kuma)",
+      "aiSettings": "Réglages IA",
+      "moduleStates": "Modules (activation + réglages)",
+      "platformSettings": "Réglages généraux",
+      "findingIgnores": "Exclusions de findings",
+      "workflowGroups": "Groupes de workflows",
+      "workflowLinks": "Liens manuels (carte)"
+    },
+    "toast": {
+      "exported": "Configuration exportée",
+      "exportFailed": "Échec de l'export : {error}",
+      "fileRefused": "Fichier refusé : {error}",
+      "invalidJson": "Ce fichier n'est pas un JSON valide",
+      "imported": "Configuration importée",
+      "importFailed": "Échec de l'import : {error}"
+    },
+    "report": {
+      "section": "Section",
+      "toCreate": "À créer",
+      "created": "Créés",
+      "toUpdate": "À mettre à jour",
+      "updated": "Mis à jour",
+      "toSkip": "Ignorés (existants)",
+      "skipped": "Ignorés"
+    },
+    "export": {
+      "title": "Exporter la configuration",
+      "intro": "Génère un fichier JSON contenant les instances n8n, les cibles d'export, les mappings d'environnement, les monitors, les réglages (IA, monitoring, généraux), l'état des modules, les exclusions de findings, les groupes de workflows et les liens manuels de la carte — à importer sur une autre instance de la plateforme. Les workflows et leurs versions ne font pas partie de l'export (ils se resynchronisent depuis n8n).",
+      "disabled": {
+        "title": "Export désactivé sur cette installation",
+        "body": "Le fichier sortirait en clair les clés API n8n, les tokens GitHub / Drive, le mot de passe Uptime Kuma, les clés des fournisseurs IA et les jetons de heartbeat. L'export ne s'ouvre qu'en local (CONFIG_EXPORT_ENABLED=1, posé par docker-compose.override.yml), là où le fichier ne quitte pas la machine. L'import ci-dessous reste disponible."
+      },
+      "includeSecrets": "Inclure les secrets (clés API n8n, tokens GitHub / Drive)",
+      "secretsWarning": "Le fichier contiendra des secrets en clair : ne le partagez pas et supprimez-le après import.",
+      "download": "Télécharger la configuration"
+    },
+    "import": {
+      "title": "Importer une configuration",
+      "file": "Fichier de configuration",
+      "drop": "Déposez le fichier de configuration ici (ou cliquez)",
+      "dropHint": "Fichier JSON généré par l'export d'une autre instance",
+      "twoPasses": {
+        "title": "Sur une base vierge, importez en deux passes",
+        "body": "Les monitors, exclusions, groupes et liens manuels pointent vers des workflows : ils ne se rétablissent qu'une fois ceux-ci synchronisés. 1) importez (les instances sont créées), 2) synchronisez les workflows depuis la page Instances, 3) ré-importez le même fichier en « Fusionner » — les références manquantes signalées ci-dessous se recolleront."
+      },
+      "merge": "Fusionner (met à jour l'existant)",
+      "skipExisting": "Ne pas toucher l'existant",
+      "preview": "Prévisualisation de « {file} » (export du {date}{secrets, select, with {, avec secrets} other {, sans secrets}})",
+      "previewHint": "Rien n'a encore été écrit : vérifiez puis confirmez l'import.",
+      "confirm": "Appliquer cet import ?",
+      "run": "Importer",
+      "done": "Import terminé"
+    },
+    "warnings": "Avertissements"
+  },
+  "globalError": {
+    "title": "La console a rencontré une erreur",
+    "retry": "Réessayer"
+  },
+  "home": {
+    "minutes": "{value} min",
+    "hours": "{value} h",
+    "percent": "{value} %",
+    "since": {
+      "expired": "dernières 24 h (dernière visite : {date})",
+      "lastVisit": "depuis ta dernière visite — {date}",
+      "firstVisit": "dernières 24 h (première visite)"
+    },
+    "title": "Tableau de bord",
+    "opened": "{count, plural, one {# nouveau problème} other {# nouveaux problèmes}}",
+    "regressed": "{count, plural, one {# rechute} other {# rechutes}}",
+    "drifts": "{count, plural, one {# dérive de durée} other {# dérives de durée}}",
+    "stats": {
+      "executions": "Exécutions",
+      "success": "Succès",
+      "openProblems": "Problèmes ouverts",
+      "timeSaved": "Temps gagné",
+      "llmCost": "Coût LLM",
+      "neverAnalyzed": "Jamais analysés"
+    },
+    "activeDrifts": "Dérives de durée en cours",
+    "byClient": "Par client",
+    "columns": {
+      "client": "Client",
+      "instances": "Instances",
+      "failures": "Échecs"
+    },
+    "footnote": "Le temps gagné se règle workflow par workflow (page du workflow, « min gagnées / exécution ») ; les clients se gèrent dans Paramètres → Clients.",
+    "figures": {
+      "timeSaved": "rendues à l’équipe",
+      "timeSavedEstimated": "rendues à l’équipe (estimé)",
+      "aiCost": "d’IA, suivis au centime"
+    },
+    "estimatedHint": "dont {value} estimées",
+    "hero": {
+      "allGood": "Tout roule",
+      "toLook": "À regarder"
+    }
+  },
+  "homeLinks": {
+    "instances": {
+      "title": "Instances",
+      "text": "Connecter vos instances n8n et vos comptes Make"
+    },
+    "workflows": {
+      "title": "Workflows",
+      "text": "Synchroniser, vérifier, documenter, optimiser"
+    },
+    "versions": {
+      "title": "Versions",
+      "text": "Historique + export GitHub / Google Drive"
+    },
+    "errors": {
+      "title": "Erreurs",
+      "text": "Problèmes regroupés, rechutes, catégories"
+    },
+    "performance": {
+      "title": "Performance",
+      "text": "Durées, taux de succès, dérives"
+    },
+    "modules": {
+      "title": "Modules",
+      "text": "Activer / désactiver les fonctionnalités"
+    }
+  },
+  "login": {
+    "subtitle": "Connexion réservée à l'équipe",
+    "errors": {
+      "oauth": "La connexion Google a échoué. Réessaie.",
+      "domain": "Ce compte Google n'appartient pas au domaine autorisé.",
+      "google_off": "La connexion Google n'est pas configurée sur cette instance.",
+      "credentials": "Identifiant ou mot de passe incorrect.",
+      "unknown": "Connexion impossible."
+    },
+    "google": "Se connecter avec Google",
+    "domains": "Comptes {domains} uniquement",
+    "or": "ou",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "submit": "Se connecter"
+  },
+  "notificationChannels": {
+    "title": "Canaux d'alerte",
+    "add": "Ajouter un canal",
+    "intro": "Quand un problème apparaît (nouveau groupe d'erreurs) ou revient après avoir été traité, chaque canal actif reçoit une alerte. Les imports d'historique n'alertent jamais.",
+    "types": {
+      "slack": "Slack (incoming webhook)",
+      "webhook": "Webhook (POST JSON)"
+    },
+    "toast": {
+      "saved": "Canal enregistré",
+      "tested": "Message d'essai envoyé sur « {name} »",
+      "deleted": "Canal supprimé"
+    },
+    "fields": {
+      "name": "Nom",
+      "type": "Type",
+      "alerts": "Alertes",
+      "enabled": "Actif"
+    },
+    "urlHidden": "L'URL complète n'est jamais renvoyée (secret)",
+    "tags": {
+      "newGroup": "nouveau problème",
+      "regression": "rechute",
+      "perfDrift": "dérive de durée",
+      "budget": "budget IA",
+      "relayBroken": "surveillance muette",
+      "modelLifecycle": "modèle déprécié",
+      "on": "actif",
+      "off": "coupé"
+    },
+    "sendTest": "Envoyer un message d'essai",
+    "deleteConfirm": "Supprimer ce canal ?",
+    "modal": {
+      "new": "Nouveau canal",
+      "edit": "Modifier le canal",
+      "nameRequired": "Un nom",
+      "urlRequired": "L'URL du webhook",
+      "urlKeep": "Laisser vide pour conserver l’URL actuelle (elle n’est jamais réaffichée).",
+      "urlHelp": "Slack : Incoming Webhook (https://hooks.slack.com/…). Webhook : n’importe quelle URL qui accepte un POST JSON.",
+      "onNewGroup": "Nouveau problème",
+      "onRegression": "Rechute",
+      "onPerfDrift": "Dérive de durée",
+      "onBudget": "Budget IA dépassé",
+      "onRelayBroken": "Surveillance muette",
+      "onRelayBrokenHelp": "Le push vers la sonde Uptime Kuma échoue : plus rien ne signalerait l'arrêt de ce monitor.",
+      "onModelLifecycle": "Modèle déprécié ou retiré",
+      "onModelLifecycleHelp": "Un modèle appelé par un workflow du parc n'est plus servi par son provider."
+    }
+  },
+  "procedures": {
+    "title": "Procédures",
+    "recordingInProgress": "Enregistrement en cours",
+    "record": "● Enregistrer",
+    "name": "Nom",
+    "steps": "Étapes",
+    "stepsWithManual": "{count} · {manual} manuelles",
+    "recorded": "Enregistrée",
+    "inProgress": "en cours",
+    "replay": "Rejouer",
+    "duplicateTo": "Dupliquer vers…",
+    "from": "Depuis",
+    "to": "Vers",
+    "start": {
+      "title": "Enregistrer une procédure",
+      "ok": "Démarrer",
+      "nameRequired": "Donne-lui un nom",
+      "placeholder": "Release de septembre"
+    },
+    "replayModal": {
+      "title": "Rejouer « {name} »",
+      "ok": "Ouvrir",
+      "noHop": "Aucune promotion enregistrée : les envs ne seront pas décalés."
+    },
+    "duplicateModal": {
+      "title": "Dupliquer « {name} »",
+      "ok": "Dupliquer",
+      "created": "« {name} » créée",
+      "same": "Même saut que l'originale"
+    }
+  },
+  "setup": {
+    "errors": {
+      "already": "La plateforme est déjà configurée — connecte-toi.",
+      "mismatch": "Les deux mots de passe ne correspondent pas.",
+      "http": "Erreur {status}"
+    },
+    "title": "Bienvenue — sécurisons la plateforme",
+    "intro": "Première ouverture : crée le compte administrateur. Tant qu'il n'existe pas, rien d'autre n'est accessible.",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Mot de passe (10 caractères minimum)",
+    "confirm": "Confirmer le mot de passe",
+    "submit": "Créer le compte et entrer",
+    "googleLater": "La connexion Google (par domaine Workspace) peut s'ajouter ensuite par variables d'environnement — voir docs/authentification.md."
+  }
+}

@@ -12,11 +12,11 @@ import {
  * Regroupements du menu. Une resource demande son groupe elle-même (`meta.parent`) :
  * le groupe n'existe que si au moins une resource visible le réclame.
  */
-export const MENU_GROUPS: Record<string, { label: string; icon: React.ReactNode }> = {
-  quality: { label: 'Qualité', icon: <SafetyCertificateOutlined /> },
-  health: { label: 'Santé', icon: <LineChartOutlined /> },
-  environments: { label: 'Environnements', icon: <DeploymentUnitOutlined /> },
-  settings: { label: 'Paramètres', icon: <SettingOutlined /> },
+export const MENU_GROUPS: Record<string, React.ReactNode> = {
+  quality: <SafetyCertificateOutlined />,
+  health: <LineChartOutlined />,
+  environments: <DeploymentUnitOutlined />,
+  settings: <SettingOutlined />,
 };
 
 interface MenuResource {
@@ -29,9 +29,12 @@ interface MenuResource {
  * Crée les resources « groupe » réclamées par `meta.parent` et absentes de la liste.
  * Les resources groupées passent en fin de liste : Refine place un groupe à la position
  * de son premier enfant, les groupes restent donc sous les entrées de premier niveau.
- * `meta.bottom` place une entrée sous les groupes (Aide).
+ * `meta.bottom` place une entrée sous les groupes (Aide). `groupLabel` nomme un groupe dans la langue affichée.
  */
-export function withMenuGroups<T extends MenuResource>(resources: T[]): (T | MenuResource)[] {
+export function withMenuGroups<T extends MenuResource>(
+  resources: T[],
+  groupLabel: (id: string) => string,
+): (T | MenuResource)[] {
   const known = new Set(resources.map((resource) => resource.name));
   const topLevel: T[] = [];
   const grouped: T[] = [];
@@ -53,8 +56,7 @@ export function withMenuGroups<T extends MenuResource>(resources: T[]): (T | Men
     // Un enfant masqué (module désactivé) ne justifie pas d'afficher le groupe.
     if (resource.meta?.hide) continue;
     known.add(parent);
-    const group = MENU_GROUPS[parent];
-    groups.push({ name: parent, meta: { label: group?.label ?? parent, icon: group?.icon } });
+    groups.push({ name: parent, meta: { label: groupLabel(parent), icon: MENU_GROUPS[parent] } });
   }
 
   return [...topLevel, ...grouped, ...groups, ...bottom];

@@ -27,7 +27,7 @@ export class WorkflowSyncCron {
       try {
         await this.sync.syncInstance(instance.id);
       } catch (error) {
-        this.logger.warn(`Synchro de « ${instance.name} » impossible : ${(error as Error).message}`);
+        this.logger.warn(`Sync of "${instance.name}" failed: ${(error as Error).message}`);
       }
     }
   }

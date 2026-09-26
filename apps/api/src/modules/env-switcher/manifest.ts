@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Libellés en accesseurs : lus à chaque requête, donc dans la langue de l'appelant. */
 export const ENV_SWITCHER_MANIFEST: ModuleManifest = {
   id: 'env-switcher',
-  name: "Bascule d'environnement",
-  description: 'Bascule de ressources et promotion entre environnements',
+  get name() {
+    return msg('env.manifestName');
+  },
+  get description() {
+    return msg('env.manifestDescription');
+  },
 };

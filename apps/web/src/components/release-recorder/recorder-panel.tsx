@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { App, Button, Input, Space, Tag, Tooltip, Typography } from 'antd';
 import { CloseOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import {
   closestCenter,
   DndContext,
@@ -28,6 +29,8 @@ const TODO: StepRun = { state: 'todo' };
 
 /** La procédure en cours : ce qui a été capté, ou ce qui se rejoue, étape par étape — et s'édite sur place. */
 export function RecorderPanel({ onHide }: { onHide?: () => void }) {
+  const t = useTranslations('reviewTools.recorder.panel');
+  const tCommon = useTranslations('common');
   const recorder = useReleaseRecorder();
   const { message } = App.useApp();
   const { mode, procedure, hop, runs, busy, frozen } = recorder;
@@ -87,7 +90,13 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
             {procedure.name}
           </Typography.Text>
           {onHide && (
-            <Button type="text" size="small" icon={<CloseOutlined />} onClick={onHide} aria-label="Masquer" />
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={onHide}
+              aria-label={t('hide')}
+            />
           )}
           {!onHide && mode !== 'recording' && !busy && (
             <Button
@@ -95,12 +104,12 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
               size="small"
               icon={<CloseOutlined />}
               onClick={recorder.close}
-              aria-label="Fermer"
+              aria-label={tCommon('close')}
             />
           )}
         </div>
         <Space size={6} style={{ marginTop: 4 }} wrap>
-          {mode === 'recording' && <Tag color="red">● Enregistrement</Tag>}
+          {mode === 'recording' && <Tag color="red">{t('recording')}</Tag>}
           {mode === 'playing' && hop && (
             <Tag color="blue">
               {hop.source.toUpperCase()} → {hop.target.toUpperCase()}
@@ -109,9 +118,9 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {mode === 'playing'
               ? pending.length === 0
-                ? 'Terminé'
-                : `${pending.length} restantes${manualLeft ? `, dont ${manualLeft} manuelles` : ''}`
-              : `${steps.length} étapes`}
+                ? t('finished')
+                : t('remaining', { count: pending.length, manual: manualLeft })
+              : t('steps', { count: steps.length })}
           </Typography.Text>
         </Space>
       </div>
@@ -119,8 +128,7 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
       <div style={{ flex: 1 }}>
         {steps.length === 0 && mode === 'recording' && (
           <Typography.Paragraph type="secondary" style={{ padding: 16, margin: 0, fontSize: 13 }}>
-            Fais ta mise en ligne normalement : promotions, déclarations d&apos;env et tests s&apos;ajoutent
-            ici.
+            {t('emptyRecording')}
           </Typography.Paragraph>
         )}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -145,10 +153,10 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
         {target !== undefined && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6, fontSize: 12 }}>
             <Typography.Text type="secondary" style={{ flex: 1, fontSize: 12 }}>
-              {target < steps.length ? `Insertion avant l'étape ${target + 1}` : 'Insertion à la fin'}
+              {target < steps.length ? t('insertBefore', { position: target + 1 }) : t('insertAtEnd')}
             </Typography.Text>
             <Button size="small" type="link" style={{ padding: 0 }} onClick={() => setInsertAt(null)}>
-              Annuler
+              {tCommon('cancel')}
             </Button>
           </div>
         )}
@@ -163,21 +171,21 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
             <Input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Étape manuelle"
-              aria-label="Étape manuelle"
+              placeholder={t('manualStep')}
+              aria-label={t('manualStep')}
             />
             <Button
               htmlType="submit"
               icon={<PlusOutlined />}
               loading={saving}
               disabled={!draft.trim()}
-              aria-label="Ajouter"
+              aria-label={tCommon('add')}
             />
-            <Tooltip title="Ajouter un geste">
+            <Tooltip title={t('addGesture')}>
               <Button
                 icon={<ThunderboltOutlined />}
                 onClick={() => setGestureOpen(true)}
-                aria-label="Ajouter un geste"
+                aria-label={t('addGesture')}
               />
             </Tooltip>
           </Space.Compact>
@@ -186,11 +194,11 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
           <div style={{ marginTop: 8 }}>
             {mode === 'recording' ? (
               <Button danger type="primary" block onClick={recorder.stopRecording}>
-                Arrêter l&apos;enregistrement
+                {t('stopRecording')}
               </Button>
             ) : (
               <Button type="primary" block onClick={recorder.play} disabled={!canPlay} loading={busy}>
-                {Object.keys(runs).length === 0 ? 'Lancer' : 'Reprendre'}
+                {Object.keys(runs).length === 0 ? t('start') : t('resume')}
               </Button>
             )}
           </div>

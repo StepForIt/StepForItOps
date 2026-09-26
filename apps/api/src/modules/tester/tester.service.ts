@@ -13,6 +13,7 @@ import {
   remapSubWorkflowRefs,
   stubWorkflowName,
   testCopyName,
+  msg,
 } from '@nwm/core';
 import { TestRun } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -54,7 +55,7 @@ export class TesterService {
     const { workflow, raw } = await this.workflows.getRaw(workflowId);
     const webhook = findWebhookPath(raw);
     if (!webhook) {
-      throw new BadRequestException("Ce workflow n'expose pas de nœud Webhook actif");
+      throw new BadRequestException(msg('platform.testerNoWebhook'));
     }
     const config = await this.instances.getConfig(workflow.instanceId);
     const target = await this.webhookTarget.check(config, workflow, webhook);
@@ -161,9 +162,7 @@ export class TesterService {
       const lost = pinned.filter((nodeName) => !fresh.pinData?.[nodeName]);
       if (lost.length > 0) {
         await this.n8n.deleteWorkflow(config, String(created.id)).catch(() => undefined);
-        throw new BadRequestException(
-          `n8n n'a pas épinglé ${lost.join(', ')} — la copie aurait envoyé pour de vrai, elle a été supprimée.`,
-        );
+        throw new BadRequestException(msg('platform.testerPinLost', { nodes: lost.join(', ') }));
       }
     }
 
@@ -178,7 +177,7 @@ export class TesterService {
         input: { pinned, stubs } as object,
         output: {
           copyN8nId: created.id,
-          note: 'Copie créée — exécuter depuis n8n puis rapatrier le résultat',
+          note: msg('platform.testerCopyCreated'),
         } as object,
       },
     });
@@ -207,7 +206,7 @@ export class TesterService {
         workflowId,
         mode: 'webhook',
         status: last ? (last.status === 'success' ? 'success' : 'error') : 'error',
-        output: (last ?? { note: 'Aucune exécution trouvée' }) as unknown as object,
+        output: (last ?? { note: msg('platform.testerNoExecution') }) as unknown as object,
         finishedAt: new Date(),
       },
     });

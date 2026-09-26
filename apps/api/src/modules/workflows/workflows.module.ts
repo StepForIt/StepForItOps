@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { WorkflowsController } from './workflows.controller';
 import { FindingsController } from './findings.controller';
 import { FindingIgnoreController } from './finding-ignore.controller';
@@ -39,8 +40,12 @@ import { manifestProvider } from '../../infra/modules-registry/manifest.provider
     FindingIgnoreService,
     manifestProvider({
       id: 'workflows',
-      name: 'Workflows',
-      description: 'Miroir local des workflows + synchronisation',
+      get name() {
+        return msg('platform.moduleWorkflowsName');
+      },
+      get description() {
+        return msg('platform.moduleWorkflowsDescription');
+      },
       core: true,
     }),
   ],

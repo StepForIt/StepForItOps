@@ -8,6 +8,7 @@
 import { CheckFinding } from '../check-finding';
 import { closestField } from './field-check';
 import { RemoteTableRequirement } from './remote-requirements';
+import { msg } from '../../i18n/translate';
 
 export interface RemoteColumn {
   name: string;
@@ -40,7 +41,7 @@ export function compareRemoteSchema(
     return requirement.nodes.map((nodeName) => ({
       severity: 'error',
       code: 'remote-table-missing',
-      message: `La table « ${table} » est introuvable sur ${requirement.locator.provider}`,
+      message: msg('checks.remoteTableMissing', { table, provider: requirement.locator.provider }),
       nodeName,
       data: { resourceKey: requirement.locator.key, provider: requirement.locator.provider },
     }));
@@ -54,14 +55,17 @@ export function compareRemoteSchema(
     .filter((column) => !present.has(column.name))
     .map((column) => {
       const suggestion = closestField(column.name, names);
-      const origin = column.via ? ` (clé posée par le Set « ${column.via} »)` : '';
-      const verb = column.access === 'write' ? 'écrit' : 'lit';
       return {
         severity: column.severity,
         code: 'remote-column-missing',
-        message:
-          `La colonne « ${column.name} » que ce nœud ${verb}${origin} n'existe pas dans « ${table} »` +
-          (column.severity === 'warning' ? ' : la donnée sera ignorée' : ''),
+        message: msg('checks.remoteColumnMissing', {
+          column: column.name,
+          access: column.access,
+          via: column.via ?? '',
+          hasVia: !!column.via,
+          table,
+          dropped: column.severity === 'warning',
+        }),
         nodeName: column.nodeName,
         data: {
           resourceKey: requirement.locator.key,
@@ -69,7 +73,7 @@ export function compareRemoteSchema(
           column: column.name,
           access: column.access,
           ...(column.via ? { via: column.via } : {}),
-          ...(suggestion ? { suggestion: `Colonne proche : « ${suggestion} »` } : {}),
+          ...(suggestion ? { suggestion: msg('checks.remoteColumnClosest', { suggestion }) } : {}),
         },
       } satisfies CheckFinding;
     });

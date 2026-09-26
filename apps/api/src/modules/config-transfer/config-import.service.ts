@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { EVENTS, envIds, normalizeEnvs } from '@nwm/core';
+import { EVENTS, envIds, normalizeEnvs, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { ModuleRegistryService } from '../../infra/modules-registry/module-registry.service';
@@ -77,7 +77,7 @@ export class ConfigImportService {
       );
       this.eventBus.emit(EVENTS.configImported, { ...totals, sections: Object.keys(report.sections) });
       this.logger.log(
-        `Config importée : ${totals.created} créés, ${totals.updated} mis à jour, ${totals.skipped} ignorés`,
+        `Config imported: ${totals.created} created, ${totals.updated} updated, ${totals.skipped} skipped`,
       );
     }
     return report;
@@ -85,13 +85,14 @@ export class ConfigImportService {
 
   private validate(bundle: ConfigBundle): void {
     if (!bundle || bundle.kind !== CONFIG_BUNDLE_KIND) {
-      throw new BadRequestException(
-        "Fichier invalide : ce n'est pas un export de configuration de la plateforme",
-      );
+      throw new BadRequestException(msg('platform.importInvalidFile'));
     }
     if (bundle.version !== CONFIG_BUNDLE_VERSION) {
       throw new BadRequestException(
-        `Version de bundle non supportée : ${bundle.version} (attendu : ${CONFIG_BUNDLE_VERSION})`,
+        msg('platform.importUnsupportedVersion', {
+          version: bundle.version,
+          expected: CONFIG_BUNDLE_VERSION,
+        }),
       );
     }
   }
@@ -125,9 +126,7 @@ export class ConfigImportService {
       const action = this.act(!!existing, strategy, report.sections.instances);
       if (action === 'skip') continue;
       if (action === 'create' && entry.apiKey === null) {
-        report.warnings.push(
-          `Instance "${entry.name}" créée sans apiKey (export sans secrets) : à renseigner manuellement`,
-        );
+        report.warnings.push(msg('platform.importInstanceNoKey', { name: entry.name }));
       }
       if (dryRun) continue;
       if (action === 'create') {
@@ -157,9 +156,7 @@ export class ConfigImportService {
       const action = this.act(!!existing, strategy, report.sections.exportTargets);
       if (action === 'skip') continue;
       if (action === 'create' && !bundle.includesSecrets) {
-        report.warnings.push(
-          `Cible export "${entry.name}" créée sans ses secrets (token…) : à renseigner manuellement`,
-        );
+        report.warnings.push(msg('platform.importTargetNoSecrets', { name: entry.name }));
       }
       if (dryRun) continue;
       const config = (entry.config ?? {}) as Prisma.InputJsonValue;
@@ -255,11 +252,12 @@ export class ConfigImportService {
       return { config: withInstanceId(entry.config, localInstanceId), enabled: entry.enabled };
     }
 
-    const cause = entry.instanceRef
-      ? `instance ${entry.instanceRef} absente de cette plateforme`
-      : "bundle antérieur à l'ajout de instanceRef";
     report.warnings.push(
-      `Monitor "${entry.name}" : instance non résolue (${cause}) — importé désactivé, à réactiver après avoir choisi son instance`,
+      msg('platform.importMonitorUnresolved', {
+        name: entry.name,
+        hasRef: !!entry.instanceRef,
+        instanceRef: entry.instanceRef ?? '',
+      }),
     );
     const { instanceId: _dropped, ...rest } = entry.config ?? {};
     return { config: rest, enabled: false };
@@ -272,7 +270,14 @@ export class ConfigImportService {
   ): Promise<string | null> {
     if (!ref) return null;
     const workflowId = await this.refs.workflowId(ref);
-    if (!workflowId) report.warnings.push(WorkflowRefResolver.missing(`Monitor "${monitorName}"`, ref));
+    if (!workflowId) {
+      report.warnings.push(
+        WorkflowRefResolver.missing(
+          msg('platform.importSubject', { kind: 'monitor', name: monitorName }),
+          ref,
+        ),
+      );
+    }
     return workflowId;
   }
 
@@ -287,9 +292,7 @@ export class ConfigImportService {
       const action = this.act(!!existing, strategy, report.sections.monitoringSettings);
       if (action === 'skip') continue;
       if (action === 'create' && entry.kumaPassword === null && (entry.kumaUsername || entry.kumaUrl)) {
-        report.warnings.push(
-          'Réglages Uptime Kuma importés sans mot de passe (export sans secrets) : à renseigner manuellement',
-        );
+        report.warnings.push(msg('platform.importKumaNoPassword'));
       }
       if (dryRun) continue;
       if (action === 'create') {
@@ -326,9 +329,7 @@ export class ConfigImportService {
       const action = this.act(!!existing, strategy, report.sections.aiSettings);
       if (action === 'skip') continue;
       if (action === 'create' && entry.apiKey === null) {
-        report.warnings.push(
-          'Réglages IA importés sans clé API (export sans secrets) : à renseigner manuellement',
-        );
+        report.warnings.push(msg('platform.importAiNoKey'));
       }
       if (dryRun) continue;
       // Un bundle d'avant le choix de fournisseur n'en désigne aucun : la ligne

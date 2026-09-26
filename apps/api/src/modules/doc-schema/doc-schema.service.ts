@@ -8,13 +8,20 @@ import {
   blueprintDocContext,
   isMakeBlueprint,
   makeMermaid,
+  msg,
   redactSecrets,
   workflowToMermaid,
+  writeInLanguage,
 } from '@nwm/core';
 import { WorkflowDoc } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { WorkflowsService } from '../workflows/workflows.service';
+
+/** Les rubriques du résumé ; leurs titres suivent la langue de sortie. */
+const DOC_SECTIONS =
+  '**Purpose**, **Trigger**, **Inputs/Outputs**, **Systems touched**, **Points of attention** ' +
+  '(section titles translated into the output language).';
 
 @Injectable()
 export class DocSchemaService {
@@ -42,7 +49,7 @@ export class DocSchemaService {
       try {
         summary = await this.ai.generate({ ...request, maxTokens: 2048 });
       } catch (error) {
-        this.logger.warn(`Résumé IA KO : ${(error as Error).message}`);
+        this.logger.warn(`AI summary failed: ${(error as Error).message}`);
       }
     }
 
@@ -62,9 +69,7 @@ export class DocSchemaService {
     return {
       mermaid: workflowToMermaid(raw),
       request: {
-        system:
-          'Tu documentes un workflow n8n pour un humain. En français, en markdown court : ' +
-          "**But**, **Déclencheur**, **Entrées/Sorties**, **Systèmes touchés**, **Points d'attention**.",
+        system: `You document an n8n workflow for a human, in short markdown: ${DOC_SECTIONS} ${writeInLanguage()}`,
         prompt: JSON.stringify({
           name: raw.name,
           // Un secret saisi en dur dans un nœud n'a rien à faire chez le fournisseur d'IA.
@@ -84,18 +89,15 @@ export class DocSchemaService {
     workflowName: string,
   ): { mermaid: string; request: Pick<AiGenerateParams, 'system' | 'prompt'> } {
     if (!isMakeBlueprint(raw)) {
-      throw new BadRequestException(
-        `« ${workflowName} » : contenu illisible comme blueprint Make, rien à documenter.`,
-      );
+      throw new BadRequestException(msg('analysis.docUnreadableBlueprint', { name: workflowName }));
     }
     return {
       mermaid: makeMermaid(raw),
       request: {
         system:
-          'Tu documentes un scénario Make pour un humain. Les modules sont désignés par leur id ; ' +
-          '"links" dit qui suit qui, et une route ou une branche est EXCLUSIVE de ses sœurs. ' +
-          'Le premier module est le déclencheur. En français, en markdown court : ' +
-          "**But**, **Déclencheur**, **Entrées/Sorties**, **Systèmes touchés**, **Points d'attention**.",
+          'You document a Make scenario for a human. Modules are designated by their id; ' +
+          '"links" says what follows what, and a route or a branch is EXCLUSIVE of its siblings. ' +
+          `The first module is the trigger. In short markdown: ${DOC_SECTIONS} ${writeInLanguage()}`,
         prompt: JSON.stringify(blueprintDocContext(raw, workflowName)),
       },
     };

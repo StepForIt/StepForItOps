@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BlueprintAccountRef, N8nNode, N8nWorkflow, PlatformId, diffBlueprints } from '@nwm/core';
+import { BlueprintAccountRef, N8nNode, N8nWorkflow, PlatformId, diffBlueprints, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { exportLocation, githubPath, legacyVersionFileName, versionFileName } from './export-path';
 import { isRetiredFromN8n } from './retired-workflow';
@@ -96,13 +96,10 @@ function n8nImpact(currentValue: unknown, restoredValue: unknown, currentName: s
 function makeImpact(currentValue: unknown, restoredValue: unknown, currentName: string): ContentImpact {
   const diff = diffBlueprints(currentValue, restoredValue);
   const restoredName = (restoredValue as { name?: unknown } | null)?.name;
-  const notes = [
-    "Le planning du scénario n'est pas dans le blueprint : il reste celui d'aujourd'hui, quel que soit celui de la version.",
-  ];
+  const notes = [msg('platform.restoreMakeSchedule')];
   if (diff.refsOnlyInRestored.length > 0) {
     notes.push(
-      `La version emploie ${diff.refsOnlyInRestored.map(describeRef).join(', ')}, que le scénario n'emploie plus aujourd'hui. ` +
-        "Si l'une a été supprimée dans Make, le scénario reviendra invalide et refusera de s'activer.",
+      msg('platform.restoreMakeRefsGone', { refs: diff.refsOnlyInRestored.map(describeRef).join(', ') }),
     );
   }
   return {
@@ -115,9 +112,8 @@ function makeImpact(currentValue: unknown, restoredValue: unknown, currentName: 
 }
 
 function describeRef(ref: BlueprintAccountRef): string {
-  const kind =
-    ref.key === '__IMTCONN__' ? 'la connexion' : ref.key === '__IMTHOOK__' ? 'le webhook' : ref.key;
-  return `${kind} #${ref.id} (${ref.module})`;
+  const kind = ref.key === '__IMTCONN__' ? 'connection' : ref.key === '__IMTHOOK__' ? 'webhook' : 'other';
+  return msg('platform.restoreMakeRef', { kind, key: ref.key, id: ref.id, module: ref.module });
 }
 
 @Injectable()
@@ -215,7 +211,11 @@ export class VersionPreviewService {
           kind: target.kind,
           destination: isGithub
             ? `${config.owner}/${config.repo}@${config.branch || 'main'} → ${path}`
-            : `Google Drive${config.folderId ? ` (dossier ${config.folderId})` : ''} → ${path}`,
+            : msg('platform.exportDriveDestination', {
+                hasFolder: !!config.folderId,
+                folderId: config.folderId ?? '',
+                path,
+              }),
           movedFrom: previous && previous !== path ? previous : null,
         };
       }),

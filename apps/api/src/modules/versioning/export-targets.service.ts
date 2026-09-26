@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PrismaListArgs } from '../../common/crud/paginate';
@@ -68,7 +69,7 @@ export class ExportTargetsService {
 
   async get(id: string): Promise<ExportTargetView> {
     const row = await this.prisma.exportTarget.findUnique({ where: { id } });
-    if (!row) throw new NotFoundException(`Cible d'export ${id} introuvable`);
+    if (!row) throw new NotFoundException(msg('platform.exportTargetNotFound', { id }));
     return toView(row);
   }
 
@@ -96,7 +97,7 @@ export class ExportTargetsService {
     let config: Prisma.InputJsonObject | undefined;
     if (input.config !== undefined) {
       const existing = await this.prisma.exportTarget.findUnique({ where: { id }, select: { config: true } });
-      if (!existing) throw new NotFoundException(`Cible d'export ${id} introuvable`);
+      if (!existing) throw new NotFoundException(msg('platform.exportTargetNotFound', { id }));
       const stored = asConfig(existing.config);
       const next = cleanConfig(input.config);
       for (const key of SECRET_CONFIG_KEYS) {

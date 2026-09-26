@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EnvName, detectWorkflowEnv, envIds, nextEnv } from '@nwm/core';
+import { EnvName, detectWorkflowEnv, envIds, nextEnv, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 
@@ -26,7 +26,7 @@ export class PromoteDefaultsService {
       where: { id: workflowId },
       select: { name: true, tags: true, instanceId: true },
     });
-    if (!workflow) throw new NotFoundException(`Workflow ${workflowId} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('env.workflowNotFound', { id: workflowId }));
     const envs = await this.settings.declaredEnvs();
     const sourceEnv = detectWorkflowEnv(workflow.name, workflow.tags, envIds(envs));
     return { sourceEnv, targetInstanceId: workflow.instanceId, targetEnv: nextEnv(envs, sourceEnv) };

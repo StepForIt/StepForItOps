@@ -16,6 +16,7 @@ import { FindingIgnoreService } from '../workflows/finding-ignore.service';
 import { MODEL_AUDIT_MANIFEST } from './manifest';
 import { ModelAuditSettingsService } from './model-audit-settings.service';
 import { NodeUsageService } from './node-usage.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { TaskClassifierService } from './task-classifier.service';
 
 export interface AuditRunResult {
@@ -51,10 +52,16 @@ export class ModelAuditService {
     private readonly tasks: TaskClassifierService,
     private readonly ignores: FindingIgnoreService,
     private readonly auditSettings: ModelAuditSettingsService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /** Un workflow. Renvoie les findings persistés. */
-  async auditWorkflow(workflowId: string, disabledChecks?: string[]): Promise<Finding[]> {
+  auditWorkflow(workflowId: string, disabledChecks?: string[]): Promise<Finding[]> {
+    // Les findings sont stockés pour tous : dans la langue de la plateforme, pas celle du lanceur.
+    return this.platformLocale.run(() => this.runAudit(workflowId, disabledChecks));
+  }
+
+  private async runAudit(workflowId: string, disabledChecks?: string[]): Promise<Finding[]> {
     const workflow = await this.prisma.workflow.findUnique({
       where: { id: workflowId },
       include: { instance: { select: { platform: true } } },
@@ -123,7 +130,7 @@ export class ModelAuditService {
         audited++;
       } catch (error) {
         // Un workflow illisible ne doit pas priver le parc de sa passe.
-        this.logger.warn(`Audit de ${workflow.id} KO : ${(error as Error).message}`);
+        this.logger.warn(`Audit of ${workflow.id} failed: ${(error as Error).message}`);
       }
     }
     return {

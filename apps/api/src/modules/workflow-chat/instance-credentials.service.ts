@@ -7,6 +7,7 @@ import {
   collectCredentials,
   credentialTypesForNode,
   credentialsPatch,
+  msg,
 } from '@nwm/core';
 import { InstanceCorpusService } from './instance-corpus.service';
 
@@ -97,18 +98,17 @@ export function describeFills(filled: CredentialFill[]): string[] {
   return filled.map((fill) => {
     const posed = fill.choices
       .filter((choice) => choice.chosen)
-      .map((choice) => `${choice.type} → « ${choice.chosen?.name} »`)
+      .map((choice) => `${choice.type} → ${msg('chat.quotedName', { name: choice.chosen?.name ?? '' })}`)
       .join(', ');
     const arbitrer = fill.choices.filter((choice) => choice.alternatives.length > 0);
     if (arbitrer.length === 0) {
-      return `Credential posée sur « ${fill.node} » : ${posed} (seule de son type sur l'instance).`;
+      return msg('chat.credentialFilledOnly', { node: fill.node, posed });
     }
-    const autres = arbitrer
-      .map((choice) => choice.alternatives.map((alt) => `« ${alt.name} »`).join(', '))
+    const others = arbitrer
+      .map((choice) =>
+        choice.alternatives.map((alt) => msg('chat.quotedName', { name: alt.name })).join(', '),
+      )
       .join(' ; ');
-    return (
-      `Credential posée sur « ${fill.node} » : ${posed} — la plus employée. ` +
-      `À vérifier, l'instance en connaît d'autres du même type : ${autres}.`
-    );
+    return msg('chat.credentialFilledMostUsed', { node: fill.node, posed, others });
   });
 }

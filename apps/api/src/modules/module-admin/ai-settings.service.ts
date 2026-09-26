@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { AI_PORT, AiPort, AiProvider, isAiProvider } from '@nwm/core';
+import { AI_PORT, AiPort, AiProvider, isAiProvider, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { activeAiProvider, aiCredentialsSource } from '../../infra/adapters/ai-credentials.provider';
 import { AI_PROVIDER_INFOS, aiProviderInfo } from '../../infra/adapters/ai-providers';
@@ -78,7 +78,7 @@ export class AiSettingsService {
 
     const existing = await this.prisma.aiSettings.findUnique({ where: { id: provider } });
     if (!apiKey && !existing?.apiKey) {
-      throw new BadRequestException(`Clé API ${info.label} requise`);
+      throw new BadRequestException(msg('platform.aiKeyRequired', { provider: info.label }));
     }
 
     await this.prisma.aiSettings.upsert({
@@ -100,7 +100,7 @@ export class AiSettingsService {
     if (source === 'none') {
       const info = aiProviderInfo(provider);
       throw new BadRequestException(
-        `${info.label} n'a pas de clé API : la renseigner avant de basculer (ou poser ${info.envKey})`,
+        msg('platform.aiProviderNoKey', { provider: info.label, envVar: info.envKey }),
       );
     }
     await this.prisma.$transaction([
@@ -137,7 +137,7 @@ export class AiSettingsService {
       if (apiKey) await this.ai.testCredentials({ apiKey, model, provider });
       else await this.ai.testCredentials();
     } catch (error) {
-      throw new BadRequestException(`Appel IA KO : ${(error as Error).message}`);
+      throw new BadRequestException(msg('platform.aiCallFailed', { error: (error as Error).message }));
     }
     return { ok: true };
   }
@@ -146,7 +146,7 @@ export class AiSettingsService {
   private async resolveProvider(provider?: string): Promise<AiProvider> {
     if (provider === undefined || provider === '') return activeAiProvider(this.prisma);
     if (!isAiProvider(provider)) {
-      throw new BadRequestException(`Fournisseur IA inconnu : ${provider}`);
+      throw new BadRequestException(msg('platform.aiProviderUnknown', { provider }));
     }
     return provider;
   }

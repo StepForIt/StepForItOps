@@ -108,5 +108,18 @@ export default tseslint.config(
     files: ['apps/web/audit-ux/**/*.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
+  {
+    // La vidéo promo : la capture est un parcours Playwright qui parle à qui la
+    // lance, la composition Remotion du React rendu dans un navigateur.
+    files: ['apps/promo/**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    rules: { 'no-console': 'off' },
+  },
+  {
+    // Seulement la vidéo : les fixtures Playwright s'appellent aussi `use`.
+    files: ['apps/promo/video/**/*.tsx'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: reactHooks.configs.recommended.rules,
+  },
   prettier,
 );

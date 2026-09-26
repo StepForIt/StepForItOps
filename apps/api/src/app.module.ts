@@ -14,6 +14,7 @@ import { ResourceLabelsModule } from './infra/resource-labels/resource-labels.mo
 import { N8nProbeModule } from './infra/n8n-probe/n8n-probe.module';
 import { RemoteSchemaInfraModule } from './infra/remote-schema/remote-schema.module';
 import { WorkflowLockModule } from './infra/workflow-lock/workflow-lock.module';
+import { I18nModule } from './infra/i18n/i18n.module';
 import { AdaptersModule } from './infra/adapters/adapters.module';
 import { EventBusModule } from './infra/events/event-bus.module';
 import { ModuleRegistryModule } from './infra/modules-registry/module-registry.module';
@@ -34,6 +35,7 @@ export class AppModule {
         LoggingModule,
         PrismaModule,
         PlatformSettingsModule,
+        I18nModule,
         AuthSettingsModule,
         CheckProfilesModule,
         NodeCatalogModule,

@@ -44,7 +44,7 @@ export class ExecutionSamplerService {
     const listed = await this.n8n.listExecutions(instance, externalId, limit, { includeData: true });
     if (listed.length === 0 || listed.some((execution) => execution.data !== undefined)) return listed;
 
-    this.logger.debug(`includeData ignoré par l'instance — repli sur ${listed.length} GET unitaires`);
+    this.logger.debug(`includeData ignored by the instance — falling back to ${listed.length} single GETs`);
     const detailed = await Promise.all(
       listed.map((execution) =>
         this.n8n.getExecution(instance, execution.id, { includeData: true }).catch(() => execution),

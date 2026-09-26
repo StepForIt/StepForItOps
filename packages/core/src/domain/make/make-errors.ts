@@ -14,6 +14,8 @@
  *
  * Constaté sur un compte réel, pas déduit de la documentation.
  */
+import { msg } from '../../i18n';
+
 export interface MakeApiErrorBody {
   detail?: string | string[];
   message?: string;
@@ -43,13 +45,13 @@ export function makeErrorMessage(status: number, body: MakeApiErrorBody | string
   const base = [detail, body.message].filter(Boolean).join(' — ') || `HTTP ${status}`;
 
   if (status === 401 && detail === 'Invalid token header.') {
-    return `${base}. Le jeton est malformé ou absent.`;
+    return msg('platform.makeTokenMalformed', { base });
   }
   if (status === 401) {
-    return `${base}. Soit le jeton n'a pas le droit demandé, soit il appartient à une autre zone que ${zone} — les deux donnent ce même refus.`;
+    return msg('platform.makeNotAuthorized', { base, zone });
   }
   if (status === 429) {
-    return `${base}. Plafond d'appels de l'organisation atteint.`;
+    return msg('platform.makeRateLimited', { base });
   }
   return subs ? `${base} (${subs})` : base;
 }

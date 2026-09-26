@@ -1,3 +1,5 @@
+import { msg } from '../i18n';
+
 /**
  * Ce qu'il reste à un humain avant qu'un geste d'environnement parte : rien
  * (`ready`), une ou plusieurs décisions (`decide`), ou un refus qu'aucune case ne
@@ -48,28 +50,28 @@ export function promotionReadiness(input: PromotionReadinessInput): Readiness {
   if (!input.forceable) reasons.push(...input.blockers);
   // En mode `block`, un saut d'étape non traversé ne s'ouvre par aucune case.
   if (!input.chain.ok && input.chain.mode === 'block' && !input.chain.through) {
-    reasons.push("la chaîne d'environnements est en mode bloquant et cette promotion saute une étape");
+    reasons.push(msg('env.readinessChainBlock'));
   }
 
   const decisions: ReadinessDecision[] = [];
   if (input.mode === 'update' && input.diffHasChanges) {
-    decisions.push({ code: 'diff', label: 'Relire ce que la promotion change sur la cible' });
+    decisions.push({ code: 'diff', label: msg('env.readinessDiff') });
   }
   if (input.mode === 'update' && input.targetLocked) {
-    decisions.push({ code: 'locked', label: 'La cible est verrouillée : forcer demande une raison' });
+    decisions.push({ code: 'locked', label: msg('env.readinessLocked') });
   }
   if (input.mode === 'update' && input.targetActive) {
-    decisions.push({ code: 'target-active', label: 'La cible est ACTIVE : elle tourne en ce moment' });
+    decisions.push({ code: 'target-active', label: msg('env.readinessTargetActive') });
   }
   if (input.blockers.length > 0) {
     decisions.push({
       code: 'force',
-      label: 'Gates au rouge — forcer en connaissance de cause',
+      label: msg('env.readinessForce'),
       details: input.blockers,
     });
   }
   if (input.needsSkipConfirm) {
-    decisions.push({ code: 'confirm-skip', label: "Confirmer le saut d'une étape de la chaîne" });
+    decisions.push({ code: 'confirm-skip', label: msg('env.readinessConfirmSkip') });
   }
   return settle(decisions, reasons);
 }
@@ -82,14 +84,14 @@ export interface DuplicationReadinessInput {
 
 export function duplicationReadiness(input: DuplicationReadinessInput): Readiness {
   const reasons: string[] = [];
-  if (input.sameAsSource) reasons.push("le workflow est déjà dans l'env cible");
-  if (input.alreadyExists) reasons.push('une copie porte déjà ce nom sur l’instance');
+  if (input.sameAsSource) reasons.push(msg('env.readinessSameAsSource'));
+  if (input.alreadyExists) reasons.push(msg('env.readinessCopyExists'));
 
   const decisions: ReadinessDecision[] = [];
   if (input.unmapped.length > 0) {
     decisions.push({
       code: 'unmapped',
-      label: 'Ressources sans mapping : la copie restera branchée sur les données de la source',
+      label: msg('env.readinessUnmapped'),
       details: input.unmapped.map((resource) => resource.label ?? resource.key ?? '?'),
     });
   }

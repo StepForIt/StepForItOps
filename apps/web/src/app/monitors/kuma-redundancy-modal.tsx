@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, Tag, Tooltip, message } from 'antd';
 import { Table } from '../../components/resizable-table';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 
 type RedundancyRule = 'health-webhook' | 'duplicate-error-watch' | 'paused';
@@ -28,10 +29,11 @@ interface RedundancyTagResult {
   skipped: Array<{ externalId: number; reason: string }>;
 }
 
-const RULE_LABELS: Record<RedundancyRule, { label: string; color: string }> = {
-  'health-webhook': { label: 'health webhook', color: 'volcano' },
-  'duplicate-error-watch': { label: 'doublon error-watch', color: 'red' },
-  paused: { label: 'en pause', color: 'default' },
+/** Couleur de chaque motif (libellé : `health.monitors.redundancy.rules.<rule>`). */
+const RULE_LABELS: Record<RedundancyRule, { color: string }> = {
+  'health-webhook': { color: 'volcano' },
+  'duplicate-error-watch': { color: 'red' },
+  paused: { color: 'default' },
 };
 
 /**
@@ -40,6 +42,7 @@ const RULE_LABELS: Record<RedundancyRule, { label: string; color: string }> = {
  */
 export function KumaRedundancyModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [review, setReview] = useState<RedundancyReview | null>(null);
+  const t = useTranslations('health.monitors.redundancy');
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [tagging, setTagging] = useState(false);
@@ -66,8 +69,13 @@ export function KumaRedundancyModal({ open, onClose }: { open: boolean; onClose:
         externalIds: selected,
       });
       message.success(
-        `${result.tagged.length} sonde(s) marquée(s) « ${result.tagName} » dans Uptime Kuma` +
-          (result.skipped.length ? `, ${result.skipped.length} ignorée(s)` : ''),
+        result.skipped.length
+          ? t('taggedWithSkipped', {
+              count: result.tagged.length,
+              tag: result.tagName,
+              skipped: result.skipped.length,
+            })
+          : t('tagged', { count: result.tagged.length, tag: result.tagName }),
       );
       onClose();
     } catch (error) {
@@ -84,11 +92,11 @@ export function KumaRedundancyModal({ open, onClose }: { open: boolean; onClose:
 
   return (
     <Modal
-      title="Sondes Kuma devenues redondantes"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       onOk={applyTag}
-      okText={`Marquer dans Kuma (${selected.length})`}
+      okText={t('ok', { count: selected.length })}
       okButtonProps={{ disabled: selected.length === 0 }}
       confirmLoading={tagging}
       width={980}
@@ -97,14 +105,8 @@ export function KumaRedundancyModal({ open, onClose }: { open: boolean; onClose:
         type="warning"
         showIcon
         style={{ marginBottom: 16 }}
-        message={`Aucune sonde n'est désactivée : elles reçoivent l'étiquette « ${
-          review?.tagName ?? 'n8n-ops:à désactiver'
-        } », à toi de les couper dans Uptime Kuma.`}
-        description={
-          savedExecutions > 0
-            ? `Les sondes sélectionnées déclenchent environ ${savedExecutions} exécutions n8n par jour, que l'error-watch rend inutiles.`
-            : undefined
-        }
+        message={t('notice', { tag: review?.tagName ?? 'n8n-ops:à désactiver' })}
+        description={savedExecutions > 0 ? t('savedExecutions', { count: savedExecutions }) : undefined}
       />
       <Table<RedundantProbe>
         rowKey="externalId"
@@ -118,18 +120,16 @@ export function KumaRedundancyModal({ open, onClose }: { open: boolean; onClose:
           onChange: (keys) => setSelected(keys as number[]),
         }}
         columns={[
-          { dataIndex: 'name', title: 'Sonde Kuma', ellipsis: true },
+          { dataIndex: 'name', title: t('probe'), ellipsis: true },
           {
             dataIndex: 'rule',
-            title: 'Motif',
+            title: t('rule'),
             width: 180,
-            render: (rule: RedundancyRule) => (
-              <Tag color={RULE_LABELS[rule].color}>{RULE_LABELS[rule].label}</Tag>
-            ),
+            render: (rule: RedundancyRule) => <Tag color={RULE_LABELS[rule].color}>{t(`rules.${rule}`)}</Tag>,
           },
           {
             dataIndex: 'reason',
-            title: 'Pourquoi',
+            title: t('reason'),
             ellipsis: true,
             render: (reason: string) => (
               <Tooltip title={reason}>
@@ -138,17 +138,16 @@ export function KumaRedundancyModal({ open, onClose }: { open: boolean; onClose:
             ),
           },
           {
-            title: 'Étiquette',
+            key: 'tag',
+            title: t('tag'),
             width: 110,
             render: (_, probe) =>
-              tagged.has(probe.externalId) ? <Tag color="blue">déjà posée</Tag> : <Tag>—</Tag>,
+              tagged.has(probe.externalId) ? <Tag color="blue">{t('alreadyTagged')}</Tag> : <Tag>—</Tag>,
           },
         ]}
       />
       {!loading && review?.candidates.length === 0 && (
-        <p style={{ marginTop: 12, color: '#888' }}>
-          Aucune sonde redondante : rien à désactiver dans Uptime Kuma.
-        </p>
+        <p style={{ marginTop: 12, color: '#888' }}>{t('empty')}</p>
       )}
     </Modal>
   );

@@ -30,17 +30,26 @@ export interface EnvDefinition {
 export const FIRST_ENV_ID = 'dev';
 export const PROD_ENV_ID = 'prod';
 
+/** Couleurs de la charte (la console les rend en point sur une pastille neutre) :
+ * dev en lagon, preprod en ambre, prod en marine — la prod n'est pas une alerte. */
 export const DEFAULT_ENVS: EnvDefinition[] = [
-  { id: 'dev', label: 'DEV', color: 'green', monitored: false, canonicalWebhookPath: false, after: null },
+  { id: 'dev', label: 'DEV', color: 'cyan', monitored: false, canonicalWebhookPath: false, after: null },
   {
     id: 'preprod',
     label: 'PREPROD',
-    color: 'orange',
+    color: 'gold',
     monitored: false,
     canonicalWebhookPath: false,
     after: 'dev',
   },
-  { id: 'prod', label: 'PROD', color: 'red', monitored: true, canonicalWebhookPath: true, after: 'preprod' },
+  {
+    id: 'prod',
+    label: 'PROD',
+    color: 'geekblue',
+    monitored: true,
+    canonicalWebhookPath: true,
+    after: 'preprod',
+  },
 ];
 
 export const DEFAULT_ENV_IDS: string[] = DEFAULT_ENVS.map((env) => env.id);

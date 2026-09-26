@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Input, Modal, Space, Typography } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPut, setLockOverrideHandler } from '../api';
 import { LockedWorkflow, lockReasonError } from './lock-override';
 
@@ -44,6 +45,7 @@ interface PendingAsk {
  * forçage que tout refus 423 ouvre, d'où qu'il vienne.
  */
 export function WorkflowLocksProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('reviewTools.lock');
   const [locks, setLocks] = useState<Map<string, WorkflowLock>>(new Map());
   const [pending, setPending] = useState<PendingAsk | null>(null);
   const [reason, setReason] = useState('');
@@ -107,12 +109,12 @@ export function WorkflowLocksProvider({ children }: { children: React.ReactNode 
         title={
           <Space>
             <LockOutlined />
-            {names.length > 1 ? 'Workflows verrouillés' : 'Workflow verrouillé'}
+            {names.length > 1 ? t('overrideTitleMany') : t('overrideTitleOne')}
           </Space>
         }
-        okText="Forcer l’écriture"
+        okText={t('overrideOk')}
         okButtonProps={{ danger: true, disabled: error !== null }}
-        cancelText="Renoncer"
+        cancelText={t('overrideCancel')}
         onOk={() => answer(reason.trim())}
         onCancel={() => answer(null)}
         destroyOnHidden
@@ -120,20 +122,20 @@ export function WorkflowLocksProvider({ children }: { children: React.ReactNode 
         <Space direction="vertical" style={{ width: '100%' }}>
           {names.map((workflow) => (
             <Typography.Text key={workflow.id}>
-              « {workflow.name} »
+              {t('quotedName', { name: workflow.name })}
               {workflow.lockedBy ? (
-                <Typography.Text type="secondary"> · verrouillé par {workflow.lockedBy}</Typography.Text>
+                <Typography.Text type="secondary">
+                  {t('overrideLockedBy', { user: workflow.lockedBy })}
+                </Typography.Text>
               ) : null}
             </Typography.Text>
           ))}
-          <Typography.Text type="secondary">
-            Ce geste va le modifier. Le verrou reste en place après, et le forçage est journalisé.
-          </Typography.Text>
+          <Typography.Text type="secondary">{t('overrideDescription')}</Typography.Text>
           <Input.TextArea
             autoFocus
             rows={3}
             maxLength={500}
-            placeholder="Raison (obligatoire)"
+            placeholder={t('reasonPlaceholder')}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
           />

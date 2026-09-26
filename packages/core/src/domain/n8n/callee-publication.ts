@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { detectPublishModel } from './n8n-publish-model';
 import { SubWorkflowRef, extractSubWorkflowRefs } from './sub-workflow-refs';
 import { N8nWorkflow } from './workflow.types';
@@ -96,11 +97,13 @@ export function planCalleePublication(
     const stuck = callees.filter((callee) => blocked.has(callee)).map((callee) => lookup(callee)?.name);
     const trigger = selfStartingTrigger(workflow);
     const reason = workflow.isArchived
-      ? 'archivé dans n8n : il ne se publie plus'
+      ? msg('env.calleeArchived')
       : trigger
-        ? `a aussi un déclencheur ${trigger} : le publier le mettrait en route`
+        ? msg('env.calleeSelfStarting', { trigger })
         : stuck.length > 0
-          ? `appelle ${stuck.map((n) => `« ${n} »`).join(', ')}, à publier d'abord`
+          ? msg('env.calleeStuck', {
+              names: stuck.map((n) => msg('env.quoted', { name: n ?? '' })).join(', '),
+            })
           : null;
     if (reason) {
       blocked.add(id);

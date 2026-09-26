@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button, Input, Segmented, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { ReloadOutlined, RiseOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
@@ -13,11 +14,7 @@ import { ResponsiveCard } from '../../components/mobile/responsive-card';
 import { PerfSummary, SampleResult, WorkflowPerfSummary, formatMs } from './types';
 import { PerfTrendChart } from './perf-trend';
 
-const PERIODS = [
-  { label: '7 jours', value: 7 },
-  { label: '14 jours', value: 14 },
-  { label: '30 jours', value: 30 },
-];
+const PERIODS = [7, 14, 30];
 
 /** En dessous, le taux de succès mérite l'œil : tag orange puis rouge. */
 const SUCCESS_WARN = 0.95;
@@ -39,8 +36,11 @@ function HeaderHelp({ label, title }: { label: string; title: string }) {
 export default function PerformancePage() {
   const mobile = useIsMobile();
   const { scope, instanceName } = useInstanceScope();
+  const t = useTranslations('health.performance');
+  const tc = useTranslations('common');
+  const locale = useLocale();
   const [days, setDays] = usePersistedState('days', 7, {
-    validate: (value) => PERIODS.find((period) => period.value === value)?.value,
+    validate: (value) => PERIODS.find((period) => period === value),
   });
   const [summary, setSummary] = useState<PerfSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +65,7 @@ export default function PerformancePage() {
     setSampling(true);
     try {
       const result = await apiPost<SampleResult>('/performance/sample');
-      message.success(`${result.inserted} exécution(s) historisée(s)`);
+      message.success(t('sampled', { count: result.inserted }));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -81,18 +81,22 @@ export default function PerformancePage() {
 
   const actions = (
     <Space wrap>
-      <Segmented options={PERIODS} value={days} onChange={(value) => setDays(value as number)} />
+      <Segmented
+        options={PERIODS.map((value) => ({ value, label: t('periodDays', { days: value }) }))}
+        value={days}
+        onChange={(value) => setDays(value as number)}
+      />
       <Button icon={<ReloadOutlined />} onClick={sampleNow} loading={sampling || loading}>
-        Rafraîchir
+        {tc('refresh')}
       </Button>
     </Space>
   );
 
   return (
-    <ResponsiveCard title="Performance des workflows" extra={actions}>
+    <ResponsiveCard title={t('title')} extra={actions}>
       <Space wrap style={{ marginBottom: 16 }}>
         <Input.Search
-          placeholder="Rechercher un workflow…"
+          placeholder={t('searchPlaceholder')}
           allowClear
           style={{ width: mobile ? '100%' : 280 }}
           value={search}
@@ -100,7 +104,7 @@ export default function PerformancePage() {
         />
         <Space>
           <Switch checked={onlyDrifted} onChange={setOnlyDrifted} />
-          <span>Uniquement les dérives</span>
+          <span>{t('onlyDrifted')}</span>
         </Space>
       </Space>
       <Table
@@ -112,7 +116,7 @@ export default function PerformancePage() {
         // Écran étroit : le tableau défile dans la carte au lieu de déborder de la page.
         scroll={{ x: 960 }}
         locale={{
-          emptyText: 'Aucune exécution sur la période.',
+          emptyText: t('empty'),
         }}
         expandable={{
           expandedRowRender: (record: WorkflowPerfSummary) => (
@@ -126,7 +130,7 @@ export default function PerformancePage() {
       >
         <Table.Column<WorkflowPerfSummary>
           dataIndex="name"
-          title="Workflow"
+          title={tc('columns.workflow')}
           render={(name: string, record) =>
             record.workflowId ? <Link href={`/workflows/show/${record.workflowId}`}>{name}</Link> : name
           }
@@ -134,14 +138,14 @@ export default function PerformancePage() {
         {!scope && (
           <Table.Column<WorkflowPerfSummary>
             dataIndex="instanceId"
-            title="Instance"
+            title={tc('columns.instance')}
             width={140}
-            render={(id: string) => <Tag color="geekblue">{instanceName(id)}</Tag>}
+            render={(id: string) => <Tag color="blue">{instanceName(id)}</Tag>}
           />
         )}
         <Table.Column<WorkflowPerfSummary>
           dataIndex="executions"
-          title="Exécutions"
+          title={t('columns.executions')}
           align="right"
           width={110}
           sorter={(a, b) => a.executions - b.executions}
@@ -149,15 +153,15 @@ export default function PerformancePage() {
         />
         <Table.Column<WorkflowPerfSummary>
           dataIndex="successRate"
-          title="Succès"
+          title={t('columns.success')}
           width={110}
           sorter={(a, b) => (a.successRate ?? 1) - (b.successRate ?? 1)}
           render={(rate: number | null, record) => {
             if (rate === null) return <Typography.Text type="secondary">—</Typography.Text>;
-            const label = `${(rate * 100).toFixed(rate === 1 ? 0 : 1)} %`;
+            const label = t('percent', { value: (rate * 100).toFixed(rate === 1 ? 0 : 1) });
             if (rate >= SUCCESS_WARN) return label;
             return (
-              <Tooltip title={`${record.errors} échec(s)`}>
+              <Tooltip title={t('failures', { count: record.errors })}>
                 <Tag color={rate < SUCCESS_BAD ? 'red' : 'orange'}>{label}</Tag>
               </Tooltip>
             );
@@ -165,36 +169,32 @@ export default function PerformancePage() {
         />
         <Table.Column<WorkflowPerfSummary>
           dataIndex="p50Ms"
-          title={<HeaderHelp label="P50" title="Durée médiane : la moitié des exécutions vont plus vite." />}
+          title={<HeaderHelp label="P50" title={t('columns.p50Help')} />}
           align="right"
           width={100}
           sorter={(a, b) => (a.p50Ms ?? 0) - (b.p50Ms ?? 0)}
-          render={(value: number | null) => formatMs(value)}
+          render={(value: number | null) => formatMs(value, locale)}
         />
         <Table.Column<WorkflowPerfSummary>
           dataIndex="p95Ms"
-          title={<HeaderHelp label="P95" title="95 % des exécutions vont plus vite que cette durée." />}
+          title={<HeaderHelp label="P95" title={t('columns.p95Help')} />}
           align="right"
           width={100}
           sorter={(a, b) => (a.p95Ms ?? 0) - (b.p95Ms ?? 0)}
-          render={(value: number | null) => formatMs(value)}
+          render={(value: number | null) => formatMs(value, locale)}
         />
         <Table.Column<WorkflowPerfSummary>
           dataIndex="driftRatio"
-          title={
-            <HeaderHelp label="Tendance" title="Médiane de la période ÷ médiane de la période précédente." />
-          }
+          title={<HeaderHelp label={t('columns.trend')} title={t('columns.trendHelp')} />}
           width={130}
           sorter={(a, b) => (a.driftRatio ?? 1) - (b.driftRatio ?? 1)}
           render={(ratio: number | null, record) => {
             if (ratio === null) return <Typography.Text type="secondary">—</Typography.Text>;
             if (record.drifted) {
               return (
-                <Tooltip
-                  title={`Médiane ×${ratio.toFixed(1)} vs les ${summary?.days ?? ''} jours précédents`}
-                >
+                <Tooltip title={t('driftTooltip', { ratio: ratio.toFixed(1), days: summary?.days ?? '' })}>
                   <Tag color="red" icon={<RiseOutlined />}>
-                    ×{ratio.toFixed(1)} plus lent
+                    {t('slower', { ratio: ratio.toFixed(1) })}
                   </Tag>
                 </Tooltip>
               );
@@ -205,9 +205,9 @@ export default function PerformancePage() {
         />
         <Table.Column<WorkflowPerfSummary>
           dataIndex="lastAt"
-          title="Dernière exécution"
+          title={t('columns.lastAt')}
           width={170}
-          render={(value: string | null) => (value ? new Date(value).toLocaleString('fr-FR') : '—')}
+          render={(value: string | null) => (value ? new Date(value).toLocaleString(locale) : '—')}
         />
       </Table>
     </ResponsiveCard>

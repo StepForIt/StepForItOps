@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge, Button, Drawer, Flex, Input } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
 
@@ -27,6 +28,8 @@ export function MobileFilterBar({
   /** Contrôles de filtre, empilés pleine largeur dans le tiroir. */
   children: React.ReactNode;
 }) {
+  const t = useTranslations('shell.mobileFilterBar');
+  const tc = useTranslations('common');
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -42,12 +45,12 @@ export function MobileFilterBar({
         />
         <Badge count={activeCount} size="small">
           <Button icon={<FilterOutlined />} onClick={() => setOpen(true)}>
-            Filtres
+            {t('filters')}
           </Button>
         </Badge>
       </Flex>
       <Drawer
-        title="Filtres"
+        title={t('filters')}
         placement="bottom"
         open={open}
         onClose={() => setOpen(false)}
@@ -55,10 +58,10 @@ export function MobileFilterBar({
         footer={
           <Flex gap={8}>
             <Button block onClick={onReset} disabled={activeCount === 0}>
-              Réinitialiser
+              {t('reset')}
             </Button>
             <Button block type="primary" onClick={() => setOpen(false)}>
-              Appliquer
+              {tc('apply')}
             </Button>
           </Flex>
         }

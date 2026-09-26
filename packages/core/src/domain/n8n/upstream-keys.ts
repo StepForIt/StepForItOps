@@ -14,6 +14,7 @@
 
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { WorkflowGraph } from './workflow-graph';
+import { msg } from '../../i18n/translate';
 
 /** Une clé d'item et le Set qui la pose. */
 export interface UpstreamKey {
@@ -173,26 +174,23 @@ function collect(
 
   if (isPassThrough(node)) {
     const parents = [...graph.parentsOf(nodeName)].filter((parent) => byName.has(parent));
-    if (parents.length === 0) walk.unknown.set(nodeName, "aucun nœud en amont : l'item n'est pas connu");
+    if (parents.length === 0) walk.unknown.set(nodeName, msg('checks.upstreamNoParent'));
     for (const parent of parents) collect(graph, byName, parent, walk, seen);
     return;
   }
 
   if (!isSetNode(node)) {
-    walk.unknown.set(
-      nodeName,
-      'ce nœud produit ses propres données : ses clés ne se lisent pas dans le JSON',
-    );
+    walk.unknown.set(nodeName, msg('checks.upstreamOwnData'));
     return;
   }
 
   const output = setOutput(node);
   if (output.raw) {
-    walk.unknown.set(nodeName, "nœud Set en mode JSON : les clés ne sont connues qu'à l'exécution");
+    walk.unknown.set(nodeName, msg('checks.upstreamSetRaw'));
     return;
   }
   for (const name of output.names) addKey(walk, name, nodeName);
-  if (output.dynamic) walk.unknown.set(nodeName, 'un nom de champ est une expression');
+  if (output.dynamic) walk.unknown.set(nodeName, msg('checks.upstreamDynamicName'));
 
   if (output.passes === 'none') return;
   if (output.passes === 'selected') {
@@ -216,7 +214,7 @@ export function upstreamKeys(workflow: N8nWorkflow, nodeName: string): UpstreamK
   const walk: Walk = { keys: new Map(), unknown: new Map() };
   const seen = new Set<string>([nodeName]);
   const parents = [...graph.parentsOf(nodeName)];
-  if (parents.length === 0) walk.unknown.set(nodeName, "aucun nœud en amont : l'item n'est pas connu");
+  if (parents.length === 0) walk.unknown.set(nodeName, msg('checks.upstreamNoParent'));
   for (const parent of parents) collect(graph, byName, parent, walk, seen);
   return {
     keys: [...walk.keys.values()],

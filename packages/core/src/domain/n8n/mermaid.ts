@@ -1,6 +1,7 @@
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { WorkflowGraph, isStickyNote, isTriggerNode } from './workflow-graph';
 import { WorkflowCall, extractWorkflowCalls } from './workflow-links';
+import { msg } from '../../i18n/translate';
 
 function nodeId(name: string, index: Map<string, string>): string {
   if (!index.has(name)) index.set(name, `n${index.size}`);
@@ -25,8 +26,10 @@ function callTarget(call: WorkflowCall): string {
   if (call.kind === 'webhook') return `→ ${short(call.targetUrl ?? `/${call.targetWebhookPath}`)}`;
   const target =
     call.targetLabel ??
-    (call.targetN8nId?.includes('{{') ? 'workflow choisi dynamiquement' : `workflow #${call.targetN8nId}`);
-  return `${call.kind === 'tool' ? '→ outil IA : ' : '→ '}${short(target)}`;
+    (call.targetN8nId?.includes('{{') ? msg('checks.mermaidDynamicTarget') : `workflow #${call.targetN8nId}`);
+  return call.kind === 'tool'
+    ? msg('checks.mermaidToolCall', { target: short(target) })
+    : `→ ${short(target)}`;
 }
 
 function nodeClass(node: N8nNode, calls: Map<string, WorkflowCall>): string {

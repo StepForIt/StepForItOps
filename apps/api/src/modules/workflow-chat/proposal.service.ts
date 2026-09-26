@@ -28,9 +28,11 @@ import {
   diffWorkflows,
   evaluateProposalGate,
   hashWorkflow,
+  msg,
   parsePublishRefusal,
   runWorkflowChecks,
 } from '@nwm/core';
+import { chatDate } from './chat-date';
 import { isN8nAuthRefusal, n8nAuthRefused } from '../../common/filters/n8n-error.mapper';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EnvChainGuardService } from '../../infra/settings/env-chain-guard.service';
@@ -271,9 +273,7 @@ export class ProposalService {
     parts: ProposalPartInput[] = [],
   ): Promise<{ proposal: WorkflowChatProposal; gate: GateVerdict }> {
     if (operations.length === 0 && parts.length === 0) {
-      throw new WorkflowEditError(
-        "la modification ne porte aucune opération — ni sur ce workflow, ni sur les sous-workflows qu'il appelle",
-      );
+      throw new WorkflowEditError(msg('chat.proposalNoOperation'));
     }
     const { workflow, raw } = await this.workflows.getFreshRaw(workflowId);
     // La racine peut n'avoir AUCUNE opération : une découpe en sous-workflow
@@ -400,7 +400,7 @@ export class ProposalService {
       try {
         warnings = (await this.buildCandidate(workflow.instanceId, raw, operations)).warnings;
       } catch (error) {
-        warnings = [`Opérations non rejouables sur l'état actuel : ${(error as Error).message}`];
+        warnings = [msg('chat.proposalReplayFailed', { detail: (error as Error).message })];
       }
     }
 
@@ -459,7 +459,7 @@ export class ProposalService {
     try {
       warnings = (await this.buildCandidate(workflow.instanceId, raw, operations)).warnings;
     } catch (error) {
-      warnings = [`Opérations non rejouables sur l'état actuel : ${(error as Error).message}`];
+      warnings = [msg('chat.proposalReplayFailed', { detail: (error as Error).message })];
     }
     return {
       workflowId: part.workflowId,
@@ -511,9 +511,7 @@ export class ProposalService {
       ...pendingParts.map((part) => part.workflowId),
     ]);
     if (proposal.status !== 'pending') {
-      throw new BadRequestException(
-        `Proposition déjà ${proposal.status === 'applied' ? 'appliquée' : 'rejetée'}`,
-      );
+      throw new BadRequestException(msg('chat.proposalAlreadyDone', { status: proposal.status }));
     }
     // On écrit un workflow ENTIER : tout ce que la copie locale ignore de l'état
     // réel serait écrasé sans être vu. D'où la relecture depuis n8n avant même de
@@ -521,18 +519,13 @@ export class ProposalService {
     // proposition à la copie d'hier et laissait passer.
     const { workflow, raw, missing } = await this.workflows.getFreshRaw(proposal.workflowId);
     if (touchesRoot && missing) {
-      throw new BadRequestException('n8n ne connaît plus ce workflow : rien ne peut y être écrit.');
+      throw new BadRequestException(msg('chat.proposalWorkflowMissing'));
     }
     if (touchesRoot && workflow.hash !== proposal.baseHash) {
-      throw new ConflictException(
-        `« ${workflow.name} » a changé dans n8n depuis que cette modification a été préparée — ` +
-          "quelqu'un l'a édité, ou une application précédente a abouti sans qu'on te l'ait dit. " +
-          "L'appliquer maintenant écraserait ce changement : ouvre le workflow dans n8n pour voir " +
-          'où il en est, puis relance la demande dans la conversation pour repartir de cet état.',
-      );
+      throw new ConflictException(msg('chat.proposalStale', { name: workflow.name }));
     }
     if (touchesRoot && workflow.archived) {
-      throw new BadRequestException('Workflow archivé côté n8n : les modifications sont refusées.');
+      throw new BadRequestException(msg('chat.proposalArchived'));
     }
 
     const candidate = proposal.raw as unknown as N8nWorkflow;
@@ -543,7 +536,7 @@ export class ProposalService {
       // pas passer — il reproposait la même chose au tour suivant.
       await this.noteInSession(
         proposal.sessionId,
-        `**Application refusée** — ${proposal.summary}\n\n${gate.reason ?? ''}`,
+        msg('chat.proposalNoteRefused', { summary: proposal.summary, reason: gate.reason ?? '' }),
       );
       throw new BadRequestException(gate.reason);
     }
@@ -566,13 +559,14 @@ export class ProposalService {
         where: { id: proposalId },
         data: { status: 'applied', appliedAt: new Date() },
       });
-      this.logger.log(`Proposition ${proposalId} appliquée (sous-workflows seuls)`);
+      this.logger.log(`Proposal ${proposalId} applied (sub-workflows only)`);
       await this.noteInSession(
         proposal.sessionId,
-        `**Modification appliquée dans n8n** — ${proposal.summary}\n\n` +
-          describeParts(partsApplied) +
-          `« ${workflow.name} » n'est pas modifié : tout le changement portait sur ` +
-          `les sous-workflows qu'il appelle. Tout ce qui suit repart de cet état.`,
+        msg('chat.proposalNoteAppliedPartsOnly', {
+          summary: proposal.summary,
+          parts: describeParts(partsApplied),
+          name: workflow.name,
+        }),
       );
       return {
         ok: true,
@@ -606,7 +600,7 @@ export class ProposalService {
       where: { id: proposalId },
       data: { status: 'applied', appliedAt: new Date() },
     });
-    this.logger.log(`Proposition ${proposalId} appliquée à « ${workflow.name} »`);
+    this.logger.log(`Proposal ${proposalId} applied to "${workflow.name}"`);
 
     // Resynchronise le snapshot local : l'événement workflow.synced déclenche la nouvelle version.
     try {
@@ -614,17 +608,15 @@ export class ProposalService {
       const synced = await this.sync.upsertWorkflow(workflow.instanceId, fresh);
       await this.noteInSession(
         proposal.sessionId,
-        `**Modification appliquée dans n8n** — ${proposal.summary}\n\n` +
-          describeParts(partsApplied) +
-          `« ${workflow.name} » est à jour côté n8n` +
-          (synced.hashChanged ? ', et une nouvelle version a été enregistrée' : '') +
-          (draftOnly
-            ? '. Elle est enregistrée EN BROUILLON : le workflow n’est pas publié, rien ne s’exécutera tant qu’il ne l’est pas'
-            : '') +
-          '. Tout ce qui suit repart de cet état.' +
-          (restorePoint
-            ? `\n\nSi ça tourne mal, l'état d'avant est archivé (version du ${restorePoint.createdAt.toLocaleString('fr-FR')}) et se restaure depuis la revue ou la page Versions.`
-            : "\n\nAucun point de retour archivé pour l'état d'avant : préviens-le avant de proposer autre chose."),
+        msg('chat.proposalNoteApplied', {
+          summary: proposal.summary,
+          parts: describeParts(partsApplied),
+          name: workflow.name,
+          versioned: synced.hashChanged,
+          draft: draftOnly,
+          hasRestore: Boolean(restorePoint),
+          restoredAt: restorePoint ? chatDate(restorePoint.createdAt) : '',
+        }),
       );
       return {
         ok: true,
@@ -636,14 +628,12 @@ export class ProposalService {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Proposition ${proposalId} appliquée dans n8n, mais resynchro KO : ${detail}`,
+        `Proposal ${proposalId} applied in n8n, but resync failed: ${detail}`,
         error instanceof Error ? error.stack : undefined,
       );
       await this.noteInSession(
         proposal.sessionId,
-        `**Modification appliquée dans n8n** — ${proposal.summary}\n\n` +
-          `L'écriture a abouti, mais la plateforme n'a pas réussi à relire « ${workflow.name} » ` +
-          `juste après : sa copie locale est peut-être en retard. Relis-le avant de proposer autre chose.`,
+        msg('chat.proposalNoteAppliedSyncFailed', { summary: proposal.summary, name: workflow.name }),
       );
       return {
         ok: true,
@@ -651,10 +641,7 @@ export class ProposalService {
         draftOnly,
         restorePoint,
         ...(partsApplied.length > 0 ? { parts: partsApplied } : {}),
-        syncError:
-          "La modification est bien enregistrée dans n8n, mais la plateforme n'a pas réussi à " +
-          "relire le workflow juste après : aucune version n'a été archivée pour ce changement. " +
-          'La synchro horaire le rattrapera, ou lance « Synchroniser » depuis la liste des workflows.',
+        syncError: msg('chat.proposalSyncError'),
       };
     }
   }
@@ -683,28 +670,23 @@ export class ProposalService {
     for (const part of parts) {
       const { workflow, raw, missing } = await this.workflows.getFreshRaw(part.workflowId);
       if (missing) {
-        throw new BadRequestException(
-          `n8n ne connaît plus « ${workflow.name} » : rien ne peut y être écrit, et cette ` +
-            'modification y touche. Relance la demande dans la conversation.',
-        );
+        throw new BadRequestException(msg('chat.proposalPartMissing', { name: workflow.name }));
       }
       if (workflow.archived) {
-        throw new BadRequestException(
-          `« ${workflow.name} » est archivé côté n8n : les modifications y sont refusées. ` +
-            'Désarchive-le dans n8n, puis reviens appliquer.',
-        );
+        throw new BadRequestException(msg('chat.proposalPartArchived', { name: workflow.name }));
       }
       if (workflow.hash !== part.baseHash) {
-        throw new ConflictException(
-          `« ${workflow.name} » a changé dans n8n depuis que cette modification a été préparée. ` +
-            "L'appliquer maintenant écraserait ce changement : relance la demande dans la " +
-            'conversation pour repartir de cet état.',
-        );
+        throw new ConflictException(msg('chat.proposalPartStale', { name: workflow.name }));
       }
       const candidate = part.raw as unknown as N8nWorkflow;
       const gate = await this.gateFor(workflow, raw, candidate, force);
       if (gate.blocked) {
-        throw new BadRequestException(`« ${workflow.name} » — ${gate.reason ?? 'modification refusée'}`);
+        throw new BadRequestException(
+          msg('chat.proposalPartBlocked', {
+            name: workflow.name,
+            reason: gate.reason ?? msg('chat.proposalRefusedDefault'),
+          }),
+        );
       }
       writes.push({ partId: part.id, workflow, candidate, refusals: gate.refusals });
     }
@@ -739,14 +721,14 @@ export class ProposalService {
         where: { id: write.partId },
         data: { status: 'applied', appliedAt: new Date() },
       });
-      this.logger.log(`Sous-workflow « ${write.workflow.name} » écrit (partie ${write.partId})`);
+      this.logger.log(`Sub-workflow "${write.workflow.name}" written (part ${write.partId})`);
       let versionCreated = false;
       try {
         const fresh = await this.n8n.getWorkflow(config, write.workflow.externalId);
         versionCreated = (await this.sync.upsertWorkflow(write.workflow.instanceId, fresh)).hashChanged;
       } catch (error) {
         this.logger.warn(
-          `« ${write.workflow.name} » écrit dans n8n, mais resynchro KO : ${(error as Error).message}`,
+          `"${write.workflow.name}" written in n8n, but resync failed: ${(error as Error).message}`,
         );
       }
       applied.push({ workflowName: write.workflow.name, versionCreated });
@@ -773,15 +755,19 @@ export class ProposalService {
       .trim();
     if (error.status >= 400 && error.status < 500) {
       return new UnprocessableEntityException(
-        `n8n a refusé d'enregistrer « ${workflowName} » (erreur ${error.status}). ` +
-          `Rien n'a été modifié. Ce qu'il répond : ${detail || '(aucun détail)'}` +
-          this.whereItRefuses(error.message, refusals),
+        msg('chat.proposalWriteRejected', {
+          name: workflowName,
+          status: String(error.status),
+          detail: detail || msg('chat.proposalNoDetail'),
+        }) + this.whereItRefuses(error.message, refusals),
       );
     }
     return new BadGatewayException(
-      `n8n n'a pas pu traiter l'écriture de « ${workflowName} » (erreur ${error.status}). ` +
-        `L'écriture n'a peut-être pas abouti : ouvre le workflow dans n8n pour voir son état avant ` +
-        `de réessayer. Ce qu'il répond : ${detail || '(aucun détail)'}`,
+      msg('chat.proposalWriteFailed', {
+        name: workflowName,
+        status: String(error.status),
+        detail: detail || msg('chat.proposalNoDetail'),
+      }),
     );
   }
 
@@ -798,20 +784,19 @@ export class ProposalService {
   private whereItRefuses(message: string, refusals: CheckFinding[]): string {
     if (!message.includes('Could not find property option')) return '';
     if (refusals.length > 0) {
-      return (
-        `\n\nCe que la plateforme avait relevé et qui explique ce refus : ` +
-        refusals
-          .map((finding) => `${finding.nodeName ? `« ${finding.nodeName} » — ` : ''}${finding.message}`)
-          .join(' ')
-      );
+      return `\n\n${msg('chat.proposalWhereRefusals', {
+        list: refusals
+          .map((finding) =>
+            msg('chat.proposalWhereItem', {
+              hasNode: Boolean(finding.nodeName),
+              node: finding.nodeName ?? '',
+              message: finding.message,
+            }),
+          )
+          .join(' '),
+      })}`;
     }
-    return (
-      `\n\nn8n ne dit pas quel nœud : une sous-clé de collection ne figure pas parmi celles que le ` +
-      `nœud déclare. La plateforme ne l'a pas retrouvée dans ses schémas — le catalogue ne décrit ` +
-      `qu'une version par type de nœud, et il se tait sur les autres. Lance une vérification du ` +
-      `workflow, et synchronise les types de nœuds de l'instance pour que le contrôle couvre les ` +
-      `versions qu'elle sert vraiment.`
-    );
+    return `\n\n${msg('chat.proposalWhereUnknown')}`;
   }
 
   /**
@@ -832,14 +817,14 @@ export class ProposalService {
     try {
       await this.prisma.workflowChatMessage.create({ data: { sessionId, role: 'assistant', content } });
     } catch (error) {
-      this.logger.warn(`Note de proposition non écrite (session ${sessionId}) : ${(error as Error).message}`);
+      this.logger.warn(`Proposal note not written (session ${sessionId}): ${(error as Error).message}`);
     }
   }
 
   async discard(proposalId: string): Promise<WorkflowChatProposal> {
     const proposal = await this.prisma.workflowChatProposal.findUniqueOrThrow({ where: { id: proposalId } });
     if (proposal.status !== 'pending') {
-      throw new BadRequestException('Cette proposition n’est plus en attente');
+      throw new BadRequestException(msg('chat.proposalNotPending'));
     }
     const updated = await this.prisma.workflowChatProposal.update({
       where: { id: proposalId },
@@ -857,13 +842,11 @@ export class ProposalService {
     const orphans = proposal.sessionId ? await this.leftovers.list({ sessionId: proposal.sessionId }) : [];
     await this.noteInSession(
       proposal.sessionId,
-      `**Modification rejetée** — ${proposal.summary}\n\n` +
-        `Le workflow n'a pas été modifié. Ne la repropose pas telle quelle : demande ce qui n'allait pas.` +
+      msg('chat.proposalNoteDiscarded', { summary: proposal.summary }) +
         (orphans.length > 0
-          ? `\n\nCréé(s) pour cette modification et resté(s) vide(s) dans n8n : ` +
-            `${orphans.map((entry) => `« ${entry.name} »`).join(', ')}. ` +
-            `Ils existent toujours — réutilise-les si la demande revient, plutôt que d'en créer d'autres ; ` +
-            `sinon ils se suppriment depuis la revue ou le bandeau du tiroir.`
+          ? `\n\n${msg('chat.proposalNoteDiscardedOrphans', {
+              names: orphans.map((entry) => msg('chat.quotedName', { name: entry.name })).join(', '),
+            })}`
           : ''),
     );
     return updated;
@@ -877,11 +860,11 @@ export class ProposalService {
  */
 function describeParts(parts: Array<{ workflowName: string; versionCreated: boolean }>): string {
   if (parts.length === 0) return '';
-  return (
-    `Sous-workflows écrits : ` +
-    parts
-      .map((part) => `« ${part.workflowName} »${part.versionCreated ? '' : ' (contenu inchangé)'}`)
-      .join(', ') +
-    '.\n\n'
-  );
+  return `${msg('chat.proposalPartsWritten', {
+    list: parts
+      .map((part) =>
+        msg('chat.proposalPartWritten', { name: part.workflowName, unchanged: !part.versionCreated }),
+      )
+      .join(', '),
+  })}\n\n`;
 }

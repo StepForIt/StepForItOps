@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Alert, Collapse, Empty, Space, Tag, Tooltip, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 
 /** Miroir de `RemoteTableReport` (`@nwm/core`) : le web ne dépend pas du domaine. */
 export interface RemoteColumnView {
@@ -39,14 +40,15 @@ const PROVIDER_LABEL: Record<string, string> = {
   postgres: 'PostgreSQL',
 };
 
-const STATUS: Record<RemoteTableView['status'], { color: string; label: string }> = {
-  ok: { color: 'green', label: 'complète' },
-  issues: { color: 'red', label: 'colonnes manquantes' },
-  missing: { color: 'red', label: 'table introuvable' },
-  unverified: { color: 'default', label: 'non vérifiée' },
+const STATUS_COLOR: Record<RemoteTableView['status'], string> = {
+  ok: 'green',
+  issues: 'red',
+  missing: 'red',
+  unverified: 'default',
 };
 
 function ColumnLine({ column }: { column: RemoteColumnView }) {
+  const t = useTranslations('reviewTools.remoteSchema');
   const color =
     column.present === null
       ? 'default'
@@ -61,15 +63,19 @@ function ColumnLine({ column }: { column: RemoteColumnView }) {
         {column.name}
       </Tag>
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        {column.access === 'write' ? 'écrite' : 'lue'} par « {column.nodeName} »
-        {column.via ? ` — clé posée par le Set « ${column.via} »` : ''}
+        {column.access === 'write'
+          ? t('columnWritten', { node: column.nodeName })
+          : t('columnRead', { node: column.nodeName })}
+        {column.via ? t('columnVia', { set: column.via }) : ''}
       </Typography.Text>
       {column.present === false && column.suggestion && (
-        <Typography.Text style={{ fontSize: 12 }}>colonne proche : « {column.suggestion} »</Typography.Text>
+        <Typography.Text style={{ fontSize: 12 }}>
+          {t('closeColumn', { column: column.suggestion })}
+        </Typography.Text>
       )}
       {column.present === false && column.severity === 'warning' && (
         <Typography.Text type="warning" style={{ fontSize: 12 }}>
-          ignorée à l’écriture : la donnée se perd
+          {t('ignoredOnWrite')}
         </Typography.Text>
       )}
     </div>
@@ -88,10 +94,9 @@ export function RemoteSchemaTables({
   tables: RemoteTableView[];
   unlocatable?: UnlocatableView[];
 }) {
+  const t = useTranslations('reviewTools.remoteSchema');
   if (tables.length === 0 && unlocatable.length === 0) {
-    return (
-      <Empty description="Ce workflow ne lit ni n’écrit aucune table Airtable, NocoDB, Notion, Sheets ou Postgres." />
-    );
+    return <Empty description={t('noTable')} />;
   }
   const opened = tables
     .filter((table) => table.status === 'issues' || table.status === 'missing')
@@ -108,10 +113,10 @@ export function RemoteSchemaTables({
             <Space wrap>
               <Tag>{PROVIDER_LABEL[table.provider] ?? table.provider}</Tag>
               <Typography.Text strong>{table.label ?? table.key}</Typography.Text>
-              <Tag color={STATUS[table.status].color}>{STATUS[table.status].label}</Tag>
+              <Tag color={STATUS_COLOR[table.status]}>{t(`status.${table.status}`)}</Tag>
               {table.partial.length > 0 && (
                 <Tooltip title={table.partial.map((item) => `${item.nodeName} — ${item.reason}`).join(' · ')}>
-                  <Tag color="gold">en partie vérifiable</Tag>
+                  <Tag color="gold">{t('partlyVerifiable')}</Tag>
                 </Tooltip>
               )}
             </Space>
@@ -122,13 +127,11 @@ export function RemoteSchemaTables({
                 <Alert
                   type="warning"
                   showIcon
-                  message={`Non vérifiée : ${table.reason ?? 'raison inconnue'}`}
+                  message={t('unverified', { reason: table.reason ?? t('unknownReason') })}
                 />
               )}
               {table.columns.length === 0 && (
-                <Typography.Text type="secondary">
-                  Aucune colonne attendue déductible du workflow.
-                </Typography.Text>
+                <Typography.Text type="secondary">{t('noExpectedColumn')}</Typography.Text>
               )}
               {table.columns.map((column) => (
                 <ColumnLine key={`${column.nodeName}/${column.name}`} column={column} />
@@ -139,7 +142,7 @@ export function RemoteSchemaTables({
                   type="secondary"
                   style={{ fontSize: 12 }}
                 >
-                  « {item.nodeName} » : colonnes en partie inconnues — {item.reason}
+                  {t('partialColumns', { node: item.nodeName, reason: item.reason })}
                 </Typography.Text>
               ))}
             </Space>
@@ -150,8 +153,10 @@ export function RemoteSchemaTables({
         <Alert
           type="info"
           showIcon
-          message={`${unlocatable.length} nœud(s) dont la table n’est pas vérifiable`}
-          description={unlocatable.map((node) => `« ${node.nodeName} » : ${node.reason}`).join(' · ')}
+          message={t('unlocatable', { count: unlocatable.length })}
+          description={unlocatable
+            .map((node) => t('nodeReason', { node: node.nodeName, reason: node.reason }))
+            .join(' · ')}
         />
       )}
     </Space>

@@ -9,6 +9,7 @@ import {
   parseSheetTitle,
   schemaReadFor,
   sheetHeaderRequest,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { N8nProbeService, ProbeCall } from '../n8n-probe/n8n-probe.service';
@@ -52,7 +53,7 @@ export class RemoteSchemaReaderService {
 
     for (const locator of locators) {
       if (!locator.credential) {
-        outcomes.set(locator.key, { status: 'unverified', reason: 'le nœud ne porte aucune credential' });
+        outcomes.set(locator.key, { status: 'unverified', reason: msg('analysis.remoteNoCredential') });
         continue;
       }
       const cached = this.cache.get(this.cacheKey(config, locator));
@@ -128,13 +129,15 @@ export class RemoteSchemaReaderService {
           }
           // La sonde est conservée pour debug si TOUT a échoué : un échec isolé est une table, pas la sonde.
           const failed = readable.every((locator) => outcomes.get(locator.key)?.status === 'unverified');
-          if (failed && options.keepOnError) throw new Error('toutes les lectures ont échoué');
+          if (failed && options.keepOnError) throw new Error(msg('analysis.remoteAllReadsFailed'));
         },
         options,
       );
     } catch (error) {
-      const reason = `sonde n8n en échec : ${(error as Error).message}`;
-      this.logger.warn(`Lecture de schéma ${first.provider} (${credential.id}) : ${reason}`);
+      const reason = msg('analysis.remoteProbeFailed', { error: (error as Error).message });
+      this.logger.warn(
+        `Schema read ${first.provider} (${credential.id}): n8n probe failed: ${(error as Error).message}`,
+      );
       for (const locator of readable)
         if (!outcomes.has(locator.key)) outcomes.set(locator.key, { status: 'unverified', reason });
     }
@@ -157,7 +160,9 @@ export class RemoteSchemaReaderService {
           const body = await call({ schema: read.schema, table: read.table });
           return {
             status: 'read',
-            schema: parsePostgresColumns(readRowsProbeResponse(body, `colonnes de ${locator.key}`)),
+            schema: parsePostgresColumns(
+              readRowsProbeResponse(body, msg('analysis.remoteColumnsOf', { table: locator.key })),
+            ),
           };
         }
         case 'sheet-title': {

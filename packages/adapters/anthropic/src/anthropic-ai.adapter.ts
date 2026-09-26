@@ -13,6 +13,7 @@ import {
   AiThinkingStep,
   AiToolLoopError,
   AiToolTrace,
+  msg,
 } from '@nwm/core';
 
 /**
@@ -76,7 +77,7 @@ export class AnthropicAiAdapter implements AiPort {
   async testCredentials(credentials?: AiCredentials): Promise<void> {
     const effective = credentials ?? (await this.credentials());
     if (!effective) {
-      throw new Error('Aucune clé API IA : réglages IA ou ANTHROPIC_API_KEY');
+      throw new Error(msg('platform.aiNoKey', { envVar: 'ANTHROPIC_API_KEY' }));
     }
     const client = new Anthropic({ apiKey: effective.apiKey });
     await client.messages.create({
@@ -98,8 +99,7 @@ export class AnthropicAiAdapter implements AiPort {
   async generateJson<T>(params: AiGenerateParams): Promise<T> {
     const text = await this.generate({
       ...params,
-      system:
-        `${params.system ?? ''}\nRéponds UNIQUEMENT avec un JSON valide, sans markdown ni commentaire.`.trim(),
+      system: `${params.system ?? ''}\nReply ONLY with valid JSON, no markdown and no comments.`.trim(),
     });
     const cleaned = text
       .trim()
@@ -110,7 +110,7 @@ export class AnthropicAiAdapter implements AiPort {
 
   async chat(params: AiChatParams): Promise<string> {
     if (params.messages.length === 0) {
-      throw new Error('Conversation vide : au moins un message utilisateur est requis');
+      throw new Error('Empty conversation: at least one user message is required');
     }
     return this.send({
       system: params.system,
@@ -128,11 +128,11 @@ export class AnthropicAiAdapter implements AiPort {
    */
   async chatWithTools(params: AiAgentParams): Promise<AiAgentResult> {
     if (params.messages.length === 0) {
-      throw new Error('Conversation vide : au moins un message utilisateur est requis');
+      throw new Error('Empty conversation: at least one user message is required');
     }
     const credentials = await this.credentials();
     if (!credentials) {
-      throw new Error('AiPort non configuré : renseigner les réglages IA ou ANTHROPIC_API_KEY');
+      throw new Error(msg('platform.aiNotConfigured', { envVar: 'ANTHROPIC_API_KEY' }));
     }
     const client = new Anthropic({ apiKey: credentials.apiKey });
     const tools = new Map(params.tools.map((tool) => [tool.name, tool]));
@@ -201,7 +201,7 @@ export class AnthropicAiAdapter implements AiPort {
         let output: string;
         let failed = false;
         if (!tool) {
-          output = `Outil inconnu : ${call.name}`;
+          output = `Unknown tool: ${call.name}`;
           failed = true;
         } else {
           try {
@@ -235,7 +235,7 @@ export class AnthropicAiAdapter implements AiPort {
   }): Promise<string> {
     const credentials = await this.credentials();
     if (!credentials) {
-      throw new Error('AiPort non configuré : renseigner les réglages IA ou ANTHROPIC_API_KEY');
+      throw new Error(msg('platform.aiNotConfigured', { envVar: 'ANTHROPIC_API_KEY' }));
     }
     const client = new Anthropic({ apiKey: credentials.apiKey });
     const body: MessageBody = {
@@ -253,14 +253,12 @@ export class AnthropicAiAdapter implements AiPort {
   /** Une réponse refusée ou coupée n'est pas une réponse : on nomme la vraie cause. */
   private assertUsable(response: Anthropic.Message, maxTokens: number): void {
     if (response.stop_reason === 'refusal') {
-      throw new Error('La requête IA a été refusée par les garde-fous du modèle');
+      throw new Error(msg('platform.aiRefused'));
     }
     // Réponse coupée en plein milieu : le JSON serait invalide et l'erreur de
     // parsing ferait croire à un modèle capricieux.
     if (response.stop_reason === 'max_tokens') {
-      throw new Error(
-        `Réponse IA tronquée : budget de ${maxTokens} tokens atteint (raisonnement compris) — augmenter maxTokens ou baisser l'effort`,
-      );
+      throw new Error(msg('platform.aiTruncatedAnthropic', { maxTokens }));
     }
   }
 }

@@ -19,6 +19,7 @@ import {
 import { Table } from '../../components/resizable-table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 import { keyColor } from '../../lib/graph-colors';
 import { useInstanceScope } from '../../lib/instance-scope';
@@ -28,13 +29,18 @@ import { WorkflowMapHelp } from './workflow-map-help';
 import { WorkflowLinkModal, WorkflowLinkFormValues } from './workflow-link-modal';
 import type { TriggerKind, WorkflowMapLink, WorkflowMapNode } from './types';
 import { useEnvs } from '../../lib/envs';
+import { BRAND } from '../../lib/brand/colors';
 
-const KIND_LABELS: Record<string, string> = {
-  execute: 'appelle',
-  tool: 'outil IA',
-  webhook: 'webhook',
-  manual: 'lien manuel',
-};
+type MapT = ReturnType<typeof useTranslations<'inventory.workflowMap.page'>>;
+
+const KIND_KEYS = ['execute', 'tool', 'webhook', 'manual'] as const;
+type LinkKind = (typeof KIND_KEYS)[number];
+const isKnownKind = (kind: string): kind is LinkKind => (KIND_KEYS as readonly string[]).includes(kind);
+
+/** Libellé d'une nature de lien ; une nature inconnue s'affiche telle quelle. */
+function kindLabel(kind: string, t: MapT): string {
+  return isKnownKind(kind) ? t(`kinds.${kind}`) : kind;
+}
 
 const KIND_COLORS: Record<string, string> = {
   execute: 'blue',
@@ -48,17 +54,17 @@ const ALL_KINDS = ['execute', 'tool', 'webhook', 'manual'];
 /** Appels qui lancent le workflow cible *en sous-workflow* (par opposition à un webhook). */
 const SUB_CALL_KINDS = ['execute', 'tool'];
 
-const TRIGGER_LABELS: Record<TriggerKind, string> = {
-  schedule: 'planifié',
+const TRIGGER_KEYS = {
+  schedule: 'schedule',
   webhook: 'webhook',
-  form: 'formulaire',
+  form: 'form',
   chat: 'chat',
   app: 'app',
-  error: 'erreur',
-  'sub-workflow': 'sous-workflow',
+  error: 'error',
+  'sub-workflow': 'subWorkflow',
   // Le trigger manuel sert à tester : affiché, mais il ne compte pas dans la nature du workflow.
-  manual: 'test manuel',
-};
+  manual: 'manual',
+} as const satisfies Record<TriggerKind, string>;
 
 /** Ne tourne jamais seul : hors bouton de test, il ne démarre que sur appel d'un autre workflow. */
 function isSubWorkflowOnly(node: WorkflowMapNode): boolean {
@@ -67,38 +73,31 @@ function isSubWorkflowOnly(node: WorkflowMapNode): boolean {
 }
 
 /** Comment ce workflow démarre, en une ligne — vide s'il n'a plus aucun trigger actif. */
-function triggersLabel(node: WorkflowMapNode): string {
-  return (node.triggers ?? []).map((kind) => TRIGGER_LABELS[kind]).join(' · ');
+function triggersLabel(node: WorkflowMapNode, t: MapT): string {
+  return (node.triggers ?? []).map((kind) => t(`triggers.${TRIGGER_KEYS[kind]}`)).join(' · ');
 }
 
 const MAX_GRAPH_NODES = 80;
 
-function plural(count: number, one: string, many = `${one}s`): string {
-  return `${count} ${count > 1 ? many : one}`;
-}
-
-const CONTEXT_LABELS: Record<string, string> = {
-  loop: 'boucle',
-  manual: 'manuel',
-  'sub-workflow': 'sous-workflow',
-};
-
-const CONTEXT_HINTS: Record<string, string> = {
-  loop: "Le nœud qui appelle est dans une boucle : l'appel part une fois par tour.",
-  manual:
-    'Le nœud qui appelle est dans un bout de workflow dont le seul déclencheur est le bouton « Execute workflow » : rien ne part sans un clic dans l’éditeur.',
-  'sub-workflow':
-    "Le nœud qui appelle est dans une branche déclenchée par un autre workflow : l'appel ne part que si le parent tourne.",
-};
+const CONTEXT_KEYS = {
+  loop: 'loop',
+  manual: 'manual',
+  'sub-workflow': 'subWorkflow',
+} as const satisfies Record<NonNullable<WorkflowMapLink['context']>['kind'], string>;
 
 /**
  * Libellé de la flèche : le contexte de départ (boucle, test, sous-workflow) quand l'appel ne part
  * pas d'un flux ordinaire, sinon rien pour un `execute` banal — la flèche dit déjà « appelle ».
  */
-function linkLabel(link: WorkflowMapLink): string | null {
-  if (link.context) return `${CONTEXT_LABELS[link.context.kind]} (${link.context.nodeCount})`;
+function linkLabel(link: WorkflowMapLink, t: MapT): string | null {
+  if (link.context) {
+    return t('contextLabel', {
+      context: t(`contexts.${CONTEXT_KEYS[link.context.kind]}`),
+      count: link.context.nodeCount,
+    });
+  }
   if (link.kind === 'execute') return null;
-  return KIND_LABELS[link.kind] ?? link.kind;
+  return kindLabel(link.kind, t);
 }
 
 function workflowHref(id: string): string {
@@ -117,10 +116,15 @@ function nodeClass(node: WorkflowMapNode): string {
 // Les flèches d'un même workflow partagent une couleur tirée de son id (`keyColor`) : on suit son
 // trait des yeux, la nature du lien étant portée par l'étiquette. Les points d'entrée gardent le
 // vert de leur pastille — seul repère fixe du schéma.
-const ENTRY_STROKE = '#52c41a';
+const ENTRY_STROKE = BRAND.success;
 
 /** Flowchart Mermaid du schéma : liens détectés en trait plein, liens manuels en pointillés. */
-function toMermaid(nodes: WorkflowMapNode[], links: WorkflowMapLink[], showEntryPoints: boolean): string {
+function toMermaid(
+  nodes: WorkflowMapNode[],
+  links: WorkflowMapLink[],
+  showEntryPoints: boolean,
+  t: MapT,
+): string {
   // Troncature par le milieu : le suffixe qui départage les homonymes (· instance, · #id) doit survivre.
   const escape = (label: string) => {
     const clean = label.replace(/"/g, '#quot;');
@@ -144,11 +148,11 @@ function toMermaid(nodes: WorkflowMapNode[], links: WorkflowMapLink[], showEntry
     // Pied de boîte : comment le workflow démarre. « aucun trigger » = il ne peut plus partir seul.
     const triggers = node.external
       ? ''
-      : `<span class="wf-triggers">${escape(triggersLabel(node) || 'aucun trigger actif')}</span>`;
+      : `<span class="wf-triggers">${escape(triggersLabel(node, t) || t('noTrigger'))}</span>`;
     const label = `${escape(node.name)}${triggers}`;
     lines.push(`  ${id}["${label}"]:::${nodeClass(node)}`);
     // Une cible hors périmètre n'a pas de fiche : elle reste un simple encadré.
-    if (!node.external) lines.push(`  click ${id} href "${workflowHref(node.id)}" "Ouvrir le workflow"`);
+    if (!node.external) lines.push(`  click ${id} href "${workflowHref(node.id)}" "${t('openWorkflow')}"`);
 
     // Déclencheurs externes (URL publique, horloge, appli tierce) dessinés devant la boîte :
     // sans eux un workflow d'entrée aurait l'air de n'avoir rien en amont.
@@ -172,14 +176,14 @@ function toMermaid(nodes: WorkflowMapNode[], links: WorkflowMapLink[], showEntry
     const color = keyColor(link.fromId);
     if (link.origin === 'auto' && link.fromId === link.toId && SUB_CALL_KINDS.includes(link.kind)) {
       target = `s${selfCalls++}`;
-      lines.push(`  ${target}["lui-même, en sous-workflow"]:::subcall`);
-      lines.push(`  click ${target} href "${workflowHref(link.toId)}" "Ouvrir le workflow"`);
+      lines.push(`  ${target}["${escape(t('selfCall'))}"]:::subcall`);
+      lines.push(`  click ${target} href "${workflowHref(link.toId)}" "${t('openWorkflow')}"`);
     }
     if (link.origin === 'manual') {
       const label = link.label ? escape(link.label) : '';
       pushEdge(label ? `  n${from} -. "${label}" .-> ${target}` : `  n${from} -.-> ${target}`, color);
     } else {
-      const label = linkLabel(link);
+      const label = linkLabel(link, t);
       pushEdge(label ? `  n${from} -- ${label} --> ${target}` : `  n${from} --> ${target}`, color);
     }
   }
@@ -188,7 +192,7 @@ function toMermaid(nodes: WorkflowMapNode[], links: WorkflowMapLink[], showEntry
     lines.push(`  linkStyle ${indexes.join(',')} stroke:${color},stroke-width:1.6px;`);
   }
 
-  lines.push('  classDef workflow fill:#e6f4ff,stroke:#1677ff;');
+  lines.push(`  classDef workflow fill:${BRAND.primarySoft},stroke:${BRAND.primary};`);
   lines.push('  classDef inactive fill:#fafafa,stroke:#bfbfbf,color:#8c8c8c;');
   lines.push('  classDef archived fill:#f5f5f5,stroke:#d9d9d9,color:#8c8c8c,stroke-dasharray: 4 4;');
   lines.push('  classDef external fill:#fff7e6,stroke:#fa8c16,stroke-dasharray: 4 4;');
@@ -199,6 +203,7 @@ function toMermaid(nodes: WorkflowMapNode[], links: WorkflowMapLink[], showEntry
 }
 
 export default function WorkflowMapPage() {
+  const t = useTranslations('inventory.workflowMap.page');
   const { scope } = useInstanceScope();
   const [nodes, setNodes] = useState<WorkflowMapNode[]>([]);
   const [links, setLinks] = useState<WorkflowMapLink[]>([]);
@@ -272,17 +277,17 @@ export default function WorkflowMapPage() {
         return (
           <Space size={4}>
             <span>{node.name}</span>
-            <Tag color="orange">hors périmètre</Tag>
+            <Tag color="orange">{t('outOfScope')}</Tag>
           </Space>
         );
       }
       return (
-        <Tooltip title={`Démarre par : ${triggersLabel(node) || 'aucun trigger actif'}`}>
+        <Tooltip title={t('startsWith', { triggers: triggersLabel(node, t) || t('noTrigger') })}>
           <Link href={workflowHref(node.id)}>{node.name}</Link>
         </Tooltip>
       );
     };
-  }, [nodes]);
+  }, [nodes, t]);
 
   /** Nœuds et liens réellement affichés, après filtres kind / recherche / isolés. */
   const visible = useMemo(() => {
@@ -331,10 +336,10 @@ export default function WorkflowMapPage() {
     try {
       if (editing) {
         await apiPatch(`/workflow-map/links/${editing.id}`, { label: values.label, note: values.note });
-        message.success('Lien mis à jour');
+        message.success(t('linkUpdated'));
       } else {
         await apiPost('/workflow-map/links', values);
-        message.success('Lien ajouté');
+        message.success(t('linkAdded'));
       }
       setEditing(null);
       setCreating(false);
@@ -347,7 +352,7 @@ export default function WorkflowMapPage() {
   const removeLink = async (id: string) => {
     try {
       await apiDelete(`/workflow-map/links/${id}`);
-      message.success('Lien supprimé');
+      message.success(t('linkDeleted'));
       await load();
     } catch (error) {
       message.error((error as Error).message);
@@ -362,16 +367,13 @@ export default function WorkflowMapPage() {
 
   return (
     <div style={{ padding: 8 }}>
-      <Card title="Carte des workflows">
+      <Card title={t('title')}>
         <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
-          Le schéma des enchaînements entre workflows : ce que la plateforme détecte toute seule dans le JSON
-          n8n (sous-workflow appelé, sous-workflow branché sur un agent IA, appel HTTP vers le webhook
-          d&apos;un autre workflow) et les liens que tu ajoutes à la main pour les enchaînements invisibles
-          dans le JSON.
+          {t('intro')}
         </Typography.Paragraph>
         <Space wrap>
           <Input
-            placeholder="Filtrer par nom de workflow"
+            placeholder={t('filterPlaceholder')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             allowClear
@@ -380,59 +382,54 @@ export default function WorkflowMapPage() {
           <Checkbox.Group
             value={kinds}
             onChange={(values) => setKinds(values as string[])}
-            options={ALL_KINDS.map((value) => ({ value, label: KIND_LABELS[value] }))}
+            options={ALL_KINDS.map((value) => ({ value, label: kindLabel(value, t) }))}
           />
-          <Tooltip title="Masque les workflows qui n'ont aucun lien affiché.">
+          <Tooltip title={t('hideIsolatedHint')}>
             <Space size={4}>
               <Switch checked={hideIsolated} onChange={setHideIsolated} size="small" />
-              <span>Masquer les isolés</span>
+              <span>{t('hideIsolated')}</span>
             </Space>
           </Tooltip>
-          <Tooltip title="Ajoute devant chaque workflow ce qui le met en route : l'URL publique s'il est appelable (webhook, formulaire, chat), sinon « planifié », l'application tierce, ou le lancement à la main. Un workflow appelé par un parent n'en a pas — c'est déjà une flèche. Ces pastilles ne comptent pas comme des liens : elles n'empêchent pas un workflow d'être « isolé ».">
+          <Tooltip title={t('entryPointsHint')}>
             <Space size={4}>
               <Switch checked={showEntryPoints} onChange={setShowEntryPoints} size="small" />
-              <span>Points d&apos;entrée</span>
+              <span>{t('entryPoints')}</span>
             </Space>
           </Tooltip>
-          <Tooltip title="Ne montre que les envs déclarés « surveillés » (la prod, par défaut) : les autres exemplaires d'un même workflow métier ont le même schéma d'appels et doublaient la carte. Un workflow dont l'environnement est indéterminé reste affiché.">
+          <Tooltip title={t('monitoredHint')}>
             <Space size={4}>
               <Switch checked={prodOnly} onChange={setProdOnly} size="small" />
-              <span>Envs surveillés</span>
+              <span>{t('monitored')}</span>
             </Space>
           </Tooltip>
-          <Tooltip title="Les workflows archivés dans n8n (masqués dans sa liste) ne tournent plus : leurs appels sortants sont retirés du schéma. Ils restent affichés s'ils sont appelés par un workflow vivant — c'est alors un appel mort à corriger.">
+          <Tooltip title={t('hideArchivedHint')}>
             <Space size={4}>
               <Switch checked={hideArchived} onChange={setHideArchived} size="small" />
-              <span>Masquer les archivés</span>
+              <span>{t('hideArchived')}</span>
             </Space>
           </Tooltip>
           <Segmented
-            options={['graphe', 'tableau']}
+            options={[
+              { value: 'graphe', label: t('viewGraph') },
+              { value: 'tableau', label: t('viewTable') },
+            ]}
             value={view}
             onChange={(v) => setView(v as 'graphe' | 'tableau')}
           />
           <Button icon={<ReloadOutlined />} loading={busy} onClick={() => load()}>
-            Rafraîchir
+            {t('refresh')}
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>
-            Ajouter un lien
+            {t('addLink')}
           </Button>
         </Space>
         <div style={{ marginTop: 12 }}>
           <Space size={4} wrap>
-            <Tag>
-              {plural(
-                nodes.filter((n) => !n.external && !n.archived).length,
-                'workflow vivant',
-                'workflows vivants',
-              )}
-            </Tag>
-            {archivedCount > 0 && <Tag>{plural(archivedCount, 'archivé', 'archivés')}</Tag>}
-            {prodOnly && outOfProdCount > 0 && (
-              <Tag>{plural(outOfProdCount, 'masqué hors surveillance', 'masqués hors surveillance')}</Tag>
-            )}
-            <Tag color="blue">{plural(autoCount, 'lien détecté', 'liens détectés')}</Tag>
-            <Tag color="magenta">{plural(manualLinks.length, 'lien manuel', 'liens manuels')}</Tag>
+            <Tag>{t('counts.live', { count: nodes.filter((n) => !n.external && !n.archived).length })}</Tag>
+            {archivedCount > 0 && <Tag>{t('counts.archived', { count: archivedCount })}</Tag>}
+            {prodOnly && outOfProdCount > 0 && <Tag>{t('counts.hidden', { count: outOfProdCount })}</Tag>}
+            <Tag color="blue">{t('counts.detected', { count: autoCount })}</Tag>
+            <Tag color="magenta">{t('counts.manual', { count: manualLinks.length })}</Tag>
           </Space>
         </div>
       </Card>
@@ -444,8 +441,8 @@ export default function WorkflowMapPage() {
           style={{ marginTop: 16 }}
           type="info"
           showIcon
-          message="Aucun workflow"
-          description="Synchronise une instance depuis la page Workflows : la carte se construit à partir des workflows déjà synchronisés."
+          message={t('noWorkflow')}
+          description={t('noWorkflowDescription')}
         />
       )}
 
@@ -454,28 +451,21 @@ export default function WorkflowMapPage() {
           style={{ marginTop: 16 }}
           type="info"
           showIcon
-          message="Rien à afficher avec ces filtres"
-          description="Aucun lien ne correspond. Décoche « Masquer les isolés » pour voir tous les workflows, ou ajoute un lien manuel."
+          message={t('nothingToShow')}
+          description={t('nothingToShowDescription')}
         />
       )}
 
       {visible.nodes.length > 0 && view === 'graphe' && (
         <Card
-          title={`Schéma (${visible.nodes.length} workflows, ${visible.links.length} liens)`}
+          title={t('graphTitle', { nodes: visible.nodes.length, links: visible.links.length })}
           style={{ marginTop: 16 }}
         >
           {visible.nodes.length > MAX_GRAPH_NODES ? (
-            <Alert
-              type="warning"
-              showIcon
-              message="Trop de workflows pour un rendu lisible — filtre par nom, ou passe en vue tableau."
-            />
+            <Alert type="warning" showIcon message={t('tooMany')} />
           ) : (
             <>
-              <Typography.Paragraph type="secondary">
-                Clique sur un workflow du schéma pour ouvrir sa fiche. Les cibles hors périmètre (encadré
-                orange) n&apos;en ont pas.
-              </Typography.Paragraph>
+              <Typography.Paragraph type="secondary">{t('clickHint')}</Typography.Paragraph>
               {/* Pied de boîte des déclencheurs : une note en bas de l'encadré, pas un titre. */}
               <style>{`
                 .wf-triggers {
@@ -489,7 +479,7 @@ export default function WorkflowMapPage() {
                 }
               `}</style>
               <MermaidView
-                code={toMermaid(visible.nodes, visible.links, showEntryPoints)}
+                code={toMermaid(visible.nodes, visible.links, showEntryPoints, t)}
                 interactive
                 layout="elk"
                 startDots
@@ -500,30 +490,37 @@ export default function WorkflowMapPage() {
       )}
 
       {visible.nodes.length > 0 && view === 'tableau' && (
-        <Card title={`Liens (${visible.links.length})`} style={{ marginTop: 16 }}>
+        <Card title={t('linksTitle', { count: visible.links.length })} style={{ marginTop: 16 }}>
           <Table dataSource={visible.links} rowKey="id" size="small">
-            <Table.Column<WorkflowMapLink> dataIndex="fromId" title="Workflow" render={renderNodeName} />
+            <Table.Column<WorkflowMapLink>
+              dataIndex="fromId"
+              title={t('columns.workflow')}
+              render={renderNodeName}
+            />
             <Table.Column<WorkflowMapLink>
               dataIndex="kind"
-              title="Relation"
+              title={t('columns.relation')}
               render={(kind: string, record) => (
                 <Space size={4}>
-                  <Tag color={KIND_COLORS[kind]}>{KIND_LABELS[kind] ?? kind}</Tag>
+                  <Tag color={KIND_COLORS[kind]}>{kindLabel(kind, t)}</Tag>
                   {record.context && (
                     <Tooltip
-                      title={`${CONTEXT_HINTS[record.context.kind]} Ce bout de workflow fait ${plural(record.context.nodeCount, 'nœud')}.`}
+                      title={t('contextTooltip', {
+                        hint: t(`contextHints.${CONTEXT_KEYS[record.context.kind]}`),
+                        count: record.context.nodeCount,
+                      })}
                     >
-                      <Tag>{linkLabel(record)}</Tag>
+                      <Tag>{linkLabel(record, t)}</Tag>
                     </Tooltip>
                   )}
                   {record.label && <span>{record.label}</span>}
                 </Space>
               )}
             />
-            <Table.Column<WorkflowMapLink> dataIndex="toId" title="Vers" render={renderNodeName} />
+            <Table.Column<WorkflowMapLink> dataIndex="toId" title={t('columns.to')} render={renderNodeName} />
             <Table.Column<WorkflowMapLink>
               dataIndex="nodeNames"
-              title="Détecté sur"
+              title={t('columns.detectedOn')}
               render={(names: string[] | undefined, record: WorkflowMapLink) =>
                 names?.length ? names.map((n) => <Tag key={n}>{n}</Tag>) : record.note || '—'
               }
@@ -532,40 +529,40 @@ export default function WorkflowMapPage() {
         </Card>
       )}
 
-      <Card title={`Liens manuels (${manualLinks.length})`} style={{ marginTop: 16 }}>
-        <Typography.Paragraph type="secondary">
-          À utiliser dès qu&apos;un enchaînement n&apos;est pas lisible dans le JSON : passage par un outil
-          tiers, workflow déclenché par la même donnée, ordre d&apos;exécution à respecter.
-        </Typography.Paragraph>
+      <Card title={t('manualTitle', { count: manualLinks.length })} style={{ marginTop: 16 }}>
+        <Typography.Paragraph type="secondary">{t('manualIntro')}</Typography.Paragraph>
         {manualLinks.length === 0 ? (
-          <Alert
-            type="info"
-            showIcon
-            message="Aucun lien manuel pour l'instant"
-            description="Clique sur « Ajouter un lien » pour relier deux workflows toi-même."
-          />
+          <Alert type="info" showIcon message={t('noManual')} description={t('noManualDescription')} />
         ) : (
           <Table dataSource={manualLinks} rowKey="id" size="small" pagination={false}>
-            <Table.Column<WorkflowMapLink> dataIndex="fromId" title="De" render={renderNodeName} />
-            <Table.Column<WorkflowMapLink> dataIndex="toId" title="Vers" render={renderNodeName} />
+            <Table.Column<WorkflowMapLink>
+              dataIndex="fromId"
+              title={t('columns.from')}
+              render={renderNodeName}
+            />
+            <Table.Column<WorkflowMapLink> dataIndex="toId" title={t('columns.to')} render={renderNodeName} />
             <Table.Column<WorkflowMapLink>
               dataIndex="label"
-              title="Libellé"
+              title={t('columns.label')}
               render={(l?: string) => l || '—'}
             />
-            <Table.Column<WorkflowMapLink> dataIndex="note" title="Note" render={(n?: string) => n || '—'} />
+            <Table.Column<WorkflowMapLink>
+              dataIndex="note"
+              title={t('columns.note')}
+              render={(n?: string) => n || '—'}
+            />
             <Table.Column<WorkflowMapLink>
               title=""
               width={100}
               render={(_, record) => (
                 <Space>
-                  <Tooltip title="Modifier le libellé et la note">
+                  <Tooltip title={t('editHint')}>
                     <Button size="small" icon={<EditOutlined />} onClick={() => setEditing(record)} />
                   </Tooltip>
                   <Popconfirm
-                    title="Supprimer ce lien ?"
-                    okText="Supprimer"
-                    cancelText="Annuler"
+                    title={t('deleteConfirm')}
+                    okText={t('delete')}
+                    cancelText={t('cancel')}
                     onConfirm={() => removeLink(record.id)}
                   >
                     <Button size="small" danger icon={<DeleteOutlined />} />

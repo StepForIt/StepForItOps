@@ -15,6 +15,7 @@ import { MIN_SECRET_LENGTH, SECRET_VALUE_PATTERNS, isExpression, isPlaceholder }
 import { FlatModule, MakeBlueprint, flattenModules, moduleLabel, moduleStrings } from './blueprint';
 import { referencedModuleIds } from './make-expressions';
 import { runMakeSchemaChecks } from './make-schema';
+import { msg } from '../../i18n/translate';
 
 /** Les itérateurs connus : ce à quoi un agrégateur a le droit de se rattacher. */
 const FEEDERS = new Set(['builtin:BasicFeeder', 'builtin:BasicIterator']);
@@ -57,7 +58,7 @@ function checkReferences(modules: FlatModule[]): CheckFinding[] {
         findings.push({
           severity: 'error',
           code: 'make-ref-unknown',
-          message: `« ${moduleLabel(flat.module)} » lit la sortie du module ${id}, qui n'existe pas dans ce scénario.`,
+          message: msg('checks.makeRefUnknown', { module: moduleLabel(flat.module), id }),
           nodeName: moduleLabel(flat.module),
           data: { referencedId: id },
         });
@@ -67,9 +68,7 @@ function checkReferences(modules: FlatModule[]): CheckFinding[] {
         findings.push({
           severity: 'warning',
           code: 'make-ref-unreachable',
-          message:
-            `« ${moduleLabel(flat.module)} » lit la sortie du module ${id}, qui n'aura pas tourné : ` +
-            `il est ailleurs dans le scénario (autre route, autre branche, ou plus loin).`,
+          message: msg('checks.makeRefUnreachable', { module: moduleLabel(flat.module), id }),
           nodeName: moduleLabel(flat.module),
           data: { referencedId: id },
         });
@@ -101,11 +100,10 @@ function checkAggregatorFeeder(modules: FlatModule[]): CheckFinding[] {
       findings.push({
         severity: 'error',
         code: 'make-aggregator-no-feeder',
-        message:
-          misplaced === undefined
-            ? `« ${moduleLabel(flat.module)} » agrège sans source : \`feeder\` manque dans \`parameters\`.`
-            : `« ${moduleLabel(flat.module)} » porte \`feeder\` à la racine du module au lieu de \`parameters\` : ` +
-              `Make l'ignore, et l'agrégation ne se fait pas.`,
+        message: msg('checks.makeAggregatorNoFeeder', {
+          module: moduleLabel(flat.module),
+          misplaced: misplaced !== undefined,
+        }),
         nodeName: moduleLabel(flat.module),
       });
       continue;
@@ -116,7 +114,10 @@ function checkAggregatorFeeder(modules: FlatModule[]): CheckFinding[] {
       findings.push({
         severity: 'error',
         code: 'make-aggregator-no-feeder',
-        message: `« ${moduleLabel(flat.module)} » agrège la sortie du module ${feeder}, qui n'existe pas.`,
+        message: msg('checks.makeAggregatorMissingFeeder', {
+          module: moduleLabel(flat.module),
+          feeder: String(feeder),
+        }),
         nodeName: moduleLabel(flat.module),
         data: { feeder },
       });
@@ -126,9 +127,10 @@ function checkAggregatorFeeder(modules: FlatModule[]): CheckFinding[] {
       findings.push({
         severity: 'warning',
         code: 'make-aggregator-bad-feeder',
-        message:
-          `« ${moduleLabel(flat.module)} » agrège « ${moduleLabel(source)} », qui n'itère rien : ` +
-          `un agrégateur se rattache à l'itérateur qui a découpé les bundles.`,
+        message: msg('checks.makeAggregatorBadFeeder', {
+          module: moduleLabel(flat.module),
+          source: moduleLabel(source),
+        }),
         nodeName: moduleLabel(flat.module),
         data: { feeder },
       });
@@ -160,9 +162,7 @@ function checkIfElseMerge(blueprint: MakeBlueprint): CheckFinding[] {
         findings.push({
           severity: 'error',
           code: 'make-ifelse-without-merge',
-          message:
-            `« ${moduleLabel(module)} » n'est pas suivi d'un Merge : les branches ne se rejoignent pas, ` +
-            `et rien de ce qui vient après ne s'exécutera.`,
+          message: msg('checks.makeIfElseWithoutMerge', { module: moduleLabel(module) }),
           nodeName: moduleLabel(module),
         });
         return;
@@ -173,9 +173,7 @@ function checkIfElseMerge(blueprint: MakeBlueprint): CheckFinding[] {
         findings.push({
           severity: 'error',
           code: 'make-merge-filters-mismatch',
-          message:
-            `« ${moduleLabel(next)} » déclare ${filters} filtre(s) pour ${branches} branche(s) : ` +
-            `le rapprochement se décale, et la mauvaise branche retombe.`,
+          message: msg('checks.makeMergeFiltersMismatch', { module: moduleLabel(next), filters, branches }),
           nodeName: moduleLabel(next),
           data: { branches, filters },
         });
@@ -204,9 +202,7 @@ function checkSecrets(modules: FlatModule[]): CheckFinding[] {
       findings.push({
         severity: 'warning',
         code: 'make-placeholder',
-        message:
-          `« ${moduleLabel(flat.module)} » porte encore une valeur d'exemple : ` +
-          `elle n'échouera qu'à la première exécution réelle.`,
+        message: msg('checks.makePlaceholder', { module: moduleLabel(flat.module) }),
         nodeName: moduleLabel(flat.module),
       });
     }
@@ -222,9 +218,7 @@ function checkSecrets(modules: FlatModule[]): CheckFinding[] {
       findings.push({
         severity: 'warning',
         code: 'make-secret-in-clear',
-        message:
-          `« ${moduleLabel(flat.module)} » porte ce qui ressemble à un secret en clair : ` +
-          `une connexion Make le garde hors du blueprint, qui s'exporte et se partage.`,
+        message: msg('checks.makeSecretInClear', { module: moduleLabel(flat.module) }),
         nodeName: moduleLabel(flat.module),
       });
     }

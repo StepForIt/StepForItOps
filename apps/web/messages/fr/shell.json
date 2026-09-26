@@ -1,0 +1,92 @@
+{
+  "resizableTable": {
+    "resizeHandle": "Glisser pour redimensionner · double-clic pour revenir à la largeur d'origine"
+  },
+  "commandPalette": {
+    "placeholder": "Rechercher un workflow, une instance, une action…",
+    "groups": {
+      "workflows": "Workflows",
+      "actions": "Actions",
+      "instances": "Instances",
+      "pages": "Pages",
+      "tips": "Astuces"
+    },
+    "keyboardHint": "↑↓ naviguer · ↵ ouvrir · échap fermer",
+    "grouped": "Groupés par env",
+    "flat": "Un par workflow n8n",
+    "empty": {
+      "syncing": "Rien en local : synchronisation avec n8n…",
+      "loading": "Recherche…",
+      "moreChars": "Encore {count} caractère(s)…",
+      "noResult": "Aucun résultat"
+    },
+    "opensMain": "ouvre la copie principale",
+    "opensEnv": "ouvre {env}",
+    "openMember": "Ouvrir {name}",
+    "commands": {
+      "createWorkflow": "Créer un workflow",
+      "createWorkflowKeywords": "creer nouveau workflow vide assistant",
+      "tip": "Astuce",
+      "tipKeywords": "aide astuce comment {text} {keywords}",
+      "pageKeywords": "aller ouvrir page {parent}",
+      "createResource": "Créer — {label}",
+      "createResourceKeywords": "creer nouveau nouvelle ajouter {label}",
+      "instance": "Instance n8n",
+      "instanceKeywords": "instance n8n"
+    }
+  },
+  "commandSearch": {
+    "tooltip": "Rechercher"
+  },
+  "actionBar": {
+    "more": "Autres actions"
+  },
+  "columnsMenu": {
+    "title": "Colonnes",
+    "moveUp": "Monter {label}",
+    "moveDown": "Descendre {label}",
+    "resetColumns": "Colonnes par défaut",
+    "resetViewHint": "Filtres, tri, page, colonnes et largeurs de cette page",
+    "resetView": "Réinitialiser la vue"
+  },
+  "menuNavProgress": {
+    "loading": "Chargement de la page"
+  },
+  "mobileTopBar": {
+    "openMenu": "Ouvrir le menu"
+  },
+  "securityWarnings": {
+    "title": "Configuration de sécurité incomplète",
+    "codes": {
+      "authOpen": "Accès sans authentification — créer l'admin via /setup.",
+      "apiOpen": "API_ACCESS_TOKEN absent : API anonyme.",
+      "noSessionSecret": "SESSION_SECRET absent."
+    }
+  },
+  "installApp": {
+    "button": "Installer l'app",
+    "iosTitle": "Installer sur l'écran d'accueil",
+    "iosOk": "Compris",
+    "iosIntro": "Safari ne propose pas l'installation automatiquement : elle se fait en deux gestes.",
+    "iosStep1": "1. Touche le bouton <b>Partager</b> de la barre du navigateur.",
+    "iosStep2": "2. Choisis <b>Sur l'écran d'accueil</b>."
+  },
+  "instanceScope": {
+    "tooltipAll": "Instance : toutes",
+    "tooltipOne": "Instance : {name}",
+    "all": "Toutes les instances"
+  },
+  "license": {
+    "summary": "StepForIt Ops — Business Source License 1.1. Usage libre, y compris commercial, y compris pour piloter les instances n8n de vos clients. En faire une offre hébergée ou revendue n'est pas couvert : mathieu@stepforit.fr."
+  },
+  "mobileFilterBar": {
+    "filters": "Filtres",
+    "reset": "Réinitialiser"
+  },
+  "api": {
+    "unreachableStatus": "{path} → API injoignable ({status}) — elle redémarre peut-être, réessaie.",
+    "unreachableNetwork": "{path} → API injoignable (réseau) — elle redémarre peut-être, réessaie.",
+    "writeCancelled": "Écriture annulée : {names} verrouillé.",
+    "quotedName": "« {name} »"
+  }
+}

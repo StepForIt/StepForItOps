@@ -7,6 +7,8 @@
  * refusent la même chose, au même moment, avec le même message.
  */
 
+import { Locale, currentLocale, msg, msgIn } from '../i18n';
+
 /** Formats acceptés par l'API Anthropic. Un autre type n'est pas « dégradé » : il est refusé. */
 export const CHAT_IMAGE_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const;
 
@@ -62,7 +64,7 @@ export interface ChatImageInput {
  */
 export function parseChatImage(input: ChatImageInput): ChatImage {
   const raw = (input?.data ?? '').trim();
-  if (!raw) throw new ChatImageError('Image vide');
+  if (!raw) throw new ChatImageError(msg('chat.imageEmpty'));
 
   let mediaType = (input?.mediaType ?? '').trim().toLowerCase();
   let data = raw;
@@ -75,16 +77,20 @@ export function parseChatImage(input: ChatImageInput): ChatImage {
 
   if (!isMediaType(mediaType)) {
     throw new ChatImageError(
-      `Format d'image non supporté${mediaType ? ` (${mediaType})` : ''} : ${CHAT_IMAGE_MEDIA_TYPES.join(', ')}`,
+      msg('chat.imageUnsupported', {
+        hasType: Boolean(mediaType),
+        mediaType,
+        accepted: CHAT_IMAGE_MEDIA_TYPES.join(', '),
+      }),
     );
   }
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new ChatImageError('Image illisible (base64 invalide)');
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new ChatImageError(msg('chat.imageUnreadable'));
 
   const size = decodedSize(data);
-  if (size <= 0) throw new ChatImageError('Image vide');
+  if (size <= 0) throw new ChatImageError(msg('chat.imageEmpty'));
   if (size > CHAT_IMAGE_MAX_BYTES) {
     throw new ChatImageError(
-      `Image trop lourde (${formatBytes(size)}) : maximum ${formatBytes(CHAT_IMAGE_MAX_BYTES)}`,
+      msg('chat.imageTooLarge', { size: formatBytes(size), max: formatBytes(CHAT_IMAGE_MAX_BYTES) }),
     );
   }
   return { mediaType, data, size };
@@ -95,15 +101,16 @@ export function parseChatImages(inputs: ChatImageInput[] | undefined): ChatImage
   const list = inputs ?? [];
   if (list.length === 0) return [];
   if (list.length > CHAT_IMAGE_MAX_PER_MESSAGE) {
-    throw new ChatImageError(`${CHAT_IMAGE_MAX_PER_MESSAGE} images au maximum par message`);
+    throw new ChatImageError(msg('chat.imageTooMany', { max: CHAT_IMAGE_MAX_PER_MESSAGE }));
   }
   return list.map(parseChatImage);
 }
 
-export function formatBytes(size: number): string {
-  if (size < 1024) return `${size} o`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} ko`;
-  return `${(size / (1024 * 1024)).toFixed(1)} Mo`;
+/** Poids lisible, dans la langue de l'écran par défaut (`o`/`ko`/`Mo` en français). */
+export function formatBytes(size: number, locale: Locale = currentLocale()): string {
+  if (size < 1024) return msgIn(locale, 'chat.sizeB', { n: String(size) });
+  if (size < 1024 * 1024) return msgIn(locale, 'chat.sizeKb', { n: String(Math.round(size / 1024)) });
+  return msgIn(locale, 'chat.sizeMb', { n: (size / (1024 * 1024)).toFixed(1) });
 }
 
 /**
@@ -245,22 +252,20 @@ function utf8Size(text: string): number {
 export function parseChatFile(input: ChatFileInput): ChatTextFile {
   const name = (input?.name ?? '').trim().split(/[\\/]/).pop()?.slice(0, 120) || 'fichier.txt';
   const text = input?.text ?? '';
-  if (!text.trim()) throw new ChatFileError(`${name} : fichier vide`);
+  if (!text.trim()) throw new ChatFileError(msg('chat.fileEmpty', { name }));
 
   const extension = extensionOf(name);
   const known = TEXT_EXTENSIONS[extension];
   const declared = (input?.mediaType ?? '').trim().toLowerCase().split(';')[0];
   if (!known && !declared.startsWith('text/')) {
-    throw new ChatFileError(
-      `${name} : type de fichier non supporté. Formats texte acceptés : ${CHAT_FILE_EXTENSIONS.join(', ')}.`,
-    );
+    throw new ChatFileError(msg('chat.fileUnsupported', { name, accepted: CHAT_FILE_EXTENSIONS.join(', ') }));
   }
-  if (looksBinary(text)) throw new ChatFileError(`${name} : le contenu n'est pas du texte lisible`);
+  if (looksBinary(text)) throw new ChatFileError(msg('chat.fileBinary', { name }));
 
   const size = utf8Size(text);
   if (size > CHAT_FILE_MAX_BYTES) {
     throw new ChatFileError(
-      `${name} : fichier trop lourd (${formatBytes(size)}), maximum ${formatBytes(CHAT_FILE_MAX_BYTES)}`,
+      msg('chat.fileTooLarge', { name, size: formatBytes(size), max: formatBytes(CHAT_FILE_MAX_BYTES) }),
     );
   }
   return { name, mediaType: known?.mediaType ?? 'text/plain', text, size };
@@ -271,13 +276,13 @@ export function parseChatFiles(inputs: ChatFileInput[] | undefined): ChatTextFil
   const list = inputs ?? [];
   if (list.length === 0) return [];
   if (list.length > CHAT_FILE_MAX_PER_MESSAGE) {
-    throw new ChatFileError(`${CHAT_FILE_MAX_PER_MESSAGE} fichiers au maximum par message`);
+    throw new ChatFileError(msg('chat.fileTooMany', { max: CHAT_FILE_MAX_PER_MESSAGE }));
   }
   const files = list.map(parseChatFile);
   const total = files.reduce((sum, file) => sum + file.size, 0);
   if (total > CHAT_FILE_HISTORY_BYTES) {
     throw new ChatFileError(
-      `Fichiers trop lourds au total (${formatBytes(total)}) : maximum ${formatBytes(CHAT_FILE_HISTORY_BYTES)} par message`,
+      msg('chat.filesTooLargeTotal', { size: formatBytes(total), max: formatBytes(CHAT_FILE_HISTORY_BYTES) }),
     );
   }
   return files;
@@ -302,9 +307,9 @@ function langOf(name: string): string {
 export function renderChatFiles(content: string, files: ChatTextFile[]): string {
   if (files.length === 0) return content;
   const blocks = files.map((file) => {
-    const head = `--- Fichier joint : ${file.name} (${formatBytes(file.size)}) ---`;
+    const head = `--- Attached file: ${file.name} (${formatBytes(file.size, 'en')}) ---`;
     if (file.dropped) {
-      return `${head}\n(contenu non rejoué dans ce tour — demande-le si tu en as besoin)`;
+      return `${head}\n(content not replayed in this turn — ask for it if you need it)`;
     }
     const fence = fenceFor(file.text);
     return `${head}\n${fence}${langOf(file.name)}\n${file.text}\n${fence}`;

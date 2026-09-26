@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { ModuleId } from '../../infra/modules-registry/module-id.decorator';
 import { CredentialHarvesterService, HarvestedCredential } from './credential-harvester.service';
 import { DiscoverInput, DiscoveryLeftover, ResourceDiscoveryService } from './resource-discovery.service';
@@ -46,7 +47,7 @@ export class ResourceDiscoveryController {
   @Put('nocodb/endpoints')
   setNocodbHost(@Body() body: { credentialId?: string; host?: string }): Promise<NocoDbEndpoint | undefined> {
     if (!body.credentialId || !body.host?.trim()) {
-      throw new BadRequestException('credentialId et host sont requis');
+      throw new BadRequestException(msg('platform.credentialHostRequired'));
     }
     return this.nocodb.setHost(body.credentialId, body.host);
   }
@@ -54,7 +55,7 @@ export class ResourceDiscoveryController {
   /** Redécouvre les vrais noms des bases/tables NocoDB et les met en cache. */
   @Post('nocodb/refresh-labels')
   refreshNocodbLabels(@Body() body: { instanceId?: string }): Promise<NocoDbRefreshResult> {
-    if (!body.instanceId) throw new BadRequestException('instanceId est requis');
+    if (!body.instanceId) throw new BadRequestException(msg('platform.instanceIdRequired'));
     return this.nocodb.refresh(body.instanceId);
   }
 
@@ -76,7 +77,7 @@ export class ResourceDiscoveryController {
   /** Workflows temporaires restés sur l'instance (échec conservé pour debug). */
   @Get('leftovers')
   leftovers(@Query('instanceId') instanceId?: string): Promise<DiscoveryLeftover[]> {
-    if (!instanceId) throw new BadRequestException('instanceId est requis');
+    if (!instanceId) throw new BadRequestException(msg('platform.instanceIdRequired'));
     return this.discovery.leftovers(instanceId);
   }
 
@@ -85,7 +86,7 @@ export class ResourceDiscoveryController {
     @Param('externalId') externalId: string,
     @Query('instanceId') instanceId?: string,
   ): Promise<{ deleted: string }> {
-    if (!instanceId) throw new BadRequestException('instanceId est requis');
+    if (!instanceId) throw new BadRequestException(msg('platform.instanceIdRequired'));
     await this.discovery.deleteLeftover(instanceId, externalId);
     return { deleted: externalId };
   }

@@ -91,6 +91,7 @@ export * from './domain/chat-progress';
 export * from './domain/chat-completion';
 export * from './domain/n8n/param-shape';
 export * from './domain/secret-patterns';
+export * from './domain/markdown-sections';
 export * from './domain/n8n/node-examples';
 export * from './domain/n8n/node-schema';
 export * from './domain/n8n/node-type-name';
@@ -148,10 +149,14 @@ export * from './ports/monitor-admin.port';
 export * from './ports/notification.port';
 export * from './ports/node-catalog.port';
 export * from './ports/docs.port';
+export * from './ports/package-docs.port';
 
 // Modules
 export * from './modules/module-manifest';
 export * from './modules/module-ids';
+
+// Langues
+export * from './i18n';
 
 // Événements
 export * from './events/events';

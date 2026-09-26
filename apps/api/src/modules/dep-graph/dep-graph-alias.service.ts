@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 /**
@@ -13,7 +14,7 @@ export class DepGraphAliasService {
 
   /** Pose l'alias, ou le retire si le label est vide (le nom calculé reprend la main). */
   async rename(key: string, label: string): Promise<{ key: string; label: string }> {
-    if (!key) throw new BadRequestException('key manquante');
+    if (!key) throw new BadRequestException(msg('platform.keyMissing'));
 
     const trimmed = label?.trim() ?? '';
     if (trimmed.length === 0) {

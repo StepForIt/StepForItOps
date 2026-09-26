@@ -39,7 +39,7 @@ export class GateRefusalService {
       await this.distill.fromGateRefusal(event);
     } catch (error) {
       // Apprendre est un bonus : jamais au prix du tour qui a émis l'événement.
-      this.logger.warn(`Refus de porte non exploité (${event.workflowId}) : ${(error as Error).message}`);
+      this.logger.warn(`Gate refusal not used (${event.workflowId}): ${(error as Error).message}`);
     }
   }
 }

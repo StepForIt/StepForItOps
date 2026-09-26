@@ -6,6 +6,7 @@ import {
   planBulkEnvAction,
   workflowFamilyKey,
   workflowFamilyName,
+  msg,
 } from '@nwm/core';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 import { WorkflowsService } from '../workflows/workflows.service';
@@ -35,17 +36,19 @@ export class BulkEnvPlanService {
   ) {}
 
   async plan(input: BulkEnvPlanInput): Promise<BulkPlanRow[]> {
-    if (!ACTIONS.includes(input.action)) throw new BadRequestException(`Action inconnue : ${input.action}`);
+    if (!ACTIONS.includes(input.action))
+      throw new BadRequestException(msg('env.bulkUnknownAction', { action: input.action }));
     if (!Array.isArray(input.familyKeys) || input.familyKeys.length === 0) {
-      throw new BadRequestException('Aucun workflow métier sélectionné');
+      throw new BadRequestException(msg('env.bulkNoFamily'));
     }
     const envs = await this.settings.declaredEnvIds();
     for (const env of [input.sourceEnv, input.targetEnv]) {
-      if (env !== null && !envs.includes(env)) throw new BadRequestException(`Env non déclaré : ${env}`);
+      if (env !== null && !envs.includes(env))
+        throw new BadRequestException(msg('env.bulkEnvNotDeclared', { env }));
     }
     if (input.action === 'mark' ? input.sourceEnv !== null : input.sourceEnv === null) {
       throw new BadRequestException(
-        input.action === 'mark' ? "Déclarer l'env part des exemplaires sans env" : 'Env source obligatoire',
+        input.action === 'mark' ? msg('env.bulkMarkFromUnmarked') : msg('env.bulkSourceRequired'),
       );
     }
 

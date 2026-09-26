@@ -10,6 +10,7 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { Response } from 'express';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { RefineListQuery, toPrismaListArgs, withTotalCount } from '../../common/crud/paginate';
@@ -55,14 +56,14 @@ export class ClientsController {
   @Post()
   create(@Body() body: { name?: string }): Promise<{ id: string; name: string }> {
     const name = body.name?.trim();
-    if (!name) throw new BadRequestException('name requis');
+    if (!name) throw new BadRequestException(msg('platform.nameRequired'));
     return this.prisma.client.create({ data: { name }, select: { id: true, name: true } });
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: { name?: string }): Promise<{ id: string; name: string }> {
     const name = body.name?.trim();
-    if (!name) throw new BadRequestException('name requis');
+    if (!name) throw new BadRequestException(msg('platform.nameRequired'));
     return this.prisma.client.update({ where: { id }, data: { name }, select: { id: true, name: true } });
   }
 

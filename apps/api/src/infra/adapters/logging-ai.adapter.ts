@@ -76,7 +76,7 @@ export class LoggingAiAdapter implements AiPort {
       // L'appelant décide souvent d'avaler l'erreur (analyse dégradée mais
       // rendue) : sans cette ligne, un modèle qui refuse tout passe inaperçu.
       this.logger.warn(
-        `${operation} ${detail} → échec après ${seconds(started)} : ${(error as Error).message}`,
+        `${operation} ${detail} → failed after ${seconds(started)}: ${(error as Error).message}`,
       );
       throw error;
     }
@@ -85,7 +85,7 @@ export class LoggingAiAdapter implements AiPort {
 
 function describe(params: { maxTokens?: number; effort?: string; prompt?: string; size?: number }): string {
   const chars = params.size ?? params.prompt?.length ?? 0;
-  return `effort=${params.effort ?? 'défaut'} max=${params.maxTokens ?? 'défaut'} in=${Math.round(chars / 1000)} kcar`;
+  return `effort=${params.effort ?? 'default'} max=${params.maxTokens ?? 'default'} in=${Math.round(chars / 1000)} kchars`;
 }
 
 function seconds(started: number): string {

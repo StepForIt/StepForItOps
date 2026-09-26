@@ -5,6 +5,7 @@ import {
   RedundancyInstance,
   RedundantProbe,
   findRedundantProbes,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { callKuma } from './kuma-errors';
@@ -45,12 +46,10 @@ export class KumaRedundancyService {
   /** Liste les sondes candidates, pour revue. Aucune écriture. */
   async review(): Promise<RedundancyReview> {
     if (!(await this.kumaAdmin.isConfigured())) {
-      throw new BadRequestException(
-        'Uptime Kuma non configuré : renseigner les réglages Kuma (page Monitors) ou KUMA_URL/KUMA_USERNAME/KUMA_PASSWORD dans le .env',
-      );
+      throw new BadRequestException(msg('ops.kumaNotConfigured'));
     }
     const [probes, monitors, instances] = await Promise.all([
-      callKuma('lecture des monitors', () => this.kumaAdmin.listProbes()),
+      callKuma(msg('ops.kumaActionReadMonitors'), () => this.kumaAdmin.listProbes()),
       this.prisma.monitor.findMany({ select: { kind: true, enabled: true, config: true } }),
       this.prisma.instance.findMany({ select: { id: true, name: true, baseUrl: true } }),
     ]);
@@ -97,7 +96,7 @@ export class KumaRedundancyService {
    */
   async tagCandidates(externalIds: number[]): Promise<RedundancyTagResult> {
     if (!externalIds?.length) {
-      throw new BadRequestException('Aucune sonde sélectionnée');
+      throw new BadRequestException(msg('ops.kumaNoProbeSelected'));
     }
     const { candidates } = await this.review();
     const byId = new Map(candidates.map((candidate) => [candidate.externalId, candidate]));
@@ -106,21 +105,21 @@ export class KumaRedundancyService {
     for (const externalId of externalIds) {
       const candidate = byId.get(externalId);
       if (candidate) result.tagged.push({ externalId, name: candidate.name });
-      else result.skipped.push({ externalId, reason: 'sonde absente de la liste des candidates' });
+      else result.skipped.push({ externalId, reason: msg('ops.kumaSkipNotCandidate') });
     }
     if (result.tagged.length === 0) return result;
 
-    const tag = await callKuma('création de l’étiquette', () =>
+    const tag = await callKuma(msg('ops.kumaActionCreateTag'), () =>
       this.kumaAdmin.ensureTag(REDUNDANT_TAG_NAME, REDUNDANT_TAG_COLOR),
     );
-    await callKuma('marquage des sondes', () =>
+    await callKuma(msg('ops.kumaActionTagProbes'), () =>
       this.kumaAdmin.tagProbes(
         tag.id,
         result.tagged.map((probe) => probe.externalId),
       ),
     );
     this.logger.log(
-      `Étiquette "${REDUNDANT_TAG_NAME}" posée sur ${result.tagged.length} sonde(s) : ${result.tagged
+      `Tag "${REDUNDANT_TAG_NAME}" set on ${result.tagged.length} probe(s): ${result.tagged
         .map((probe) => probe.name)
         .join(', ')}`,
     );

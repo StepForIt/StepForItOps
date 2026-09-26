@@ -9,6 +9,7 @@ import {
   AiPort,
   AiToolLoopError,
   AiToolTrace,
+  msg,
 } from '@nwm/core';
 import { MistralMessage, MistralRequest, MistralToolDef, callMistral, textOfContent } from './mistral-api';
 import { parseToolArguments, toMistralConversation } from './mistral-messages';
@@ -44,7 +45,7 @@ export class MistralAiAdapter implements AiPort {
   async testCredentials(credentials?: AiCredentials): Promise<void> {
     const effective = credentials ?? (await this.credentials());
     if (!effective) {
-      throw new Error('Aucune clé API IA : réglages IA ou MISTRAL_API_KEY');
+      throw new Error(msg('platform.aiNoKey', { envVar: 'MISTRAL_API_KEY' }));
     }
     await callMistral(effective.apiKey, {
       model: effective.model || DEFAULT_MISTRAL_MODEL,
@@ -63,8 +64,7 @@ export class MistralAiAdapter implements AiPort {
 
   async generateJson<T>(params: AiGenerateParams): Promise<T> {
     const text = await this.send({
-      system:
-        `${params.system ?? ''}\nRéponds UNIQUEMENT avec un JSON valide, sans markdown ni commentaire.`.trim(),
+      system: `${params.system ?? ''}\nReply ONLY with valid JSON, no markdown and no comments.`.trim(),
       messages: [{ role: 'user', content: params.prompt }],
       maxTokens: params.maxTokens,
       // Le mode JSON de l'API garantit la forme ; la consigne reste, elle décrit
@@ -80,7 +80,7 @@ export class MistralAiAdapter implements AiPort {
 
   async chat(params: AiChatParams): Promise<string> {
     if (params.messages.length === 0) {
-      throw new Error('Conversation vide : au moins un message utilisateur est requis');
+      throw new Error('Empty conversation: at least one user message is required');
     }
     return this.send({ system: params.system, messages: params.messages, maxTokens: params.maxTokens });
   }
@@ -91,11 +91,11 @@ export class MistralAiAdapter implements AiPort {
    */
   async chatWithTools(params: AiAgentParams): Promise<AiAgentResult> {
     if (params.messages.length === 0) {
-      throw new Error('Conversation vide : au moins un message utilisateur est requis');
+      throw new Error('Empty conversation: at least one user message is required');
     }
     const credentials = await this.credentials();
     if (!credentials) {
-      throw new Error('AiPort non configuré : renseigner les réglages IA ou MISTRAL_API_KEY');
+      throw new Error(msg('platform.aiNotConfigured', { envVar: 'MISTRAL_API_KEY' }));
     }
     const tools = new Map(params.tools.map((tool) => [tool.name, tool]));
     const maxRounds = params.maxRounds ?? DEFAULT_MAX_ROUNDS;
@@ -131,7 +131,7 @@ export class MistralAiAdapter implements AiPort {
       };
       const response = await callMistral(credentials.apiKey, body);
       const choice = response.choices[0];
-      if (!choice) throw new Error('Réponse IA vide : aucun choix rendu par Mistral');
+      if (!choice) throw new Error(msg('platform.aiEmptyMistral'));
       assertUsable(choice.finish_reason, maxTokens);
 
       const calls = choice.message.tool_calls ?? [];
@@ -152,7 +152,7 @@ export class MistralAiAdapter implements AiPort {
         let output: string;
         let failed = false;
         if (!tool) {
-          output = `Outil inconnu : ${call.function.name}`;
+          output = `Unknown tool: ${call.function.name}`;
           failed = true;
         } else {
           try {
@@ -184,7 +184,7 @@ export class MistralAiAdapter implements AiPort {
   }): Promise<string> {
     const credentials = await this.credentials();
     if (!credentials) {
-      throw new Error('AiPort non configuré : renseigner les réglages IA ou MISTRAL_API_KEY');
+      throw new Error(msg('platform.aiNotConfigured', { envVar: 'MISTRAL_API_KEY' }));
     }
     const maxTokens = params.maxTokens ?? 4096;
     const messages: MistralMessage[] = toMistralConversation(params.system, params.messages);
@@ -195,7 +195,7 @@ export class MistralAiAdapter implements AiPort {
       ...(params.json ? { response_format: { type: 'json_object' as const } } : {}),
     });
     const choice = response.choices[0];
-    if (!choice) throw new Error('Réponse IA vide : aucun choix rendu par Mistral');
+    if (!choice) throw new Error(msg('platform.aiEmptyMistral'));
     assertUsable(choice.finish_reason, maxTokens);
     return textOfContent(choice.message.content);
   }
@@ -208,8 +208,6 @@ export class MistralAiAdapter implements AiPort {
  */
 function assertUsable(finishReason: string | undefined, maxTokens: number): void {
   if (finishReason === 'length' || finishReason === 'model_length') {
-    throw new Error(
-      `Réponse IA tronquée : budget de ${maxTokens} tokens atteint — augmenter maxTokens ou raccourcir le contexte`,
-    );
+    throw new Error(msg('platform.aiTruncatedMistral', { maxTokens }));
   }
 }

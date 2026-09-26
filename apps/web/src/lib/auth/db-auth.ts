@@ -76,7 +76,7 @@ export async function bootstrapDbAuth(
       cache: 'no-store',
     });
     const body = (await response.json()) as DbAuthState & { message?: string };
-    if (!response.ok) return { ok: false, error: body.message ?? `Erreur ${response.status}` };
+    if (!response.ok) return { ok: false, error: body.message ?? `http_${response.status}` };
     invalidateDbAuthCache();
     return { ok: true, state: body };
   } catch (error) {

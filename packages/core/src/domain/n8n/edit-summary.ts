@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { WorkflowEditOperation } from './workflow-edit';
 
 /**
@@ -13,28 +14,28 @@ import { WorkflowEditOperation } from './workflow-edit';
 function describe(operation: WorkflowEditOperation): string {
   switch (operation.op) {
     case 'set-workflow-name':
-      return `renommage du workflow en « ${operation.name} »`;
+      return msg('edit.summaryRenameWorkflow', { name: operation.name });
     case 'rename-node':
-      return `renommage de « ${operation.node} » en « ${operation.newName} »`;
+      return msg('edit.summaryRenameNode', { node: operation.node, newName: operation.newName });
     case 'set-node-parameters':
     case 'patch-node-parameters':
-      return `paramètres de « ${operation.node} »`;
+      return msg('edit.summaryParameters', { node: operation.node });
     case 'remove-node-parameter':
-      return `retrait d'un paramètre de « ${operation.node} »`;
+      return msg('edit.summaryRemoveParameter', { node: operation.node });
     case 'set-node-notes':
-      return `note de « ${operation.node} »`;
+      return msg('edit.summaryNotes', { node: operation.node });
     case 'set-node-disabled':
-      return `${operation.disabled ? 'désactivation' : 'réactivation'} de « ${operation.node} »`;
+      return msg('edit.summaryDisabled', { disabled: operation.disabled, node: operation.node });
     case 'remove-node':
-      return `suppression de « ${operation.node} »`;
+      return msg('edit.summaryRemoveNode', { node: operation.node });
     case 'add-node':
-      return `ajout de « ${operation.node?.name ?? 'nœud'} »`;
+      return msg('edit.summaryAddNode', { name: operation.node?.name ?? msg('edit.summaryNodeFallback') });
     case 'connect':
-      return `connexion ${operation.from} → ${operation.to}`;
+      return msg('edit.summaryConnect', { from: operation.from, to: operation.to });
     case 'disconnect':
-      return `déconnexion ${operation.from} → ${operation.to}`;
+      return msg('edit.summaryDisconnect', { from: operation.from, to: operation.to });
     default:
-      return 'modification';
+      return msg('edit.summaryModification');
   }
 }
 
@@ -45,7 +46,10 @@ function describe(operation: WorkflowEditOperation): string {
  */
 export function summarizeEditOperations(operations: WorkflowEditOperation[]): string {
   const parts = operations.map(describe);
-  if (parts.length === 0) return 'Modification proposée';
-  const head = parts.length <= 2 ? parts.join(', ') : `${parts[0]} (+${parts.length - 1} autres)`;
+  if (parts.length === 0) return msg('edit.summaryDefault');
+  const head =
+    parts.length <= 2
+      ? parts.join(', ')
+      : msg('edit.summaryMore', { head: parts[0], count: parts.length - 1 });
   return head.charAt(0).toUpperCase() + head.slice(1);
 }

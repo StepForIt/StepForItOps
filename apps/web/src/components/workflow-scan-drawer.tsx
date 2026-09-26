@@ -17,6 +17,7 @@ import {
   message,
 } from 'antd';
 import { ScanOutlined, PlusOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../lib/api';
 import { useInstanceScope } from '../lib/instance-scope';
 import { useEnvColor, useEnvs } from '../lib/envs';
@@ -79,7 +80,8 @@ interface GroupRow {
 /** Statut d'un id : mapping existant qui le contient, ou "non mappé". */
 function MappedTag({ mapping }: { mapping?: MappingHit }) {
   const envColor = useEnvColor();
-  if (!mapping) return <Tag color="orange">non mappé</Tag>;
+  const t = useTranslations('chat.scan');
+  if (!mapping) return <Tag color="orange">{t('unmapped')}</Tag>;
   return (
     <Tag color={envColor(mapping.env)}>
       {mapping.logicalName} · {mapping.env}
@@ -105,6 +107,7 @@ function unmappedValues(ids: ScannedId[]): Record<string, string> {
  * pré-remplis pour l'env choisi.
  */
 export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations('chat.scan');
   const { envs } = useEnvs();
   const envColor = useEnvColor();
   const { scope } = useInstanceScope();
@@ -179,7 +182,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
           logicalName: body.logicalName,
           values: { [env]: body.values },
         });
-        message.success(`Mapping « ${body.logicalName} » créé (${env})`);
+        message.success(t('mappingCreated', { name: body.logicalName, env }));
         invalidate({ resource: 'resource-mappings', invalidates: ['list'] });
         await scan();
       } catch (error) {
@@ -188,12 +191,12 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
         setCreating(undefined);
       }
     },
-    [env, invalidate, scan],
+    [env, invalidate, scan, t],
   );
 
   const envSelect = (
     <Select
-      placeholder="Env des valeurs"
+      placeholder={t('envPlaceholder')}
       style={{ minWidth: 160 }}
       value={env}
       onChange={setEnv}
@@ -202,7 +205,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
   );
 
   return (
-    <Drawer title="Découvrir depuis un workflow" width={720} open={open} onClose={onClose}>
+    <Drawer title={t('title')} width={720} open={open} onClose={onClose}>
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         <Space wrap>
           <Segmented
@@ -212,12 +215,12 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
               setResult(null);
             }}
             options={[
-              { value: 'workflow', label: 'Workflow' },
-              { value: 'group', label: 'Groupe' },
+              { value: 'workflow', label: t('mode.workflow') },
+              { value: 'group', label: t('mode.group') },
             ]}
           />
           <Select
-            placeholder="Instance n8n"
+            placeholder={t('instancePlaceholder')}
             style={{ minWidth: 180 }}
             value={instanceId}
             onChange={setInstanceId}
@@ -227,7 +230,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
             <Select
               showSearch
               optionFilterProp="label"
-              placeholder="Workflow"
+              placeholder={t('workflowPlaceholder')}
               style={{ minWidth: 280 }}
               value={workflowId}
               onChange={setWorkflowId}
@@ -237,13 +240,13 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
             <Select
               showSearch
               optionFilterProp="label"
-              placeholder={groups.length === 0 ? 'Aucun groupe sur cette instance' : 'Groupe'}
+              placeholder={groups.length === 0 ? t('noGroups') : t('groupPlaceholder')}
               style={{ minWidth: 280 }}
               value={groupId}
               onChange={setGroupId}
               options={groups.map((g) => ({
                 value: g.id,
-                label: `${g.name} (${g.workflowIds.length} wf)`,
+                label: t('groupOption', { name: g.name, count: g.workflowIds.length }),
               }))}
             />
           )}
@@ -254,16 +257,12 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
             loading={loading}
             onClick={scan}
           >
-            Scanner
+            {t('scan')}
           </Button>
         </Space>
 
         {result === null ? (
-          <Typography.Paragraph type="secondary">
-            Le scan liste les bases, tables et credentials référencés par le workflow ou le groupe (snapshots
-            locaux, aucun appel n8n), indique ceux déjà couverts par un mapping, et crée les mappings
-            manquants pré-remplis avec les valeurs trouvées — pour un seul env : celui des workflows scannés.
-          </Typography.Paragraph>
+          <Typography.Paragraph type="secondary">{t('intro')}</Typography.Paragraph>
         ) : (
           <Spin spinning={loading}>
             <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -271,39 +270,30 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
                 <Alert
                   type="info"
                   showIcon
-                  message={
-                    <>
-                      Env détecté via les mappings existants :{' '}
-                      <Tag color={envColor(result.detectedEnv)}>{result.detectedEnv}</Tag>— les valeurs seront
-                      rangées dans {envSelect}
-                    </>
-                  }
+                  message={t.rich('detectedEnv', {
+                    env: () => <Tag color={envColor(result.detectedEnv!)}>{result.detectedEnv}</Tag>,
+                    select: () => envSelect,
+                  })}
                 />
               ) : (
                 <Alert
                   type="warning"
                   showIcon
-                  message={
-                    <>
-                      Aucun id de ce workflow n&apos;est connu des mappings — choisis l&apos;env auquel
-                      appartiennent ses valeurs : {envSelect}
-                    </>
-                  }
+                  message={t.rich('noDetectedEnv', { select: () => envSelect })}
                 />
               )}
 
               {result.workflowCount !== undefined && (
                 <Typography.Text type="secondary">
-                  {result.workflowCount} workflow{result.workflowCount > 1 ? 's' : ''} scanné
-                  {result.workflowCount > 1 ? 's' : ''}.
+                  {t('workflowCount', { count: result.workflowCount })}
                 </Typography.Text>
               )}
 
               <Typography.Title level={5} style={{ margin: 0 }}>
-                Ressources ({result.resources.length})
+                {t('resources', { count: result.resources.length })}
               </Typography.Title>
               {result.resources.length === 0 ? (
-                <Empty description="Aucune ressource externe détectée" />
+                <Empty description={t('noResources')} />
               ) : (
                 <List
                   size="small"
@@ -330,7 +320,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
                                     })
                                   }
                                 >
-                                  Créer le mapping
+                                  {t('createMapping')}
                                 </Button>,
                               ]
                             : []
@@ -347,11 +337,11 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
                             <Space direction="vertical" size={2} style={{ width: '100%' }}>
                               {mode === 'group' && (
                                 <Typography.Text type="secondary">
-                                  Workflows : {resource.workflows.join(', ')}
+                                  {t('workflows', { list: resource.workflows.join(', ') })}
                                 </Typography.Text>
                               )}
                               <Typography.Text type="secondary">
-                                Nœuds : {resource.nodeNames.join(', ')}
+                                {t('nodes', { list: resource.nodeNames.join(', ') })}
                               </Typography.Text>
                               {resource.ids.map((id) => (
                                 <Space key={id.id} wrap>
@@ -372,10 +362,10 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
               )}
 
               <Typography.Title level={5} style={{ margin: 0 }}>
-                Credentials ({result.credentials.length})
+                {t('credentials', { count: result.credentials.length })}
               </Typography.Title>
               {result.credentials.length === 0 ? (
-                <Empty description="Aucun credential détecté" />
+                <Empty description={t('noCredentials')} />
               ) : (
                 <List
                   size="small"
@@ -400,7 +390,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
                                   })
                                 }
                               >
-                                Créer le mapping
+                                {t('createMapping')}
                               </Button>,
                             ]
                       }
@@ -422,11 +412,11 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
                             </Space>
                             {mode === 'group' && (
                               <Typography.Text type="secondary">
-                                Workflows : {credential.workflows.join(', ')}
+                                {t('workflows', { list: credential.workflows.join(', ') })}
                               </Typography.Text>
                             )}
                             <Typography.Text type="secondary">
-                              Nœuds : {credential.nodeNames.join(', ')}
+                              {t('nodes', { list: credential.nodeNames.join(', ') })}
                             </Typography.Text>
                           </Space>
                         }

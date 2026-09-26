@@ -1,21 +1,21 @@
-/** Libellés et couleurs des statuts de problème et des entrées de leur journal. */
+/** Couleurs des statuts de problème et des entrées de leur journal (libellés : `health.errors.status` / `.event`). */
 
 import type { ErrorGroupEventRow, ErrorGroupStatus } from './types';
 
-export const STATUS_META: Record<ErrorGroupStatus, { label: string; color: string }> = {
-  open: { label: 'À traiter', color: 'red' },
-  resolved: { label: 'Traité', color: 'green' },
-  ignored: { label: 'Ignoré', color: 'default' },
+export const STATUS_META: Record<ErrorGroupStatus, { color: string }> = {
+  open: { color: 'red' },
+  resolved: { color: 'green' },
+  ignored: { color: 'default' },
 };
 
-export const EVENT_META: Record<ErrorGroupEventRow['type'], { label: string; color: string }> = {
-  resolved: { label: 'Marqué traité', color: 'green' },
-  reopened: { label: 'Rouvert', color: 'orange' },
-  regression: { label: 'Rechute', color: 'red' },
-  ignored: { label: 'Ignoré', color: 'gray' },
-  note: { label: 'Note', color: 'blue' },
+export const EVENT_META: Record<ErrorGroupEventRow['type'], { color: string }> = {
+  resolved: { color: 'green' },
+  reopened: { color: 'orange' },
+  regression: { color: 'red' },
+  ignored: { color: 'gray' },
+  note: { color: 'blue' },
 };
 
-export function formatDate(value: string | null): string {
-  return value ? new Date(value).toLocaleString('fr-FR') : '—';
+export function formatDate(value: string | null, locale: string): string {
+  return value ? new Date(value).toLocaleString(locale) : '—';
 }

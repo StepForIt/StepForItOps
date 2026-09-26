@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Popover, Space, Spin, Tag, Typography } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../../../../lib/api';
 import { useEnabledModules } from '../../../../lib/enabled-modules';
 import { WorkflowRow } from '../../workflow-row';
@@ -20,6 +21,7 @@ interface GroupDetail {
  * appartient à un domaine, et qu'on saute à ses voisins sans repasser par la liste.
  */
 export function GroupLinks({ workflow }: { workflow: WorkflowRow }) {
+  const t = useTranslations('workflowShow.groupLinks');
   const { enabled } = useEnabledModules();
   const groups = workflow.groups ?? [];
 
@@ -28,7 +30,7 @@ export function GroupLinks({ workflow }: { workflow: WorkflowRow }) {
   return (
     <Space wrap size={4} style={{ marginTop: 8 }}>
       <Typography.Text type="secondary">
-        <TeamOutlined /> Groupe{groups.length > 1 ? 's' : ''} :
+        <TeamOutlined /> {t('label', { count: groups.length })}
       </Typography.Text>
       {groups.map((group) => (
         <GroupTag key={group.id} group={group} currentId={workflow.id} />
@@ -39,6 +41,7 @@ export function GroupLinks({ workflow }: { workflow: WorkflowRow }) {
 
 /** Le contenu du groupe n'est chargé qu'à l'ouverture : la page en affiche souvent plusieurs. */
 function GroupTag({ group, currentId }: { group: { id: string; name: string }; currentId: string }) {
+  const t = useTranslations('workflowShow.groupLinks');
   const [detail, setDetail] = useState<GroupDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,13 +57,13 @@ function GroupTag({ group, currentId }: { group: { id: string; name: string }; c
   const content = loading ? (
     <Spin size="small" />
   ) : detail === null ? (
-    <Typography.Text type="secondary">Groupe illisible</Typography.Text>
+    <Typography.Text type="secondary">{t('unreadable')}</Typography.Text>
   ) : (
     <Space direction="vertical" size={2} style={{ maxWidth: 320 }}>
       {detail.workflows.map((member) =>
         member.id === currentId ? (
           <Typography.Text key={member.id} strong>
-            {member.name} (ici)
+            {t('here', { name: member.name })}
           </Typography.Text>
         ) : (
           <Link key={member.id} href={`/workflows/show/${member.id}`}>
@@ -68,7 +71,7 @@ function GroupTag({ group, currentId }: { group: { id: string; name: string }; c
           </Link>
         ),
       )}
-      <Link href={`/workflow-groups/edit/${group.id}`}>Ouvrir le groupe →</Link>
+      <Link href={`/workflow-groups/edit/${group.id}`}>{t('openGroup')}</Link>
     </Space>
   );
 

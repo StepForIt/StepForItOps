@@ -148,7 +148,7 @@ export class MonitoringController {
         await this.provisioning.syncProbeIntervals(id);
       } catch (error) {
         this.logger.warn(
-          `Intervalle sonde Kuma non réaligné pour ${monitor.name} : ${(error as Error).message}`,
+          `Kuma probe interval not realigned for ${monitor.name}: ${(error as Error).message}`,
         );
       }
     }

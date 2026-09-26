@@ -5,6 +5,7 @@ import { List } from '@refinedev/antd';
 import { CrudFilters, useInvalidate, useSelect } from '@refinedev/core';
 import { Dropdown, Modal, Segmented, Select, Space, Tag, message } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
@@ -24,6 +25,7 @@ interface ArchiveMove {
 }
 
 export default function VersionsList() {
+  const t = useTranslations('inventory.versions.page');
   const { scope, instanceName } = useInstanceScope();
   const [onlyWorkflow, setOnlyWorkflow] = usePersistedState<string | null>('workflow', null);
   // Groupé par défaut, comme la liste Workflows : un même workflow métier versionné
@@ -60,9 +62,9 @@ export default function VersionsList() {
       const result = await apiPost<{ exported: number; skipped: number; failed: number }>(
         `/versions/export-all${force ? '?force=1' : ''}`,
       );
-      const s = result.exported > 1 ? 's' : '';
-      const done = result.exported === 0 ? 'Rien à exporter' : `${result.exported} version${s} exportée${s}`;
-      if (result.failed) message.warning(`${done} — ${result.failed} échec(s)`);
+      const done =
+        result.exported === 0 ? t('nothingToExport') : t('exportDone', { exported: result.exported });
+      if (result.failed) message.warning(t('exportPartial', { done, failed: result.failed }));
       else message.success(done);
       refreshLists();
     } catch (error) {
@@ -83,16 +85,16 @@ export default function VersionsList() {
         `/versions/archive-sweep${scope ? `?instanceId=${scope}` : ''}`,
       );
       if (result.moved.length === 0) {
-        if (result.failed) message.warning(`Rien rangé — ${result.failed} échec(s)`);
-        else message.success('Rien à ranger');
+        if (result.failed) message.warning(t('nothingMovedFailed', { failed: result.failed }));
+        else message.success(t('nothingToMove'));
         return;
       }
       Modal.info({
-        title: `${result.moved.length} fichier(s) rangé(s)`,
+        title: t('movedTitle', { count: result.moved.length }),
         width: 720,
         content: (
           <Space direction="vertical" size={4} style={{ marginTop: 12 }}>
-            {result.failed > 0 && <Tag color="red">{result.failed} échec(s) — voir les logs de l’API</Tag>}
+            {result.failed > 0 && <Tag color="red">{t('movedFailed', { count: result.failed })}</Tag>}
             {result.moved.map((move) => (
               <div key={`${move.targetName}/${move.from}`}>
                 <strong>{move.workflowName}</strong> <Tag>{move.targetName}</Tag>
@@ -150,13 +152,11 @@ export default function VersionsList() {
           onClick={() => exportAll(false)}
           menu={{
             items: [
-              { key: 'force', label: 'Forcer le ré-export' },
-              { key: 'cleanup', label: 'Nettoyer les doublons d\u2019une cible…' },
+              { key: 'force', label: t('forceExport') },
+              { key: 'cleanup', label: t('cleanup') },
               {
                 key: 'sweep',
-                label: scope
-                  ? 'Ranger les archivés de cette instance'
-                  : 'Ranger les archivés (toutes instances)',
+                label: scope ? t('sweepScoped') : t('sweepAll'),
               },
             ],
             onClick: ({ key }) => {
@@ -166,13 +166,13 @@ export default function VersionsList() {
             },
           }}
         >
-          <CloudUploadOutlined /> Tout exporter
+          <CloudUploadOutlined /> {t('exportAll')}
         </Dropdown.Button>
       }
     >
       <Space wrap style={{ marginBottom: 16 }}>
         <Select
-          placeholder="Filtrer par workflow"
+          placeholder={t('filterWorkflow')}
           allowClear
           showSearch
           optionFilterProp="label"
@@ -185,8 +185,8 @@ export default function VersionsList() {
           value={grouped ? 'grouped' : 'flat'}
           onChange={(value) => setGrouped(value === 'grouped')}
           options={[
-            { value: 'grouped', label: 'Groupées par env' },
-            { value: 'flat', label: 'Par workflow n8n' },
+            { value: 'grouped', label: t('grouped') },
+            { value: 'flat', label: t('flat') },
           ]}
         />
       </Space>

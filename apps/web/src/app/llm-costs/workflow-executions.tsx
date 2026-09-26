@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Empty, Spin, Tag, Tooltip, Typography } from 'antd';
 import { Table } from '../../components/resizable-table';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
 import { ExecutionCost, formatTokens, formatUsd } from './types';
 
@@ -17,6 +18,8 @@ export function WorkflowExecutions({
   days: number;
 }) {
   const [executions, setExecutions] = useState<ExecutionCost[] | null>(null);
+  const t = useTranslations('health.llmCosts');
+  const locale = useLocale();
 
   useEffect(() => {
     setExecutions(null);
@@ -27,7 +30,7 @@ export function WorkflowExecutions({
 
   if (!executions) return <Spin size="small" />;
   if (executions.length === 0) {
-    return <Empty description="Aucune exécution avec appel LLM" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    return <Empty description={t('executions.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   return (
@@ -38,41 +41,43 @@ export function WorkflowExecutions({
       pagination={{ pageSize: 10, hideOnSinglePage: true }}
       columns={[
         {
-          title: 'Exécution',
+          title: t('executions.execution'),
           dataIndex: 'executionId',
           render: (id: string, row) => (
             <Typography.Text>
               #{id}{' '}
               <Typography.Text type="secondary">
-                {new Date(row.startedAt).toLocaleString('fr-FR')}
+                {new Date(row.startedAt).toLocaleString(locale)}
               </Typography.Text>
             </Typography.Text>
           ),
         },
         {
-          title: 'Modèles',
+          title: t('executions.models'),
           dataIndex: 'models',
           render: (models: string[]) => models.map((model) => <Tag key={model}>{model}</Tag>),
         },
-        { title: 'Appels', dataIndex: 'calls', align: 'right', width: 80 },
+        { title: t('columns.calls'), dataIndex: 'calls', align: 'right', width: 80 },
         {
-          title: 'Tokens in / out',
+          key: 'tokens',
+          title: t('columns.tokens'),
           align: 'right',
           width: 140,
-          render: (_, row) => `${formatTokens(row.promptTokens)} / ${formatTokens(row.completionTokens)}`,
+          render: (_, row) =>
+            `${formatTokens(row.promptTokens, locale)} / ${formatTokens(row.completionTokens, locale)}`,
         },
         {
-          title: 'Coût',
+          title: t('columns.cost'),
           dataIndex: 'costUsd',
           align: 'right',
           width: 110,
           render: (cost: number, row) =>
             row.unpricedCalls > 0 ? (
-              <Tooltip title={`${row.unpricedCalls} appel(s) sans tarif : coût plancher`}>
-                <span>≥ {formatUsd(cost)}</span>
+              <Tooltip title={t('unpricedFloor', { count: row.unpricedCalls })}>
+                <span>≥ {formatUsd(cost, locale)}</span>
               </Tooltip>
             ) : (
-              formatUsd(cost)
+              formatUsd(cost, locale)
             ),
         },
       ]}

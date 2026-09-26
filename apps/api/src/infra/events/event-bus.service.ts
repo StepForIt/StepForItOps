@@ -18,6 +18,6 @@ export class EventBusService {
     // Journal best-effort (jamais bloquant)
     void this.prisma.eventLog
       .create({ data: { name, payload: payload as object } })
-      .catch((error) => this.logger.warn(`EventLog KO pour ${name}: ${error.message}`));
+      .catch((error) => this.logger.warn(`EventLog failed for ${name}: ${error.message}`));
   }
 }

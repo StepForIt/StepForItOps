@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const WORKFLOW_CHAT_MANIFEST: ModuleManifest = {
   id: 'workflow-chat',
-  name: 'Assistant IA workflow',
-  description: 'Assistant IA : questions et modifications revues en diff',
+  get name() {
+    return msg('chat.manifestName');
+  },
+  get description() {
+    return msg('chat.manifestDescription');
+  },
 };

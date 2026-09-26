@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import { EnvDefinition } from './env';
 
 /**
@@ -103,15 +104,6 @@ export function nextHop(envs: EnvDefinition[], env: string): string | null {
   return envs.find((candidate) => candidate.after === env && candidate.id !== env)?.id ?? null;
 }
 
-const VERBS: Record<MacroAction, string> = {
-  promote: 'Promouvoir',
-  mark: 'Déclarer',
-  duplicate: 'Dupliquer',
-  switch: 'Rebrancher',
-  'run-tests': 'Jouer les tests de',
-  publish: 'Publier',
-};
-
 /** Une publication vise l'exemplaire lui-même : c'est son env qui se lit (« Publier X en PROD »). */
 export function stepLabel(step: {
   action: MacroAction;
@@ -120,9 +112,16 @@ export function stepLabel(step: {
   sourceEnv?: string | null;
 }): string {
   if (step.action === 'publish') {
-    return `${VERBS.publish} ${step.familyName}${step.sourceEnv ? ` en ${step.sourceEnv.toUpperCase()}` : ''}`;
+    return msg('release.stepPublish', {
+      name: step.familyName,
+      hasEnv: Boolean(step.sourceEnv),
+      env: step.sourceEnv?.toUpperCase() ?? '',
+    });
   }
-  const joint = step.action === 'mark' ? 'en' : step.action === 'switch' ? 'sur' : 'vers';
-  const target = step.targetEnv ? ` ${joint} ${step.targetEnv.toUpperCase()}` : '';
-  return `${VERBS[step.action]} ${step.familyName}${target}`;
+  return msg('release.stepGesture', {
+    action: step.action,
+    name: step.familyName,
+    hasTarget: Boolean(step.targetEnv),
+    target: step.targetEnv?.toUpperCase() ?? '',
+  });
 }

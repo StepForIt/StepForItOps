@@ -10,6 +10,7 @@ import {
   PlatformWorkflow,
   PlatformWorkflowSummary,
   WorkflowPlatformPort,
+  msg,
   readBlueprint,
   toExecutionStatus,
   toExecutionStatusFromLabel,
@@ -112,9 +113,7 @@ export class MakeApiAdapter implements WorkflowPlatformPort {
   ): Promise<PlatformExecutionsPage> {
     const scenarioId = opts?.workflowExternalId;
     if (!scenarioId) {
-      throw new Error(
-        'Make ne liste les exécutions que scénario par scénario : préciser `workflowExternalId`.',
-      );
+      throw new Error('Make only lists executions scenario by scenario: pass `workflowExternalId`.');
     }
     const limit = opts?.limit ?? 100;
     const page = await this.http.get<ScenarioLogsResponse>(
@@ -186,7 +185,7 @@ interface MakeExecutionDetail {
 function scopeQuery(instance: PlatformInstanceConfig): string {
   if (instance.teamId) return `teamId=${encodeURIComponent(instance.teamId)}`;
   if (instance.orgId) return `organizationId=${encodeURIComponent(instance.orgId)}`;
-  throw new Error("Instance Make sans périmètre : renseigner l'id de team ou d'organisation.");
+  throw new Error(msg('platform.makeNoScope'));
 }
 
 export { MakeApiError };

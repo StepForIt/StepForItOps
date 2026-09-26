@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Tooltip, Typography, theme } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useCommandPalette } from './command-palette';
@@ -18,6 +19,8 @@ function shortcutLabel(): string {
 export function CommandSearchMenuItem({ collapsed }: { collapsed: boolean }) {
   const { token } = theme.useToken();
   const { open } = useCommandPalette();
+  const t = useTranslations('shell.commandSearch');
+  const tc = useTranslations('common');
   const [shortcut, setShortcut] = React.useState('');
 
   // Lu après le montage : le rendu serveur ne connaît pas la plateforme du visiteur.
@@ -25,7 +28,7 @@ export function CommandSearchMenuItem({ collapsed }: { collapsed: boolean }) {
 
   if (collapsed) {
     return (
-      <Tooltip placement="right" title="Rechercher">
+      <Tooltip placement="right" title={t('tooltip')}>
         <div style={{ textAlign: 'center', padding: '12px 0', cursor: 'pointer' }} onClick={open}>
           <SearchOutlined style={{ color: token.colorTextSecondary }} />
         </div>
@@ -50,7 +53,7 @@ export function CommandSearchMenuItem({ collapsed }: { collapsed: boolean }) {
         }}
       >
         <SearchOutlined />
-        <span style={{ flex: 1 }}>Rechercher…</span>
+        <span style={{ flex: 1 }}>{tc('search')}</span>
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           {shortcut}
         </Typography.Text>

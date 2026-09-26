@@ -17,21 +17,24 @@ import {
   message,
 } from 'antd';
 import { ReloadOutlined, SyncOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost, apiPut } from '../../lib/api';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
 import { AuditRunResult, CatalogProposal, ModelParcRow, ModelParcSummary, TaskProfile } from './types';
 
-const TIER_LABELS: Record<string, string> = {
-  light: 'léger',
-  standard: 'intermédiaire',
-  reasoning: 'raisonnement',
-};
+/** Niveaux connus (libellé : `health.modelAudit.tiers.<code>`). */
+const TIERS = ['light', 'standard', 'reasoning'] as const;
+type Tier = (typeof TIERS)[number];
+const isTier = (value: string): value is Tier => (TIERS as readonly string[]).includes(value);
 
-const STATUS_TAG: Record<string, { color: string; label: string }> = {
-  preview: { color: 'blue', label: 'préversion' },
-  deprecated: { color: 'orange', label: 'déprécié' },
-  retired: { color: 'red', label: 'retiré' },
-};
+/** Couleur des statuts connus (libellé : `health.modelAudit.statuses.<code>`). */
+const STATUS_TAG = {
+  preview: { color: 'blue' },
+  deprecated: { color: 'orange' },
+  retired: { color: 'red' },
+} as const;
+type KnownStatus = keyof typeof STATUS_TAG;
+const isKnownStatus = (value: string): value is KnownStatus => value in STATUS_TAG;
 
 /**
  * L'audit des modèles, vu du parc.
@@ -42,6 +45,8 @@ const STATUS_TAG: Record<string, { color: string; label: string }> = {
  * coup d'œil pourquoi un modèle cher n'a rien à faire là.
  */
 export default function ModelAuditPage() {
+  const t = useTranslations('health.modelAudit');
+  const tc = useTranslations('common');
   const [tab, setTab] = usePersistedState<'parc' | 'tasks' | 'catalog'>('tab', 'parc', {
     validate: (value) => (value === 'parc' || value === 'tasks' || value === 'catalog' ? value : undefined),
   });
@@ -74,8 +79,13 @@ export default function ModelAuditPage() {
     try {
       const result = await apiPost<AuditRunResult>('/model-audit/run');
       message.success(
-        `${result.workflows} workflow(s) audité(s), ${result.findings} remarque(s)` +
-          (result.catalogStale ? ` — catalogue périmé (${result.catalogAgeDays} j)` : ''),
+        result.catalogStale
+          ? t('auditedStale', {
+              workflows: result.workflows,
+              findings: result.findings,
+              days: result.catalogAgeDays ?? '?',
+            })
+          : t('audited', { workflows: result.workflows, findings: result.findings }),
       );
       load();
     } catch (error) {
@@ -87,16 +97,16 @@ export default function ModelAuditPage() {
 
   const refreshCatalog = () => {
     Modal.confirm({
-      title: 'Rafraîchir le catalogue des modèles ?',
-      content: 'Crée des propositions à relire.',
-      okText: 'Rafraîchir',
-      cancelText: 'Annuler',
+      title: t('refreshConfirm.title'),
+      content: t('refreshConfirm.content'),
+      okText: tc('refresh'),
+      cancelText: tc('cancel'),
       onOk: async () => {
         try {
           const results =
             await apiPost<Array<{ source: string; proposed: number }>>('/model-catalog/refresh');
           const total = results.reduce((sum, result) => sum + result.proposed, 0);
-          message.success(total > 0 ? `${total} proposition(s) à relire.` : 'Rien à changer.');
+          message.success(total > 0 ? t('proposalsToReview', { count: total }) : t('nothingToChange'));
           load();
         } catch (error) {
           message.error((error as Error).message);
@@ -108,7 +118,7 @@ export default function ModelAuditPage() {
   const decide = async (ids: string[], action: 'apply' | 'reject') => {
     try {
       await apiPost(`/model-catalog/proposals/${action}`, { ids });
-      message.success(action === 'apply' ? 'Catalogue mis à jour.' : 'Propositions écartées.');
+      message.success(action === 'apply' ? t('catalogUpdated') : t('proposalsRejected'));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -119,7 +129,7 @@ export default function ModelAuditPage() {
 
   return (
     <Card
-      title="Audit des modèles IA"
+      title={t('title')}
       loading={loading && !summary}
       extra={
         <Space wrap>
@@ -127,16 +137,21 @@ export default function ModelAuditPage() {
             value={tab}
             onChange={(value) => setTab(value as typeof tab)}
             options={[
-              { label: 'Parc', value: 'parc' },
-              { label: 'Tâches', value: 'tasks' },
-              { label: `Catalogue${proposals.length ? ` (${proposals.length})` : ''}`, value: 'catalog' },
+              { label: t('tabs.parc'), value: 'parc' },
+              { label: t('tabs.tasks'), value: 'tasks' },
+              {
+                label: proposals.length
+                  ? t('tabs.catalogCount', { count: proposals.length })
+                  : t('tabs.catalog'),
+                value: 'catalog',
+              },
             ]}
           />
           <Button icon={<SyncOutlined />} loading={running} onClick={runAudit}>
-            Auditer le parc
+            {t('runAudit')}
           </Button>
           <Button icon={<ReloadOutlined />} onClick={refreshCatalog}>
-            Rafraîchir le catalogue
+            {t('refreshCatalog')}
           </Button>
         </Space>
       }
@@ -146,7 +161,7 @@ export default function ModelAuditPage() {
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message={`Catalogue périmé (${freshness.ageDays} j) : obsolescence et économies en pause.`}
+          message={t('staleCatalog', { days: freshness.ageDays ?? '?' })}
         />
       )}
 
@@ -158,41 +173,45 @@ export default function ModelAuditPage() {
 }
 
 function ParcTable({ rows }: { rows: ModelParcRow[] }) {
+  const t = useTranslations('health.modelAudit.parc');
+  const tt = useTranslations('health.modelAudit');
   if (rows.length === 0) {
-    return <Empty description="Aucun nœud LLM dans le parc synchronisé." />;
+    return <Empty description={t('empty')} />;
   }
   return (
     <Table<ModelParcRow> dataSource={rows} rowKey="model" size="small" pagination={false}>
       <Table.Column<ModelParcRow>
-        title="Modèle"
+        title={t('model')}
         dataIndex="model"
         render={(model: string, row) => (
           <Space direction="vertical" size={0}>
             <Typography.Text strong>{model}</Typography.Text>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {[row.provider, row.tier && (TIER_LABELS[row.tier] ?? row.tier)].filter(Boolean).join(' · ')}
+              {[row.provider, row.tier && (isTier(row.tier) ? tt(`tiers.${row.tier}`) : row.tier)]
+                .filter(Boolean)
+                .join(' · ')}
             </Typography.Text>
           </Space>
         )}
       />
       <Table.Column<ModelParcRow>
-        title="État"
+        title={t('status')}
         dataIndex="status"
         render={(status: string | null, row) => {
           if (!row.known) {
             return (
-              <Tooltip title="Absent du catalogue">
-                <Tag>inconnu</Tag>
+              <Tooltip title={t('unknownTooltip')}>
+                <Tag>{t('unknown')}</Tag>
               </Tooltip>
             );
           }
-          const tag = status ? STATUS_TAG[status] : undefined;
+          const known = status && isKnownStatus(status) ? status : undefined;
           return (
             <Space direction="vertical" size={0}>
-              {tag && <Tag color={tag.color}>{tag.label}</Tag>}
+              {known && <Tag color={STATUS_TAG[known].color}>{tt(`statuses.${known}`)}</Tag>}
               {row.retiresAt && (
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  retrait le {row.retiresAt.slice(0, 10)}
+                  {t('retiresAt', { date: row.retiresAt.slice(0, 10) })}
                 </Typography.Text>
               )}
               {row.replacedByPattern && (
@@ -205,18 +224,15 @@ function ParcTable({ rows }: { rows: ModelParcRow[] }) {
         }}
       />
       <Table.Column<ModelParcRow>
-        title="Parc"
+        title={t('parc')}
         render={(_, row) => (
           <Tooltip title={row.workflowNames.slice(0, 12).join(', ')}>
-            <span>
-              {row.workflows} workflow{row.workflows > 1 ? 's' : ''} · {row.nodes} nœud
-              {row.nodes > 1 ? 's' : ''}
-            </span>
+            <span>{t('usage', { workflows: row.workflows, nodes: row.nodes })}</span>
           </Tooltip>
         )}
       />
       <Table.Column<ModelParcRow>
-        title="Tâches classées"
+        title={t('tasks')}
         dataIndex="tasks"
         render={(tasks: Record<string, number>) => {
           const entries = Object.entries(tasks);
@@ -226,25 +242,23 @@ function ParcTable({ rows }: { rows: ModelParcRow[] }) {
           return (
             <Space size={4} wrap>
               {entries.map(([task, count]) => (
-                <Tag key={task}>
-                  {task} · {count} nœud{count > 1 ? 's' : ''}
-                </Tag>
+                <Tag key={task}>{t('taskNodes', { task, count })}</Tag>
               ))}
             </Space>
           );
         }}
       />
       <Table.Column<ModelParcRow>
-        title="Coût 30 j"
+        title={t('cost30d')}
         dataIndex="costUsd30d"
         align="right"
         render={(cost: number, row) =>
           row.calls30d === 0 ? (
-            <Tooltip title="Aucun appel sur 30 j">
-              <Typography.Text type="secondary">non mesuré</Typography.Text>
+            <Tooltip title={t('noCalls')}>
+              <Typography.Text type="secondary">{t('notMeasured')}</Typography.Text>
             </Tooltip>
           ) : (
-            <span>{cost.toFixed(2)} $</span>
+            <span>{t('usd', { cost: cost.toFixed(2) })}</span>
           )
         }
       />
@@ -257,10 +271,11 @@ function ParcTable({ rows }: { rows: ModelParcRow[] }) {
  * plutôt que dans le prompt d'un modèle.
  */
 function TaskProfiles({ profiles, onSaved }: { profiles: TaskProfile[]; onSaved: () => void }) {
+  const t = useTranslations('health.modelAudit');
   const save = async (task: string, minTier: string) => {
     try {
       await apiPut(`/model-catalog/task-profiles/${task}`, { minTier });
-      message.success('Plancher enregistré.');
+      message.success(t('taskProfiles.saved'));
       onSaved();
     } catch (error) {
       message.error((error as Error).message);
@@ -270,9 +285,9 @@ function TaskProfiles({ profiles, onSaved }: { profiles: TaskProfile[]; onSaved:
   return (
     <>
       <Table<TaskProfile> dataSource={profiles} rowKey="task" size="small" pagination={false}>
-        <Table.Column<TaskProfile> title="Tâche" dataIndex="label" />
+        <Table.Column<TaskProfile> title={t('taskProfiles.task')} dataIndex="label" />
         <Table.Column<TaskProfile>
-          title="Niveau minimal"
+          title={t('taskProfiles.minTier')}
           dataIndex="minTier"
           render={(minTier: string, row) => (
             <Select
@@ -280,7 +295,7 @@ function TaskProfiles({ profiles, onSaved }: { profiles: TaskProfile[]; onSaved:
               style={{ width: 180 }}
               value={minTier}
               onChange={(value) => save(row.task, value)}
-              options={Object.entries(TIER_LABELS).map(([value, label]) => ({ value, label }))}
+              options={TIERS.map((value) => ({ value, label: t(`tiers.${value}`) }))}
             />
           )}
         />
@@ -297,8 +312,9 @@ function Proposals({
   onDecide: (ids: string[], action: 'apply' | 'reject') => void;
 }) {
   const [selected, setSelected] = useState<React.Key[]>([]);
+  const t = useTranslations('health.modelAudit.proposals');
   if (rows.length === 0) {
-    return <Empty description="Aucune proposition." />;
+    return <Empty description={t('empty')} />;
   }
   return (
     <>
@@ -308,10 +324,10 @@ function Proposals({
           disabled={selected.length === 0}
           onClick={() => onDecide(selected as string[], 'apply')}
         >
-          Appliquer ({selected.length})
+          {t('apply', { count: selected.length })}
         </Button>
         <Button disabled={selected.length === 0} onClick={() => onDecide(selected as string[], 'reject')}>
-          Écarter
+          {t('reject')}
         </Button>
       </Space>
       <Table<CatalogProposal>
@@ -321,15 +337,15 @@ function Proposals({
         pagination={false}
         rowSelection={{ selectedRowKeys: selected, onChange: setSelected }}
       >
-        <Table.Column<CatalogProposal> title="Modèle" dataIndex="pattern" />
-        <Table.Column<CatalogProposal> title="Champ" dataIndex="field" />
+        <Table.Column<CatalogProposal> title={t('model')} dataIndex="pattern" />
+        <Table.Column<CatalogProposal> title={t('field')} dataIndex="field" />
         <Table.Column<CatalogProposal>
-          title="Actuel"
+          title={t('current')}
           dataIndex="currentValue"
           render={(value: unknown) => <code>{String(value ?? '—')}</code>}
         />
         <Table.Column<CatalogProposal>
-          title="Proposé"
+          title={t('proposed')}
           dataIndex="proposedValue"
           render={(value: unknown) => (
             <Typography.Text strong>
@@ -338,7 +354,7 @@ function Proposals({
           )}
         />
         <Table.Column<CatalogProposal>
-          title="Origine"
+          title={t('origin')}
           dataIndex="origin"
           render={(origin: string, row) => (
             <Tooltip title={row.evidence ?? ''}>

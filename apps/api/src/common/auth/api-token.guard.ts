@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { msg } from '@nwm/core';
 import { PUBLIC_ROUTE_KEY } from './public-route.decorator';
 
 /**
@@ -35,7 +36,7 @@ export class ApiTokenGuard implements CanActivate {
     const provided = request.headers['x-api-token'];
     if (typeof provided === 'string' && equals(provided, expected)) return true;
 
-    throw new UnauthorizedException("Jeton d'accès API manquant ou invalide");
+    throw new UnauthorizedException(msg('common.apiTokenInvalid'));
   }
 }
 

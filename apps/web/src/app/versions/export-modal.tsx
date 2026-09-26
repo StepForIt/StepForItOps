@@ -3,7 +3,9 @@
 import React from 'react';
 import { Alert, Descriptions, List, Modal, Skeleton, Space, Tag, Typography } from 'antd';
 import { GithubOutlined, CloudOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
+import { BRAND } from '../../lib/brand/colors';
 
 interface ExportPreview {
   versionId: string;
@@ -22,11 +24,13 @@ interface ExportPreview {
   }>;
 }
 
-const fr = (iso: string) => new Date(iso).toLocaleString('fr-FR');
-const kb = (bytes: number) => `${(bytes / 1024).toFixed(1)} Ko`;
+const kb = (bytes: number) => (bytes / 1024).toFixed(1);
 
 /** Explique où part le JSON de la version avant de confirmer l'export. */
 export function ExportModal({ versionId, onClose }: { versionId: string | null; onClose: () => void }) {
+  const t = useTranslations('inventory.versions.export');
+  const locale = useLocale();
+  const fr = (iso: string) => new Date(iso).toLocaleString(locale);
   const [preview, setPreview] = React.useState<ExportPreview | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [running, setRunning] = React.useState(false);
@@ -63,12 +67,12 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
 
   return (
     <Modal
-      title="Exporter cette version"
+      title={t('title')}
       open={versionId !== null}
       onCancel={onClose}
       width={640}
-      okText={result ? 'Fermer' : 'Exporter'}
-      cancelText="Annuler"
+      okText={result ? t('close') : t('ok')}
+      cancelText={t('cancel')}
       okButtonProps={{
         loading: running,
         disabled: loading || (!result && (!preview || noTarget)),
@@ -81,19 +85,21 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
       {preview && !result && (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Descriptions size="small" column={1} bordered>
-            <Descriptions.Item label="Workflow">
+            <Descriptions.Item label={t('workflow')}>
               {preview.workflowName}{' '}
               <Typography.Text type="secondary">({preview.instanceName})</Typography.Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Version">
+            <Descriptions.Item label={t('version')}>
               <code>{preview.hash.slice(0, 10)}</code>
             </Descriptions.Item>
-            <Descriptions.Item label="Fichier écrit">
+            <Descriptions.Item label={t('file')}>
               <code>{preview.fileName}</code>{' '}
-              <Typography.Text type="secondary">({kb(preview.sizeBytes)})</Typography.Text>
+              <Typography.Text type="secondary">
+                ({t('size', { size: kb(preview.sizeBytes) })})
+              </Typography.Text>
             </Descriptions.Item>
             {preview.alreadyExported && (
-              <Descriptions.Item label="Déjà exportée">
+              <Descriptions.Item label={t('alreadyExported')}>
                 <Tag color="green">
                   {fr(preview.alreadyExported.at)} → {preview.alreadyExported.to.join(', ')}
                 </Tag>
@@ -102,15 +108,10 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
           </Descriptions>
 
           {noTarget ? (
-            <Alert
-              type="warning"
-              showIcon
-              message="Aucune cible d'export active"
-              description="Configure une cible GitHub ou Google Drive dans « Cibles export » avant d'exporter."
-            />
+            <Alert type="warning" showIcon message={t('noTarget')} description={t('noTargetDescription')} />
           ) : (
             <>
-              <Typography.Text strong>Cibles qui vont recevoir le fichier</Typography.Text>
+              <Typography.Text strong>{t('targetsTitle')}</Typography.Text>
               <List
                 size="small"
                 bordered
@@ -119,7 +120,7 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
                   <List.Item>
                     <List.Item.Meta
                       avatar={
-                        <span style={{ fontSize: 18, color: '#1677ff' }}>
+                        <span style={{ fontSize: 18, color: BRAND.primary }}>
                           {target.kind === 'github' ? <GithubOutlined /> : <CloudOutlined />}
                         </span>
                       }
@@ -130,8 +131,10 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
                           {target.movedFrom && (
                             <>
                               <br />
-                              Déplacé depuis <code>{target.movedFrom}</code> (l&apos;ancien fichier est
-                              supprimé)
+                              {t.rich('movedFrom', {
+                                from: target.movedFrom,
+                                code: (chunks) => <code>{chunks}</code>,
+                              })}
                             </>
                           )}
                         </Typography.Text>
@@ -141,7 +144,7 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
                 )}
               />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Sans credentials
+                {t('noCredentials')}
               </Typography.Text>
             </>
           )}
@@ -152,19 +155,13 @@ export function ExportModal({ versionId, onClose }: { versionId: string | null; 
         <Alert
           type={result.length ? 'success' : 'warning'}
           showIcon
-          message={
-            result.length ? `Exporté vers : ${result.join(', ')}` : 'Aucune cible n’a accepté l’export'
-          }
-          description={
-            result.length
-              ? undefined
-              : 'Vérifie les identifiants et les droits des cibles dans « Cibles export ».'
-          }
+          message={result.length ? t('exportedTo', { list: result.join(', ') }) : t('noneAccepted')}
+          description={result.length ? undefined : t('checkTargets')}
         />
       )}
 
       {error && (
-        <Alert style={{ marginTop: 12 }} type="error" showIcon message="Export échoué" description={error} />
+        <Alert style={{ marginTop: 12 }} type="error" showIcon message={t('failed')} description={error} />
       )}
     </Modal>
   );

@@ -9,6 +9,7 @@ import {
   envIds,
   findPathConflicts,
   withDeclaredEntryPath,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowSyncService } from '../workflows/workflow-sync.service';
@@ -68,14 +69,12 @@ export class WebhookPathFixService {
    * ne doit pas écrire un path calculé sur un état qui n'existe plus.
    */
   async apply(instanceId: string, workflowIds: string[]): Promise<{ results: AppliedPathFix[] }> {
-    if (workflowIds.length === 0) throw new BadRequestException('Aucun workflow à corriger.');
+    if (workflowIds.length === 0) throw new BadRequestException(msg('env.pathFixNone'));
     const { fixes } = await this.plan(instanceId);
     const retained = fixes.filter((fix) => workflowIds.includes(fix.workflowId));
     const unknown = workflowIds.filter((id) => !retained.some((fix) => fix.workflowId === id));
     if (unknown.length > 0) {
-      throw new BadRequestException(
-        `${unknown.length} workflow(s) ne sont plus dans le plan (état changé dans n8n ?) : relis le plan avant d'appliquer.`,
-      );
+      throw new BadRequestException(msg('env.pathFixStale', { count: unknown.length }));
     }
 
     await this.locks.assertWritable(retained.map((fix) => fix.workflowId));
@@ -97,10 +96,10 @@ export class WebhookPathFixService {
         const fresh = await this.n8n.getWorkflow(config, local.externalId);
         await this.sync.upsertWorkflow(instanceId, fresh);
         results.push({ ...fix, applied: true });
-        this.logger.log(`« ${fix.workflowName} » : path /${fix.from} → /${fix.to}`);
+        this.logger.log(`"${fix.workflowName}": path /${fix.from} → /${fix.to}`);
       } catch (error) {
         results.push({ ...fix, applied: false, error: (error as Error).message });
-        this.logger.warn(`Path KO sur « ${fix.workflowName} » : ${(error as Error).message}`);
+        this.logger.warn(`Path change failed on "${fix.workflowName}": ${(error as Error).message}`);
       }
     }
     return { results };

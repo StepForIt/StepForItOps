@@ -190,12 +190,12 @@ export class DraftRepairService {
         // rédigé une correction, on ne sait pas la lire. On rend le brouillon
         // refusé plutôt que rien — la revue dira ce qui bloque.
         if (turn.malformed) {
-          this.logger.warn(`Correction illisible (workflow ${input.workflowId})`);
+          this.logger.warn(`Unreadable repair (workflow ${input.workflowId})`);
           return { draft, outcome: 'gave-up', attempts: attempt + 1, reply, trace, thinking };
         }
         // Le modèle renonce, comme on le lui demande quand il ne sait pas
         // corriger. Insister produirait la même proposition refusée.
-        this.logger.log(`Correction abandonnée par le modèle (workflow ${input.workflowId})`);
+        this.logger.log(`Repair abandoned by the model (workflow ${input.workflowId})`);
         return { draft: null, outcome: 'abandoned', attempts: attempt + 1, reply, trace, thinking };
       }
       draft = turn.proposal;
@@ -240,10 +240,10 @@ export class DraftRepairService {
     if (rejected.length > 0) {
       return {
         text:
-          `STOP — ta proposition vise des workflows auxquels elle ne peut pas s'appliquer :\n` +
-          rejected.map((entry) => `- « ${entry.workflow} » : ${entry.reason}`).join('\n') +
-          `\n\nCorrige \`proposal.targets\` (le nom doit être EXACTEMENT celui du périmètre), ou ` +
-          `retire ces cibles et dis en une ligne ce qui n'a pas pu être fait.`,
+          `STOP — your proposal targets workflows it cannot apply to:\n` +
+          rejected.map((entry) => `- "${entry.workflow}": ${entry.reason}`).join('\n') +
+          `\n\nFix \`proposal.targets\` (the name must be EXACTLY the one in the scope), or ` +
+          `remove these targets and say in one line what could not be done.`,
         // Un nom de cible erroné ne dit rien de la façon d'écrire un nœud : il n'y
         // a pas de règle à en tirer, seulement un périmètre à relire.
         findings: [],
@@ -260,19 +260,19 @@ export class DraftRepairService {
         // Le nom du workflow en tête : à plusieurs cibles, une plainte anonyme
         // envoie le modèle corriger celle qu'il a sous les yeux.
         return {
-          text: `Workflow concerné : « ${verdict.workflowName} ».\n\n${request}`,
+          text: `Workflow concerned: "${verdict.workflowName}".\n\n${request}`,
           findings: findingsToLearn(verdict.gate, verdict.candidate),
         };
       }
       return null;
     } catch (error) {
-      const detail = (error as Error).message ?? 'erreur inconnue';
-      this.logger.warn(`Brouillon non applicable (workflow ${workflowId}) : ${detail}`);
+      const detail = (error as Error).message ?? 'unknown error';
+      this.logger.warn(`Draft cannot be applied (workflow ${workflowId}): ${detail}`);
       return {
         text:
-          `STOP — tes opérations ne sont même pas applicables au workflow : ${detail}\n\n` +
-          `Relis les nœuds concernés (\`read_node\`), corrige, et renvoie les opérations COMPLÈTES ` +
-          `dans \`proposal\`. Si tu ne sais pas corriger, renvoie \`proposal: null\` et dis ce qui manque.`,
+          `STOP — your operations cannot even be applied to the workflow: ${detail}\n\n` +
+          `Read the nodes involved again (\`read_node\`), fix them, and send back the COMPLETE operations ` +
+          `in \`proposal\`. If you cannot fix it, return \`proposal: null\` and say what is missing.`,
         // Une opération inapplicable n'a pas de finding : la porte n'a pas eu lieu.
         // Rien à apprendre ici, l'erreur est dans la forme des opérations elles-mêmes.
         findings: [],

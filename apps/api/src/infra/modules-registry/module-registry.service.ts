@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { EVENTS, ModuleManifest } from '@nwm/core';
+import { EVENTS, ModuleManifest, msg } from '@nwm/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../events/event-bus.service';
 
@@ -43,7 +43,7 @@ export class ModuleRegistryService implements OnModuleInit {
     // Refus, et non panne : un `Error` nu ressortait en 500, donc journalisé
     // comme une faute du serveur alors que c'est la demande qui n'a pas de sens.
     if (manifest?.core) {
-      throw new BadRequestException(`Le module core "${moduleId}" n'est pas désactivable`);
+      throw new BadRequestException(msg('ops.moduleNotDisableable', { id: moduleId }));
     }
     await this.prisma.moduleState.upsert({
       where: { id: moduleId },
@@ -52,6 +52,6 @@ export class ModuleRegistryService implements OnModuleInit {
     });
     this.enabledCache.set(moduleId, enabled);
     this.eventBus.emit(enabled ? EVENTS.moduleEnabled : EVENTS.moduleDisabled, { moduleId, enabled });
-    this.logger.log(`Module ${moduleId} → ${enabled ? 'activé' : 'désactivé'}`);
+    this.logger.log(`Module ${moduleId} → ${enabled ? 'enabled' : 'disabled'}`);
   }
 }

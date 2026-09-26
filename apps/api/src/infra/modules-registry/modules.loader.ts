@@ -13,11 +13,11 @@ export async function loadFeatureModules(): Promise<Type[]> {
     try {
       const imported: Record<string, Type> = await import(entry.path);
       const moduleClass = imported[entry.className];
-      if (!moduleClass) throw new Error(`classe ${entry.className} absente`);
+      if (!moduleClass) throw new Error(`class ${entry.className} missing`);
       loaded.push(moduleClass);
-      logger.log(`Module chargé : ${entry.id}`);
+      logger.log(`Module loaded: ${entry.id}`);
     } catch (error) {
-      logger.warn(`Module "${entry.id}" non chargé (${(error as Error).message}) — ignoré`);
+      logger.warn(`Module "${entry.id}" not loaded (${(error as Error).message}) — skipped`);
     }
   }
   return loaded;

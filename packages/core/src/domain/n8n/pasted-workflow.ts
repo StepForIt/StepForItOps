@@ -106,7 +106,7 @@ export function findPastedWorkflows(text: string): PastedWorkflow[] {
         (edge) =>
           `${edge.from} → ${edge.to}` +
           (edge.outputType !== 'main' ? ` [${edge.outputType}]` : '') +
-          (edge.outputIndex > 0 ? ` (sortie ${edge.outputIndex})` : ''),
+          (edge.outputIndex > 0 ? ` (output ${edge.outputIndex})` : ''),
       ),
       hasPinData: Boolean(workflow.pinData && Object.keys(workflow.pinData).length > 0),
     });
@@ -122,31 +122,31 @@ export function findPastedWorkflows(text: string): PastedWorkflow[] {
 export function pastedWorkflowBrief(pasted: PastedWorkflow[]): string {
   if (pasted.length === 0) return '';
   const lines = pasted.flatMap((fragment, index) => {
-    const title = pasted.length > 1 ? `Fragment ${index + 1} :` : 'Fragment collé :';
+    const title = pasted.length > 1 ? `Fragment ${index + 1}:` : 'Pasted fragment:';
     return [
       title,
       ...fragment.nodes.map(
-        (node) => `- « ${node.name} » (${node.type}${node.typeVersion ? ` v${node.typeVersion}` : ''})`,
+        (node) => `- "${node.name}" (${node.type}${node.typeVersion ? ` v${node.typeVersion}` : ''})`,
       ),
-      ...(fragment.edges.length ? [`- câblage : ${fragment.edges.join(' ; ')}`] : []),
-      ...(fragment.hasPinData ? ['- porte des données épinglées (extrait d’une exécution réelle)'] : []),
+      ...(fragment.edges.length ? [`- wiring: ${fragment.edges.join('; ')}`] : []),
+      ...(fragment.hasPinData ? ['- carries pinned data (excerpt from a real execution)'] : []),
     ];
   });
   return [
-    'L’utilisateur a COLLÉ du JSON n8n dans son message. C’est la base de départ qu’il a choisie,',
-    'pas une illustration : il sait ce qu’il veut, il te donne le point de départ exact.',
+    'The user PASTED n8n JSON into their message. It is the starting point they chose,',
+    'not an illustration: they know what they want, they are giving you the exact starting point.',
     ...lines,
     '',
-    'Ce que ça implique :',
-    '- Pars de ce JSON tel qu’il est écrit. Reprends les paramètres, les prompts et le câblage',
-    '  VERBATIM ; tu n’as pas à les réécrire « en mieux », ni à les résumer.',
-    '- Tout nœud du fragment se retrouve dans ta proposition. Un IF, un Switch, une boucle collés',
-    '  se reproduisent avec leurs sorties : en perdre un, c’est perdre l’intention.',
-    '- Tu ADAPTES seulement ce que ce workflow-ci impose : noms de nœuds référencés par les',
-    '  expressions, credentials de l’instance (list_credentials), ids et urls d’ici, typeVersion',
-    '  servie par l’instance. Dis en une ligne ce que tu as adapté, et pourquoi.',
-    '- Ce que tu voudrais changer d’autre se PROPOSE à côté, en une ligne, jamais en le faisant',
-    '  d’office dans le diff.',
-    '- Les données épinglées ne se recopient pas : elles servent à comprendre la forme attendue.',
+    'What this implies:',
+    '- Start from this JSON as written. Keep the parameters, prompts and wiring',
+    '  VERBATIM; you do not have to rewrite them "better", nor summarize them.',
+    '- Every node of the fragment ends up in your proposal. A pasted IF, Switch or loop',
+    '  is reproduced with its outputs: losing one means losing the intent.',
+    '- You only ADAPT what this workflow requires: node names referenced by',
+    '  expressions, the instance credentials (list_credentials), local ids and urls, the typeVersion',
+    '  served by the instance. Say in one line what you adapted, and why.',
+    '- Anything else you would like to change is PROPOSED alongside, in one line, never by doing',
+    '  it unasked in the diff.',
+    '- Pinned data is not copied: it is there to understand the expected shape.',
   ].join('\n');
 }

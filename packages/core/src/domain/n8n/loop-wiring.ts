@@ -15,6 +15,7 @@
 
 import { N8nWorkflow } from './workflow.types';
 import { WorkflowGraph } from './workflow-graph';
+import { msg } from '../../i18n/translate';
 
 export interface LoopWiringFinding {
   severity: 'info' | 'warning' | 'error';
@@ -56,11 +57,10 @@ export function runLoopWiringChecks(workflow: N8nWorkflow): LoopWiringFinding[] 
       findings.push({
         severity: 'error',
         code: 'loop-body-on-done',
-        message: `"${node.name}" n'a rien sur sa sortie « loop » : le corps de boucle est branché sur « done »`,
+        message: msg('checks.loopBodyOnDone', { node: node.name }),
         nodeName: node.name,
         data: {
-          suggestion:
-            "Branche le corps de la boucle sur la sortie « loop » (index 1) ; « done » (index 0) ne sert qu'à ce qui vient APRÈS la boucle.",
+          suggestion: msg('checks.loopBodyOnDoneFix'),
         },
       });
       continue; // Sans branche « loop », parler du retour manquant serait redondant.
@@ -72,10 +72,10 @@ export function runLoopWiringChecks(workflow: N8nWorkflow): LoopWiringFinding[] 
       findings.push({
         severity: 'error',
         code: 'loop-not-closed',
-        message: `La branche « loop » de "${node.name}" ne revient pas sur le nœud : un seul lot sera traité`,
+        message: msg('checks.loopNotClosed', { node: node.name }),
         nodeName: node.name,
         data: {
-          suggestion: `Relie le dernier nœud du corps de boucle à l'entrée de "${node.name}" : c'est ce retour qui demande le lot suivant.`,
+          suggestion: msg('checks.loopNotClosedFix', { node: node.name }),
         },
       });
     }

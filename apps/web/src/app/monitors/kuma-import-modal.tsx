@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, Tag, message } from 'antd';
 import { Table } from '../../components/resizable-table';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 
 interface ImportableProbe {
@@ -34,6 +35,8 @@ export function KumaImportModal({
   onImported: () => void;
 }) {
   const [probes, setProbes] = useState<ImportableProbe[]>([]);
+  const t = useTranslations('health.monitors.import');
+  const tc = useTranslations('common');
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -55,8 +58,9 @@ export function KumaImportModal({
         externalIds: selected,
       });
       message.success(
-        `${result.imported.length} sonde(s) importée(s)` +
-          (result.skipped.length ? `, ${result.skipped.length} ignorée(s)` : ''),
+        result.skipped.length
+          ? t('importedWithSkipped', { count: result.imported.length, skipped: result.skipped.length })
+          : t('imported', { count: result.imported.length }),
       );
       onImported();
       onClose();
@@ -71,11 +75,11 @@ export function KumaImportModal({
 
   return (
     <Modal
-      title="Importer les monitors Uptime Kuma existants"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       onOk={doImport}
-      okText={`Importer (${selected.length})`}
+      okText={t('ok', { count: selected.length })}
       okButtonProps={{ disabled: selected.length === 0 }}
       confirmLoading={importing}
       width={900}
@@ -84,8 +88,8 @@ export function KumaImportModal({
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="push → monitor heartbeat ; http/keyword/ping → monitor actif (check assuré par Kuma)."
-        description="Quand l'URL de la sonde pointe vers un webhook n8n connu, le monitor est rattaché automatiquement au workflow (colonne Workflow). Les monitors actifs importés sont désactivés localement pour ne pas doubler les checks de Kuma."
+        message={t('info')}
+        description={t('infoDetail')}
       />
       <Table<ImportableProbe>
         rowKey="externalId"
@@ -100,44 +104,44 @@ export function KumaImportModal({
           getCheckboxProps: (probe) => ({ disabled: !probe.importable }),
         }}
         columns={[
-          { dataIndex: 'name', title: 'Nom' },
+          { dataIndex: 'name', title: tc('columns.name') },
           {
             dataIndex: 'type',
-            title: 'Type',
+            title: tc('columns.type'),
             width: 90,
-            render: (t: string) => <Tag color={t === 'push' ? 'green' : undefined}>{t}</Tag>,
+            render: (type: string) => <Tag color={type === 'push' ? 'green' : undefined}>{type}</Tag>,
           },
           {
             dataIndex: 'active',
-            title: 'Actif',
+            title: t('active'),
             width: 80,
-            render: (a: boolean) => (a ? <Tag color="green">oui</Tag> : <Tag>non</Tag>),
+            render: (a: boolean) => (a ? <Tag color="green">{t('yes')}</Tag> : <Tag>{t('no')}</Tag>),
           },
           {
-            title: 'Workflow',
+            key: 'workflow',
+            title: tc('columns.workflow'),
             width: 200,
             ellipsis: true,
             render: (_, probe) =>
-              probe.matchedWorkflow ? <Tag color="geekblue">{probe.matchedWorkflow.name}</Tag> : '—',
+              probe.matchedWorkflow ? <Tag color="blue">{probe.matchedWorkflow.name}</Tag> : '—',
           },
           {
-            title: 'État',
+            key: 'state',
+            title: t('state'),
             width: 140,
             render: (_, probe) =>
               probe.linkedMonitorId ? (
-                <Tag color="blue">déjà rattachée</Tag>
+                <Tag color="blue">{t('linked')}</Tag>
               ) : probe.importable ? (
-                <Tag color="gold">importable</Tag>
+                <Tag color="gold">{t('importable')}</Tag>
               ) : (
-                <Tag>non importable</Tag>
+                <Tag>{t('notImportable')}</Tag>
               ),
           },
         ]}
       />
       {!loading && importableCount === 0 && probes.length > 0 && (
-        <p style={{ marginTop: 12, color: '#888' }}>
-          Aucune sonde importable : tout est déjà rattaché (ou de type groupe).
-        </p>
+        <p style={{ marginTop: 12, color: '#888' }}>{t('noneImportable')}</p>
       )}
     </Modal>
   );

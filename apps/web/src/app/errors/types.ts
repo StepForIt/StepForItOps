@@ -23,14 +23,14 @@ export type ErrorGroupStatus = 'open' | 'resolved' | 'ignored';
 
 export type ErrorCategory = 'auth' | 'rate-limit' | 'timeout' | 'network' | 'data' | 'other';
 
-/** Libellé + couleur antd de chaque catégorie, pour les tags et le filtre. */
-export const CATEGORY_META: Record<ErrorCategory, { label: string; color: string }> = {
-  auth: { label: 'Authentification', color: 'purple' },
-  'rate-limit': { label: 'Rate limit', color: 'gold' },
-  timeout: { label: 'Timeout', color: 'orange' },
-  network: { label: 'Réseau', color: 'cyan' },
-  data: { label: 'Données', color: 'magenta' },
-  other: { label: 'Autre', color: 'default' },
+/** Couleur antd de chaque catégorie, pour les tags et le filtre (libellé : `health.errors.category.<code>`). */
+export const CATEGORY_META: Record<ErrorCategory, { color: string }> = {
+  auth: { color: 'purple' },
+  'rate-limit': { color: 'gold' },
+  timeout: { color: 'orange' },
+  network: { color: 'cyan' },
+  data: { color: 'magenta' },
+  other: { color: 'default' },
 };
 
 /** Un problème : toutes les occurrences d'une même erreur, sur un même workflow. */

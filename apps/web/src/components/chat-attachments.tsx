@@ -3,7 +3,9 @@
 import React from 'react';
 import { Image, Space, Tag, Tooltip, Typography, message as toast } from 'antd';
 import { CloseCircleFilled, FileTextOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { API_URL } from '../lib/api';
+import { BRAND } from '../lib/brand/colors';
 
 /**
  * Pièces jointes du chat : captures d'écran ET fichiers texte (JSON exporté,
@@ -71,20 +73,22 @@ export interface MessageAttachment {
   size: number;
 }
 
-function readDataUrl(file: File): Promise<string> {
+type AttachmentsT = ReturnType<typeof useTranslations<'chat.attachments'>>;
+
+function readDataUrl(file: File, failure: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error(`Lecture de ${file.name} impossible`));
+    reader.onerror = () => reject(new Error(failure));
     reader.readAsDataURL(file);
   });
 }
 
-function readText(file: File): Promise<string> {
+function readText(file: File, failure: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error(`Lecture de ${file.name} impossible`));
+    reader.onerror = () => reject(new Error(failure));
     reader.readAsText(file);
   });
 }
@@ -98,10 +102,10 @@ function isTextFile(file: File): boolean {
   return FILE_EXTENSIONS.includes(extensionOf(file.name)) || file.type.startsWith('text/');
 }
 
-export function formatSize(size: number): string {
-  if (size < 1024) return `${size} o`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} ko`;
-  return `${(size / (1024 * 1024)).toFixed(1)} Mo`;
+export function formatSize(size: number, t: AttachmentsT): string {
+  if (size < 1024) return t('size.bytes', { size: String(size) });
+  if (size < 1024 * 1024) return t('size.kilobytes', { size: String(Math.round(size / 1024)) });
+  return t('size.megabytes', { size: (size / (1024 * 1024)).toFixed(1) });
 }
 
 /**
@@ -110,81 +114,100 @@ export function formatSize(size: number): string {
  * de l'IA, qui parle alors d'une capture qu'elle n'a jamais reçue.
  */
 export function useChatAttachments() {
+  const t = useTranslations('chat.attachments');
   const [images, setImages] = React.useState<PendingImage[]>([]);
   const [files, setFiles] = React.useState<PendingFile[]>([]);
 
-  const addImage = React.useCallback(async (file: File): Promise<boolean> => {
-    if (!ACCEPTED_IMAGES.includes(file.type)) {
-      toast.error(`${file.name} : format d'image non supporté (PNG, JPEG, WebP ou GIF).`);
-      return true;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast.error(`${file.name} : ${(file.size / 1024 / 1024).toFixed(1)} Mo, maximum 5 Mo.`);
-      return true;
-    }
-    let dataUrl: string;
-    try {
-      dataUrl = await readDataUrl(file);
-    } catch (error) {
-      toast.error((error as Error).message);
-      return true;
-    }
-    let overflow = false;
-    setImages((previous) => {
-      if (previous.length >= MAX_IMAGES) {
-        overflow = true;
-        return previous;
+  const addImage = React.useCallback(
+    async (file: File): Promise<boolean> => {
+      if (!ACCEPTED_IMAGES.includes(file.type)) {
+        toast.error(t('errors.imageFormat', { name: file.name }));
+        return true;
       }
-      return [
-        ...previous,
-        { key: `${file.name}-${previous.length}-${Date.now()}`, name: file.name || 'capture', dataUrl },
-      ];
-    });
-    if (overflow) toast.warning(`${MAX_IMAGES} images au maximum par message.`);
-    return !overflow;
-  }, []);
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error(
+          t('errors.imageTooLarge', { name: file.name, size: (file.size / 1024 / 1024).toFixed(1) }),
+        );
+        return true;
+      }
+      let dataUrl: string;
+      try {
+        dataUrl = await readDataUrl(file, t('errors.readFailed', { name: file.name }));
+      } catch (error) {
+        toast.error((error as Error).message);
+        return true;
+      }
+      let overflow = false;
+      setImages((previous) => {
+        if (previous.length >= MAX_IMAGES) {
+          overflow = true;
+          return previous;
+        }
+        return [
+          ...previous,
+          {
+            key: `${file.name}-${previous.length}-${Date.now()}`,
+            name: file.name || t('defaultImageName'),
+            dataUrl,
+          },
+        ];
+      });
+      if (overflow) toast.warning(t('errors.tooManyImages', { max: MAX_IMAGES }));
+      return !overflow;
+    },
+    [t],
+  );
 
-  const addFile = React.useCallback(async (file: File): Promise<boolean> => {
-    if (file.size > MAX_FILE_BYTES) {
-      toast.error(`${file.name} : ${formatSize(file.size)}, maximum ${formatSize(MAX_FILE_BYTES)}.`);
-      return true;
-    }
-    let text: string;
-    try {
-      text = await readText(file);
-    } catch (error) {
-      toast.error((error as Error).message);
-      return true;
-    }
-    if (!text.trim()) {
-      toast.error(`${file.name} : fichier vide.`);
-      return true;
-    }
-    let refused: string | null = null;
-    setFiles((previous) => {
-      if (previous.length >= MAX_FILES) {
-        refused = `${MAX_FILES} fichiers au maximum par message.`;
-        return previous;
+  const addFile = React.useCallback(
+    async (file: File): Promise<boolean> => {
+      if (file.size > MAX_FILE_BYTES) {
+        toast.error(
+          t('errors.fileTooLarge', {
+            name: file.name,
+            size: formatSize(file.size, t),
+            max: formatSize(MAX_FILE_BYTES, t),
+          }),
+        );
+        return true;
       }
-      const total = previous.reduce((sum, item) => sum + item.size, 0) + file.size;
-      if (total > MAX_FILES_BYTES) {
-        refused = `Fichiers trop lourds au total : maximum ${formatSize(MAX_FILES_BYTES)} par message.`;
-        return previous;
+      let text: string;
+      try {
+        text = await readText(file, t('errors.readFailed', { name: file.name }));
+      } catch (error) {
+        toast.error((error as Error).message);
+        return true;
       }
-      return [
-        ...previous,
-        {
-          key: `${file.name}-${previous.length}-${Date.now()}`,
-          name: file.name || 'fichier.txt',
-          mediaType: file.type || 'text/plain',
-          text,
-          size: file.size,
-        },
-      ];
-    });
-    if (refused) toast.warning(refused);
-    return !refused;
-  }, []);
+      if (!text.trim()) {
+        toast.error(t('errors.emptyFile', { name: file.name }));
+        return true;
+      }
+      let refused: string | null = null;
+      setFiles((previous) => {
+        if (previous.length >= MAX_FILES) {
+          refused = t('errors.tooManyFiles', { max: MAX_FILES });
+          return previous;
+        }
+        const total = previous.reduce((sum, item) => sum + item.size, 0) + file.size;
+        if (total > MAX_FILES_BYTES) {
+          refused = t('errors.filesTooHeavy', { max: formatSize(MAX_FILES_BYTES, t) });
+          return previous;
+        }
+        return [
+          ...previous,
+          {
+            key: `${file.name}-${previous.length}-${Date.now()}`,
+            name: file.name || t('defaultFileName'),
+            mediaType: file.type || 'text/plain',
+            text,
+            size: file.size,
+          },
+        ];
+      });
+      if (refused) toast.warning(refused);
+      return !refused;
+    },
+    [t],
+  );
 
   const add = React.useCallback(
     async (incoming: File[]) => {
@@ -197,10 +220,10 @@ export function useChatAttachments() {
           if (!(await addFile(file))) break;
           continue;
         }
-        toast.error(`${file.name} : seuls les images et les fichiers texte sont acceptés.`);
+        toast.error(t('errors.unsupported', { name: file.name }));
       }
     },
-    [addImage, addFile],
+    [addImage, addFile, t],
   );
 
   const remove = React.useCallback((key: string) => {
@@ -243,6 +266,7 @@ export function PendingAttachmentStrip({
   files: PendingFile[];
   onRemove: (key: string) => void;
 }) {
+  const t = useTranslations('chat.attachments');
   if (images.length === 0 && files.length === 0) return null;
   return (
     <Space wrap size={6} style={{ marginTop: 8 }}>
@@ -255,7 +279,7 @@ export function PendingAttachmentStrip({
             height={56}
             style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #f0f0f0' }}
           />
-          <Tooltip title="Retirer">
+          <Tooltip title={t('remove')}>
             <CloseCircleFilled
               onClick={() => onRemove(item.key)}
               style={{
@@ -263,7 +287,7 @@ export function PendingAttachmentStrip({
                 top: -6,
                 right: -6,
                 fontSize: 16,
-                color: '#8c8c8c',
+                color: BRAND.slate,
                 background: '#fff',
                 borderRadius: '50%',
                 cursor: 'pointer',
@@ -283,14 +307,14 @@ export function PendingAttachmentStrip({
           }}
           style={{ margin: 0, padding: '4px 8px' }}
         >
-          {item.name} · {formatSize(item.size)}
+          {item.name} · {formatSize(item.size, t)}
         </Tag>
       ))}
       {(images.length >= MAX_IMAGES || files.length >= MAX_FILES) && (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {images.length >= MAX_IMAGES && `${MAX_IMAGES}/${MAX_IMAGES} images`}
+          {images.length >= MAX_IMAGES && t('imagesFull', { max: MAX_IMAGES })}
           {images.length >= MAX_IMAGES && files.length >= MAX_FILES && ' · '}
-          {files.length >= MAX_FILES && `${MAX_FILES}/${MAX_FILES} fichiers`}
+          {files.length >= MAX_FILES && t('filesFull', { max: MAX_FILES })}
         </Typography.Text>
       )}
     </Space>
@@ -304,6 +328,7 @@ export function PendingAttachmentStrip({
  * noierait le fil sous le contenu qu'on venait justement de sortir du message.
  */
 export function MessageAttachments({ attachments }: { attachments: MessageAttachment[] }) {
+  const t = useTranslations('chat.attachments');
   if (attachments.length === 0) return null;
   const images = attachments.filter((attachment) => !attachment.name);
   const files = attachments.filter((attachment) => attachment.name);
@@ -316,7 +341,7 @@ export function MessageAttachments({ attachments }: { attachments: MessageAttach
               <Image
                 key={attachment.id}
                 src={`${API_URL}/workflow-chat/attachments/${attachment.id}`}
-                alt="capture jointe"
+                alt={t('attachedImageAlt')}
                 width={120}
                 style={{ borderRadius: 6, border: '1px solid #f0f0f0' }}
               />
@@ -335,7 +360,7 @@ export function MessageAttachments({ attachments }: { attachments: MessageAttach
               >
                 {attachment.name}
               </a>{' '}
-              · {formatSize(attachment.size)}
+              · {formatSize(attachment.size, t)}
             </Tag>
           ))}
         </Space>

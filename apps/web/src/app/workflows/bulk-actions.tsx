@@ -9,6 +9,7 @@ import {
   SafetyOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../../lib/api';
 import { runWithConcurrency } from '../../lib/concurrency';
 import { WorkflowRow } from './workflow-row';
@@ -16,12 +17,16 @@ import { WorkflowRow } from './workflow-row';
 /** Workflows traités de front : chaque action est un aller-retour vers n8n. */
 const BULK_CONCURRENCY = 4;
 
+type BulkT = ReturnType<typeof useTranslations<'workflowsList.bulkActions'>>;
+
 interface BulkAction {
-  key: string;
+  key: 'resync' | 'analyse' | 'archive' | 'unarchive';
   label: string;
   icon: React.ReactNode;
-  /** Participe du toast de fin (« 3/5 archivés »). */
-  done: string;
+  /** Toast de fin quand tout est passé (« 3 workflows archivés »). */
+  success: (count: number) => string;
+  /** Toast de fin avec échecs (« 3/5 archivés — 2 échecs : … »). */
+  partial: (values: { ok: number; total: number; failed: number; first: string }) => string;
   /** Ce que le geste fait, dit avant de le confirmer quand ce n'est pas évident. */
   description?: string;
   /** Ligne sur laquelle l'action a un sens ; les autres sont laissées de côté, pas mises en échec. */
@@ -36,7 +41,7 @@ interface BulkAction {
  * répond 404 : on n'échoue que si AUCUNE des quatre n'a abouti, sinon une
  * plateforme qui n'active que la vérification structurelle serait toute rouge.
  */
-async function analyse(workflow: WorkflowRow): Promise<void> {
+async function analyse(workflow: WorkflowRow, fallbackError: string): Promise<void> {
   const results = await Promise.allSettled([
     apiPost(`/verifier/run/${workflow.id}?ai=1`),
     apiPost(`/js-checker/run/${workflow.id}?ai=1`),
@@ -45,51 +50,57 @@ async function analyse(workflow: WorkflowRow): Promise<void> {
   ]);
   if (results.some((result) => result.status === 'fulfilled')) return;
   const first = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-  throw new Error((first?.reason as Error)?.message ?? 'analyse en échec');
+  throw new Error((first?.reason as Error)?.message ?? fallbackError);
 }
 
-const ACTIONS: BulkAction[] = [
-  {
-    key: 'resync',
-    label: 'Resynchroniser',
-    icon: <ReloadOutlined />,
-    done: 'resynchronisé',
-    eligible: () => true,
-    skipped: '',
-    run: (workflow) => apiPost(`/workflows/${workflow.id}/resync`),
-  },
-  {
-    key: 'analyse',
-    label: 'Analyser',
-    icon: <SafetyOutlined />,
-    done: 'analysé',
-    description: 'Structure, JS, naming, champs — IA incluse (lent)',
-    eligible: (workflow) => !workflow.missingInN8n,
-    skipped: 'absents de n8n',
-    run: analyse,
-  },
-  {
-    key: 'archive',
-    label: 'Archiver',
-    icon: <InboxOutlined />,
-    done: 'archivé',
-    description: 'Tag + préfixe [ARCHIVED], rien n’est supprimé',
-    eligible: (workflow) => !workflow.archived && !workflow.archivedUpstream && !workflow.missingInN8n,
-    skipped: 'déjà archivés ou absents',
-    run: (workflow) => apiPost(`/workflows/${workflow.id}/archive`),
-  },
-  {
-    key: 'unarchive',
-    label: 'Désarchiver',
-    icon: <UndoOutlined />,
-    // Archivé DANS n8n : l'API publique refuse d'y toucher, le retour se fait dans n8n.
-    done: 'désarchivé',
-    description: 'Retire le tag et le préfixe [ARCHIVED]',
-    eligible: (workflow) => workflow.archived && !workflow.archivedUpstream && !workflow.missingInN8n,
-    skipped: 'non archivés par la plateforme',
-    run: (workflow) => apiPost(`/workflows/${workflow.id}/unarchive`),
-  },
-];
+function bulkActions(t: BulkT): BulkAction[] {
+  return [
+    {
+      key: 'resync',
+      label: t('resync.label'),
+      icon: <ReloadOutlined />,
+      success: (count) => t('resync.success', { count }),
+      partial: (values) => t('resync.partial', values),
+      eligible: () => true,
+      skipped: '',
+      run: (workflow) => apiPost(`/workflows/${workflow.id}/resync`),
+    },
+    {
+      key: 'analyse',
+      label: t('analyse.label'),
+      icon: <SafetyOutlined />,
+      success: (count) => t('analyse.success', { count }),
+      partial: (values) => t('analyse.partial', values),
+      description: t('analyse.description'),
+      eligible: (workflow) => !workflow.missingInN8n,
+      skipped: t('analyse.skipped'),
+      run: (workflow) => analyse(workflow, t('analyseFailed')),
+    },
+    {
+      key: 'archive',
+      label: t('archive.label'),
+      icon: <InboxOutlined />,
+      success: (count) => t('archive.success', { count }),
+      partial: (values) => t('archive.partial', values),
+      description: t('archive.description'),
+      eligible: (workflow) => !workflow.archived && !workflow.archivedUpstream && !workflow.missingInN8n,
+      skipped: t('archive.skipped'),
+      run: (workflow) => apiPost(`/workflows/${workflow.id}/archive`),
+    },
+    {
+      key: 'unarchive',
+      label: t('unarchive.label'),
+      icon: <UndoOutlined />,
+      // Archivé DANS n8n : l'API publique refuse d'y toucher, le retour se fait dans n8n.
+      success: (count) => t('unarchive.success', { count }),
+      partial: (values) => t('unarchive.partial', values),
+      description: t('unarchive.description'),
+      eligible: (workflow) => workflow.archived && !workflow.archivedUpstream && !workflow.missingInN8n,
+      skipped: t('unarchive.skipped'),
+      run: (workflow) => apiPost(`/workflows/${workflow.id}/unarchive`),
+    },
+  ];
+}
 
 /**
  * Barre d'actions groupées de la liste des workflows. Elle ne fait que rejouer,
@@ -108,6 +119,9 @@ export function WorkflowBulkActions({
   onDone: () => void;
   onClear: () => void;
 }) {
+  const t = useTranslations('workflowsList.bulkActions');
+  const tCommon = useTranslations('common');
+  const actions = bulkActions(t);
   const [running, setRunning] = React.useState<{ action: string; done: number; total: number } | null>(null);
 
   const run = async (action: BulkAction, targets: WorkflowRow[]) => {
@@ -128,16 +142,14 @@ export function WorkflowBulkActions({
       );
       const ok = targets.length - failures.length;
       if (failures.length > 0) {
-        const n = failures.length;
         message.warning(
-          `${ok}/${targets.length} ${action.done}s — ${n} échec${n > 1 ? 's' : ''} : ${failures[0]}`,
+          action.partial({ ok, total: targets.length, failed: failures.length, first: failures[0] }),
           10,
         );
         // eslint-disable-next-line no-console
         console.warn(`${action.label} — échecs (${failures.length}) :\n${failures.join('\n')}`);
       } else {
-        const s = ok > 1 ? 's' : '';
-        message.success(`${ok} workflow${s} ${action.done}${s}`);
+        message.success(action.success(ok));
       }
       onDone();
       if (failures.length === 0) onClear();
@@ -154,40 +166,39 @@ export function WorkflowBulkActions({
       showIcon
       message={
         <Space wrap>
-          <Typography.Text strong>
-            {selected.length} workflow{selected.length > 1 ? 's' : ''} sélectionné
-            {selected.length > 1 ? 's' : ''}
-          </Typography.Text>
-          {ACTIONS.map((action) => {
+          <Typography.Text strong>{t('selected', { count: selected.length })}</Typography.Text>
+          {actions.map((action) => {
             const targets = selected.filter(action.eligible);
             const ignored = selected.length - targets.length;
             const busy = running?.action === action.key;
-            const label = busy ? `${action.label}… ${running.done}/${running.total}` : action.label;
+            const label = busy
+              ? t('running', { label: action.label, done: running.done, total: running.total })
+              : action.label;
             return (
               <Popconfirm
                 key={action.key}
-                title={`${action.label} ${targets.length} workflow${targets.length > 1 ? 's' : ''} ?`}
+                title={t('confirmTitle', { label: action.label, count: targets.length })}
                 description={
                   action.description || ignored > 0 ? (
                     <div style={{ maxWidth: 340 }}>
                       {action.description}
                       {ignored > 0 && (
                         <div style={{ marginTop: action.description ? 4 : 0 }}>
-                          {ignored} ignoré{ignored > 1 ? 's' : ''} ({action.skipped})
+                          {t('ignored', { count: ignored, reason: action.skipped })}
                         </div>
                       )}
                     </div>
                   ) : undefined
                 }
                 okText={action.label}
-                cancelText="Annuler"
+                cancelText={tCommon('cancel')}
                 disabled={targets.length === 0 || running !== null}
                 onConfirm={() => run(action, targets)}
               >
                 <Tooltip
                   title={
                     targets.length === 0
-                      ? `Aucune ligne concernée (${action.skipped || 'sélection vide'})`
+                      ? t('noTarget', { reason: action.skipped || t('emptySelection') })
                       : undefined
                   }
                 >
@@ -205,7 +216,7 @@ export function WorkflowBulkActions({
             );
           })}
           <Button size="small" type="link" onClick={onClear} disabled={running !== null}>
-            Tout décocher
+            {t('clearAll')}
           </Button>
         </Space>
       }

@@ -21,6 +21,7 @@
  * exécuter n'en est pas une.
  */
 
+import { msg } from '../../i18n';
 import { CheckFinding } from './structural-checks';
 import { IntegrityBreach } from './workflow-integrity';
 import { EnvName } from '../env';
@@ -139,10 +140,7 @@ export function evaluateProposalGate(
       breaches,
       introduced,
       refusals,
-      reason:
-        `Modification refusée : elle casse le workflow. ` +
-        `${breaches.map((breach) => breach.message).join(' ')} ` +
-        `Ce refus-là ne se contourne pas — reformule la demande dans la conversation.`,
+      reason: msg('edit.gateIntegrity', { details: breaches.map((breach) => breach.message).join(' ') }),
     };
   }
 
@@ -160,9 +158,7 @@ export function evaluateProposalGate(
         breaches,
         introduced,
         refusals,
-        reason:
-          `n8n refusera d'enregistrer ce workflow, et pas seulement cette modification : ` +
-          `${detail} Corrige-le dans la conversation — la même demande passera ensuite.`,
+        reason: msg('edit.gateRefusal', { detail }),
       };
     }
   }
@@ -176,25 +172,25 @@ export function evaluateProposalGate(
   // L'environnement ne change plus que le ton du message — il décidait avant du
   // refus lui-même, et le workflow de dev d'aujourd'hui est celui qu'on promeut
   // demain : ce qui casse s'y voyait, sans jamais rien arrêter.
-  const detail = errors.map((finding) => `${finding.code} — ${finding.message}`).join(' ; ');
+  const detail = errors
+    .map((finding) => `${finding.code} — ${finding.message}`)
+    .join(msg('edit.clauseSeparator'));
   if (options.force) {
     return {
       blocked: false,
       breaches,
       introduced,
       refusals,
-      reason: `${errors.length} problème(s) introduit(s), appliqués malgré le refus : ${detail}`,
+      reason: msg('edit.gateForced', { count: errors.length, detail }),
     };
   }
-  const where = gateEnv(options.env, options.active) === 'prod' ? ' de production' : '';
+  const prod = gateEnv(options.env, options.active) === 'prod';
   return {
     blocked: true,
     blockedBy: 'quality',
     breaches,
     introduced,
     refusals,
-    reason:
-      `Modification refusée sur ce workflow${where} : elle introduit ${errors.length} erreur(s) — ` +
-      `${detail}. Corrige-les dans la conversation, ou coche « appliquer quand même ».`,
+    reason: msg('edit.gateQuality', { prod, count: errors.length, detail }),
   };
 }

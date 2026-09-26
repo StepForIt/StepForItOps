@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Libellés en accesseurs : lus à chaque requête, donc dans la langue de l'appelant. */
 export const RELEASE_PROCEDURES_MANIFEST: ModuleManifest = {
   id: 'release-procedures',
-  name: 'Procédures de mise en ligne',
-  description: "Enregistre les gestes d'une mise en ligne et les rejoue vers l'env suivant",
+  get name() {
+    return msg('release.manifestName');
+  },
+  get description() {
+    return msg('release.manifestDescription');
+  },
 };

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowRef } from './config-bundle.types';
 
@@ -47,6 +48,10 @@ export class WorkflowRefResolver {
 
   /** Message d'avertissement homogène quand une référence ne retombe sur rien. */
   static missing(what: string, ref: WorkflowRef): string {
-    return `${what} : workflow introuvable (${ref.instanceBaseUrl} / ${ref.externalId}) — synchronisez les workflows depuis n8n puis ré-importez le même fichier`;
+    return msg('platform.importWorkflowMissing', {
+      what,
+      instanceUrl: ref.instanceBaseUrl,
+      externalId: ref.externalId,
+    });
   }
 }

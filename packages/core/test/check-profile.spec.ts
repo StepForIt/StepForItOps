@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   CHECK_CATALOG,
   CHECK_GROUPS,
+  checkCatalogLocalized,
   checkCodesOfGroup,
+  checkGroupsLocalized,
   enabledCodesOfModule,
   isModuleFullyDisabled,
   normalizeDisabled,
@@ -18,6 +20,14 @@ describe('catalogue', () => {
   it('rattache chaque contrôle à un groupe déclaré', () => {
     const groups = new Set(CHECK_GROUPS.map((group) => group.id));
     for (const check of CHECK_CATALOG) expect(groups.has(check.group)).toBe(true);
+  });
+
+  it('donne un libellé à chaque groupe et à chaque contrôle', () => {
+    expect(checkGroupsLocalized().every((group) => group.label && group.description)).toBe(true);
+    expect(checkCatalogLocalized().every((check) => check.label)).toBe(true);
+    expect(checkCatalogLocalized().find((check) => check.code === 'orphan-node')?.label).toBe(
+      'Nœud non connecté',
+    );
   });
 
   it('écarte les codes hors catalogue et rend un ordre stable', () => {

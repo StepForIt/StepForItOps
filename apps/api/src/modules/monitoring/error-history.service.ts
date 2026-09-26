@@ -15,6 +15,7 @@ import {
   PlatformId,
   WorkflowPlatformPorts,
   WORKFLOW_PLATFORM_PORTS,
+  msg,
 } from '@nwm/core';
 import { ExecutionError } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -87,7 +88,7 @@ export class ErrorHistoryService {
         await this.fetchDetail(row).catch(() => undefined);
       }
     } catch (error) {
-      this.logger.warn(`Historisation des erreurs KO : ${(error as Error).message}`);
+      this.logger.warn(`Error history ingestion failed: ${(error as Error).message}`);
     }
   }
 
@@ -122,7 +123,7 @@ export class ErrorHistoryService {
   ): Promise<BackfillResult> {
     const port = this.platforms[instance.platform as PlatformId];
     if (!port)
-      throw new BadRequestException(`Plateforme « ${instance.platform} » non gérée par cette version.`);
+      throw new BadRequestException(msg('ops.platformNotSupported', { platform: instance.platform }));
 
     const config = {
       baseUrl: instance.baseUrl,
@@ -165,7 +166,7 @@ export class ErrorHistoryService {
 
   async backfill(instanceId: string, days = 30): Promise<BackfillResult> {
     const instance = await this.prisma.instance.findUnique({ where: { id: instanceId } });
-    if (!instance) throw new NotFoundException(`Instance ${instanceId} introuvable`);
+    if (!instance) throw new NotFoundException(msg('ops.instanceNotFound', { id: instanceId }));
     if (instance.platform !== 'n8n') return this.backfillPlatform(instance, days);
 
     const mirrored = await this.mirroredWorkflows(instanceId);
@@ -256,11 +257,11 @@ export class ErrorHistoryService {
       const result = await this.fetchPendingDetails();
       if (result.processed > 0) {
         this.logger.log(
-          `Détails d'erreurs drainés : ${result.fetched} récupéré(s), ${result.unavailable} indisponible(s), ${result.remaining} restant(s)`,
+          `Error details drained: ${result.fetched} fetched, ${result.unavailable} unavailable, ${result.remaining} remaining`,
         );
       }
     } catch (error) {
-      this.logger.warn(`Drainage des détails KO : ${(error as Error).message}`);
+      this.logger.warn(`Error details drain failed: ${(error as Error).message}`);
     } finally {
       this.draining = false;
     }
@@ -273,7 +274,7 @@ export class ErrorHistoryService {
     const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 3600 * 1000);
     const { count } = await this.prisma.executionError.deleteMany({ where: { startedAt: { lt: cutoff } } });
     if (count === 0) return;
-    this.logger.log(`${count} erreur(s) d'exécution purgée(s) (> ${RETENTION_DAYS} j)`);
+    this.logger.log(`${count} execution error(s) purged (> ${RETENTION_DAYS} d)`);
     // Les groupes comptent des lignes qui n'existent plus : on recale (et ceux
     // qui n'ont plus aucune occurrence disparaissent avec leur journal).
     const groups = await this.prisma.errorGroup.findMany({ select: { id: true } });
@@ -313,7 +314,7 @@ export class ErrorHistoryService {
     // Groupée tout de suite, sur le peu qu'on sait : le détail affinera la
     // signature (et déplacera la ligne) dès qu'il arrivera.
     await this.groups.assign(row).catch((error) => {
-      this.logger.warn(`Regroupement KO pour l'exécution ${row.executionId} : ${(error as Error).message}`);
+      this.logger.warn(`Grouping failed for execution ${row.executionId}: ${(error as Error).message}`);
     });
     return row;
   }
@@ -382,9 +383,7 @@ export class ErrorHistoryService {
       await this.groups.assign(updated).catch(() => undefined);
       return updated;
     } catch (error) {
-      this.logger.debug(
-        `Détail indisponible pour l'exécution ${row.executionId} : ${(error as Error).message}`,
-      );
+      this.logger.debug(`Detail unavailable for execution ${row.executionId}: ${(error as Error).message}`);
       const updated = await this.prisma.executionError.update({
         where: { id: row.id },
         data: { detailState: 'unavailable' },

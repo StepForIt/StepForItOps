@@ -7,6 +7,7 @@ import {
   N8nWorkflow,
   withArchivedPrefix,
   withoutArchivedPrefix,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { InstancesService } from '../instances/instances.service';
@@ -42,15 +43,13 @@ export class WorkflowArchiveService {
 
   private async apply(id: string, archived: boolean): Promise<WorkflowWithEnv> {
     const workflow = await this.prisma.workflow.findUnique({ where: { id } });
-    if (!workflow) throw new NotFoundException(`Workflow ${id} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('platform.workflowNotFound', { id }));
     await this.locks.assertWritable(id);
     const config = await this.instances.getConfig(workflow.instanceId);
 
     const raw = await this.n8n.getWorkflow(config, workflow.externalId);
     if (raw.isArchived) {
-      throw new BadRequestException(
-        `« ${raw.name} » est archivé nativement côté n8n : il n'est plus modifiable via l'API. Désarchivez-le d'abord dans n8n.`,
-      );
+      throw new BadRequestException(msg('platform.archiveNativelyArchived', { name: raw.name }));
     }
     const newName = archived ? withArchivedPrefix(raw.name) : withoutArchivedPrefix(raw.name);
     if (newName !== raw.name) {
@@ -61,7 +60,7 @@ export class WorkflowArchiveService {
     // Resynchronise le miroir local (émet workflow.synced → snapshot versioning, etc.)
     const fresh = await this.n8n.getWorkflow(config, workflow.externalId);
     await this.sync.upsertWorkflow(workflow.instanceId, fresh);
-    this.logger.log(`Workflow ${workflow.externalId} ${archived ? 'archivé' : 'désarchivé'} (tag + préfixe)`);
+    this.logger.log(`Workflow ${workflow.externalId} ${archived ? 'archived' : 'unarchived'} (tag + prefix)`);
     return this.workflows.get(id);
   }
 

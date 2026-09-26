@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { paramLabel as name, paramString as str } from './n8n-params';
 
@@ -121,7 +122,7 @@ export function extractNodeResourceRefs(node: N8nNode): ResourceRef[] {
           key: `http:${url}`,
           provider: 'http',
           nodeName: node.name,
-          label: 'URL dynamique',
+          label: msg('env.dynamicUrl'),
           detail: { url },
         });
     }

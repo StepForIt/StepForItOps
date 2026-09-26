@@ -24,6 +24,7 @@ import {
   RedoOutlined,
   RobotOutlined,
 } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 import { useWorkflowChat } from '../../components/workflow-chat-drawer';
 import type { ErrorGroupDetail, ErrorGroupRow } from './types';
@@ -50,6 +51,9 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [fixing, setFixing] = useState(false);
   const chat = useWorkflowChat();
+  const t = useTranslations('health.errors');
+  const locale = useLocale();
+  const fmt = (value: string | null) => formatDate(value, locale);
 
   /** IA erreur → correctif : crée la conversation pré-alimentée puis ouvre le chat. */
   const proposeFix = async () => {
@@ -57,16 +61,12 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
     setFixing(true);
     // L'appel dure plusieurs secondes : un bouton qui tourne sans un mot se lit
     // comme une page figée, et on reclique.
-    const done = message.loading('L’IA rédige un correctif pour ce problème…', 0);
+    const done = message.loading(t('group.fixLoading'), 0);
     try {
       const result = await apiPost<{ workflowId: string; sessionId: string; proposalId: string | null }>(
         `/workflow-chat/error-fix/${current.id}`,
       );
-      message.success(
-        result.proposalId
-          ? 'Correctif proposé — relis le diff avant d’appliquer.'
-          : 'L’IA a répondu sans proposer de modification — sa réponse est dans le chat.',
-      );
+      message.success(result.proposalId ? t('group.fixProposed') : t('group.fixNoProposal'));
       // Le chat s'ouvre par-dessus : changer de page pour lire un diff faisait
       // perdre le problème en cours de lecture.
       chat.open({ workflowId: result.workflowId, sessionId: result.sessionId, onWorkflowChanged: onChanged });
@@ -96,7 +96,7 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
   const act = async (action: 'resolve' | 'reopen' | 'ignore' | 'note', label: string) => {
     if (!group) return;
     if (action === 'note' && !note.trim()) {
-      message.warning('Écris la note avant de l’ajouter.');
+      message.warning(t('group.noteRequired'));
       return;
     }
     setBusy(true);
@@ -120,19 +120,19 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
       open={group !== null}
       onClose={onClose}
       width={760}
-      title={current ? `Problème — ${current.workflowName}` : 'Problème'}
+      title={current ? t('group.title', { name: current.workflowName }) : t('group.titleEmpty')}
       extra={
         current && (
           <Space>
             {current.category !== 'other' && (
               <Tag color={(CATEGORY_META[current.category] ?? CATEGORY_META.other).color}>
-                {(CATEGORY_META[current.category] ?? CATEGORY_META.other).label}
+                {t(`category.${current.category in CATEGORY_META ? current.category : 'other'}`)}
               </Tag>
             )}
-            <Tag color={STATUS_META[current.status].color}>{STATUS_META[current.status].label}</Tag>
+            <Tag color={STATUS_META[current.status].color}>{t(`status.${current.status}`)}</Tag>
             {current.regressions > 0 && (
               <Tag color="volcano" icon={<RedoOutlined />}>
-                {current.regressions} rechute{current.regressions > 1 ? 's' : ''}
+                {t('regressions', { count: current.regressions })}
               </Tag>
             )}
           </Space>
@@ -143,8 +143,9 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
         <>
           {current.status === 'resolved' && (
             <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
-              Traité le {formatDate(current.resolvedAt)}
-              {current.resolvedBy ? ` par ${current.resolvedBy}` : ''}
+              {current.resolvedBy
+                ? t('group.resolvedOnBy', { date: fmt(current.resolvedAt), author: current.resolvedBy })
+                : t('group.resolvedOn', { date: fmt(current.resolvedAt) })}
               {current.resolutionNote && (
                 <>
                   <br />
@@ -158,12 +159,12 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
-              message={`Rechute le ${formatDate(current.reopenedAt)}.`}
+              message={t('group.regressionOn', { date: fmt(current.reopenedAt) })}
             />
           )}
 
           <Descriptions column={1} size="small" bordered style={{ marginBottom: 16 }}>
-            <Descriptions.Item label="Nœud fautif">
+            <Descriptions.Item label={t('group.failedNode')}>
               {current.failedNode ? (
                 <Space direction="vertical" size={2}>
                   <Tag color="red">{current.failedNode}</Tag>
@@ -177,22 +178,22 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
                 '—'
               )}
             </Descriptions.Item>
-            <Descriptions.Item label="Occurrences">{current.occurrences}</Descriptions.Item>
-            <Descriptions.Item label="Première fois">{formatDate(current.firstSeenAt)}</Descriptions.Item>
-            <Descriptions.Item label="Dernière fois">{formatDate(current.lastSeenAt)}</Descriptions.Item>
+            <Descriptions.Item label={t('group.occurrences')}>{current.occurrences}</Descriptions.Item>
+            <Descriptions.Item label={t('group.firstSeen')}>{fmt(current.firstSeenAt)}</Descriptions.Item>
+            <Descriptions.Item label={t('group.lastSeen')}>{fmt(current.lastSeenAt)}</Descriptions.Item>
           </Descriptions>
 
-          <Typography.Title level={5}>Erreur</Typography.Title>
+          <Typography.Title level={5}>{t('group.error')}</Typography.Title>
           <Alert type="error" message={current.pattern} style={{ marginBottom: 8 }} />
           {current.sample && current.sample !== current.pattern && (
             <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
-              Dernier message réel : {current.sample}
+              {t('group.lastSample', { sample: current.sample })}
             </Typography.Paragraph>
           )}
 
           <Space.Compact style={{ width: '100%', marginTop: 8 }}>
             <Input.TextArea
-              placeholder="Note (ce qui a été corrigé, pourquoi c’est normal…)"
+              placeholder={t('group.notePlaceholder')}
               autoSize={{ minRows: 1, maxRows: 4 }}
               value={note}
               onChange={(event) => setNote(event.target.value)}
@@ -204,49 +205,57 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
                 type="primary"
                 icon={<CheckOutlined />}
                 loading={busy}
-                onClick={() => act('resolve', 'Problème marqué comme traité.')}
+                onClick={() => act('resolve', t('group.resolvedMsg'))}
               >
-                Marquer comme traité
+                {t('group.resolve')}
               </Button>
             )}
             {current.status !== 'open' && (
               <Button
                 icon={<RedoOutlined />}
                 loading={busy}
-                onClick={() => act('reopen', 'Problème rouvert.')}
+                onClick={() => act('reopen', t('group.reopenedMsg'))}
               >
-                Rouvrir
+                {t('group.reopen')}
               </Button>
             )}
             {current.status !== 'ignored' && (
-              <Tooltip title="Erreur connue et acceptée : elle ne remontera plus, même si elle se répète.">
+              <Tooltip title={t('group.ignoreTooltip')}>
                 <Button
                   icon={<EyeInvisibleOutlined />}
                   loading={busy}
-                  onClick={() => act('ignore', 'Problème ignoré.')}
+                  onClick={() => act('ignore', t('group.ignoredMsg'))}
                 >
-                  Ignorer
+                  {t('group.ignore')}
                 </Button>
               </Tooltip>
             )}
-            <Button icon={<MessageOutlined />} loading={busy} onClick={() => act('note', 'Note ajoutée.')}>
-              Ajouter la note
+            <Button
+              icon={<MessageOutlined />}
+              loading={busy}
+              onClick={() => act('note', t('group.noteAdded'))}
+            >
+              {t('group.addNote')}
             </Button>
             {current.workflowId && (
-              <Tooltip title="Revu en diff avant application">
+              <Tooltip title={t('group.fixTooltip')}>
                 <Button icon={<RobotOutlined />} loading={fixing} onClick={proposeFix}>
-                  Proposer un correctif (IA)
+                  {t('group.proposeFix')}
                 </Button>
               </Tooltip>
             )}
           </Space>
 
-          {error && <Alert type="error" showIcon message="Détail indisponible" description={error} />}
+          {error && (
+            <Alert type="error" showIcon message={t('group.detailUnavailable')} description={error} />
+          )}
           {loading && !detail && <Skeleton active paragraph={{ rows: 4 }} />}
 
           {detail && (
             <>
-              {detail.events.length > 0 && <Typography.Title level={5}>Historique</Typography.Title>}
+              {detail.events.length > 0 && (
+                <Typography.Title level={5}>{t('group.history')}</Typography.Title>
+              )}
               {detail.events.length > 0 && (
                 <Timeline
                   style={{ marginTop: 8 }}
@@ -255,12 +264,12 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
                     children: (
                       <Space direction="vertical" size={0}>
                         <Space size={8}>
-                          <strong>{EVENT_META[event.type]?.label ?? event.type}</strong>
+                          <strong>{event.type in EVENT_META ? t(`event.${event.type}`) : event.type}</strong>
                           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            {formatDate(event.createdAt)}
+                            {fmt(event.createdAt)}
                             {event.author ? ` · ${event.author}` : ''}
                             {event.type === 'regression' &&
-                              ` · ${event.occurrences} occurrence(s) à ce moment`}
+                              ` · ${t('group.regressionOccurrences', { count: event.occurrences })}`}
                           </Typography.Text>
                         </Space>
                         {event.note && <Typography.Text>{event.note}</Typography.Text>}
@@ -270,7 +279,7 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
                 />
               )}
 
-              <Typography.Title level={5}>Dernières occurrences</Typography.Title>
+              <Typography.Title level={5}>{t('group.recent')}</Typography.Title>
               <List
                 size="small"
                 dataSource={detail.recent}
@@ -291,7 +300,7 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
                     ]}
                   >
                     <Space size={12}>
-                      <Typography.Text>{formatDate(row.startedAt)}</Typography.Text>
+                      <Typography.Text>{fmt(row.startedAt)}</Typography.Text>
                       <Typography.Text type="secondary">#{row.executionId}</Typography.Text>
                     </Space>
                   </List.Item>

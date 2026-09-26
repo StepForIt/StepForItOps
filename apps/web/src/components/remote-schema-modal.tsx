@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Modal, Space, Spin } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
 import { RemoteSchemaTables, RemoteTableView, UnlocatableView } from './remote-schema-tables';
 
@@ -20,6 +21,8 @@ interface Props {
 
 /** « Le distant a-t-il tout ce que ce workflow attend ? », lu sur l'instance du workflow. */
 export function RemoteSchemaModal({ workflowId, open, onClose, onChecked }: Props) {
+  const t = useTranslations('reviewTools.remoteSchema');
+  const tCommon = useTranslations('common');
   const [result, setResult] = useState<RunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,17 +47,17 @@ export function RemoteSchemaModal({ workflowId, open, onClose, onChecked }: Prop
 
   return (
     <Modal
-      title="Tables distantes"
+      title={t('title')}
       open={open}
       onCancel={onClose}
       width={860}
       footer={
         <Space>
           <Button loading={loading} onClick={run}>
-            Relancer
+            {t('rerun')}
           </Button>
           <Button type="primary" onClick={onClose}>
-            Fermer
+            {tCommon('close')}
           </Button>
         </Space>
       }
@@ -63,7 +66,7 @@ export function RemoteSchemaModal({ workflowId, open, onClose, onChecked }: Prop
         {error && <Alert type="error" showIcon message={error} />}
         {loading && !result ? (
           <div style={{ textAlign: 'center', padding: 32 }}>
-            <Spin tip="Lecture des tables…">
+            <Spin tip={t('loading')}>
               <div style={{ height: 40 }} />
             </Spin>
           </div>

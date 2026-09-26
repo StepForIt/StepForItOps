@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Alert, Button, Modal, Space, Tag, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../../../lib/api';
 import { WorkflowFamily } from '../workflow-row';
 import { BulkEnvReviewTable } from './bulk-env-review-table';
@@ -9,12 +10,6 @@ import { BulkEnvSettingsForm } from './bulk-env-settings-form';
 import { isApplicable, rowStatus } from './row-status';
 import { BulkEnvAction, BulkSettings } from './types';
 import { useBulkEnv } from './use-bulk-env';
-
-const TITLES: Record<BulkEnvAction, string> = {
-  promote: 'Promouvoir',
-  duplicate: 'Dupliquer vers un env',
-  mark: 'Déclarer l’env',
-};
 
 /** `dev` et `prod` sont les deux bouts obligatoires de la chaîne : les seuls qu'on puisse supposer. */
 const DEFAULTS: Record<BulkEnvAction, BulkSettings> = {
@@ -69,6 +64,8 @@ export function BulkEnvModal({
   /** Au moins une ligne est passée : la liste se recharge. */
   onApplied: () => void;
 }) {
+  const t = useTranslations('workflowsList.bulkEnv');
+  const tCommon = useTranslations('common');
   const bulk = useBulkEnv(action);
   const [settings, setSettings] = React.useState<BulkSettings>(DEFAULTS[action]);
   const [instances, setInstances] = React.useState<Array<{ id: string; name: string }>>([]);
@@ -101,12 +98,12 @@ export function BulkEnvModal({
   );
   // Seuls les compteurs non nuls s'affichent : « 3 prêtes · 1 bloquée ».
   const tally = [
-    { count: counts.ready, one: 'prête', many: 'prêtes', color: 'green' },
-    { count: counts.decide, one: 'à décider', many: 'à décider', color: 'orange' },
-    { count: counts.blocked, one: 'bloquée', many: 'bloquées', color: 'red' },
-    { count: counts.skipped, one: 'ignorée', many: 'ignorées', color: 'default' },
-    { count: counts.done, one: 'appliquée', many: 'appliquées', color: 'blue' },
-    { count: counts.failed, one: 'en échec', many: 'en échec', color: 'volcano' },
+    { key: 'ready' as const, count: counts.ready, color: 'green' },
+    { key: 'decide' as const, count: counts.decide, color: 'orange' },
+    { key: 'blocked' as const, count: counts.blocked, color: 'red' },
+    { key: 'skipped' as const, count: counts.skipped, color: 'default' },
+    { key: 'done' as const, count: counts.done, color: 'blue' },
+    { key: 'failed' as const, count: counts.failed, color: 'volcano' },
   ].filter((item) => item.count > 0);
   const busy = bulk.phase === 'planning' || bulk.phase === 'applying';
   const canPrepare = Boolean(settings.targetEnv) && (action === 'mark' || Boolean(settings.sourceEnv));
@@ -119,7 +116,7 @@ export function BulkEnvModal({
   const footer =
     bulk.phase === 'setup' || bulk.phase === 'planning' ? (
       <Space>
-        <Button onClick={onClose}>Annuler</Button>
+        <Button onClick={onClose}>{tCommon('cancel')}</Button>
         <Button
           type="primary"
           loading={bulk.phase === 'planning'}
@@ -131,13 +128,13 @@ export function BulkEnvModal({
             )
           }
         >
-          Préparer le lot
+          {t('modal.prepare')}
         </Button>
       </Space>
     ) : (
       <Space wrap>
         <Button onClick={bulk.reset} disabled={busy}>
-          Changer les réglages
+          {t('modal.changeSettings')}
         </Button>
         {diffOnly.length > 0 && (
           <Button
@@ -146,11 +143,11 @@ export function BulkEnvModal({
               diffOnly.forEach((row) => bulk.setChoices(row.plan.familyKey, { validated: true }))
             }
           >
-            Valider {diffOnly.length} diff{diffOnly.length > 1 ? 's' : ''}
+            {t('modal.validateDiffs', { count: diffOnly.length })}
           </Button>
         )}
         <Button onClick={onClose} disabled={bulk.phase === 'applying'}>
-          Fermer
+          {tCommon('close')}
         </Button>
         <Button
           type="primary"
@@ -158,7 +155,7 @@ export function BulkEnvModal({
           disabled={counts.ready === 0 || counts.loading > 0 || busy}
           onClick={apply}
         >
-          Appliquer {counts.ready} ligne{counts.ready > 1 ? 's' : ''} prête{counts.ready > 1 ? 's' : ''}
+          {t('modal.applyReady', { count: counts.ready })}
         </Button>
       </Space>
     );
@@ -166,7 +163,7 @@ export function BulkEnvModal({
   return (
     <Modal
       open={open}
-      title={`${TITLES[action]} — ${families.length} workflow${families.length > 1 ? 's' : ''} métier`}
+      title={t('modal.title', { action: t(`actions.${action}`), count: families.length })}
       width={1100}
       onCancel={bulk.phase === 'applying' ? undefined : onClose}
       maskClosable={false}
@@ -182,8 +179,8 @@ export function BulkEnvModal({
           {tally.length > 0 && (
             <Space size={4} wrap>
               {tally.map((item) => (
-                <Tag key={item.one} color={item.color}>
-                  {item.count} {item.count > 1 ? item.many : item.one}
+                <Tag key={item.key} color={item.color}>
+                  {t(`modal.tally.${item.key}`, { count: item.count })}
                 </Tag>
               ))}
             </Space>

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Alert, Checkbox, List, Modal, Select, Space, Spin, Tag, Tooltip, Typography, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
 import { useEnvColor, useEnvs } from '../lib/envs';
 import { SwitchedResource, SwitchedResources } from './switched-resources';
@@ -71,6 +72,8 @@ export function GroupDuplicateModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations('settings.groupDuplicate');
+  const tc = useTranslations('common');
   const { envs } = useEnvs();
   const envColor = useEnvColor();
   const [env, setEnv] = useState<string>('');
@@ -109,7 +112,7 @@ export function GroupDuplicateModal({
         force,
       });
       setResult(res);
-      message.success(`${res.copies.length} workflow(s) dupliqué(s) vers ${res.targetEnv}`);
+      message.success(t('done', { count: res.copies.length, env: res.targetEnv }));
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -124,14 +127,16 @@ export function GroupDuplicateModal({
     <Modal
       open={open}
       onCancel={onClose}
-      title={`Dupliquer le groupe « ${groupName} » vers un env`}
+      title={t('title', { name: groupName })}
       width={760}
       okText={
         result
-          ? 'Fermer'
-          : `Dupliquer ${preview?.copies.length ?? ''} workflow${(preview?.copies.length ?? 0) > 1 ? 's' : ''}`
+          ? tc('close')
+          : preview
+            ? t('duplicateCount', { count: preview.copies.length })
+            : t('duplicate')
       }
-      cancelText={result ? null : 'Annuler'}
+      cancelText={result ? null : tc('cancel')}
       okButtonProps={{ disabled: !result && (blocked || preview === null), loading: running }}
       cancelButtonProps={{ style: result ? { display: 'none' } : undefined }}
       onOk={result ? onClose : run}
@@ -139,7 +144,7 @@ export function GroupDuplicateModal({
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         {!result && (
           <Space wrap>
-            <Typography.Text type="secondary">Env cible :</Typography.Text>
+            <Typography.Text type="secondary">{t('targetEnv')}</Typography.Text>
             <Select
               style={{ width: 140 }}
               value={env}
@@ -156,19 +161,22 @@ export function GroupDuplicateModal({
         ) : preview ? (
           <>
             <Typography.Text>
-              Groupe cible : <strong>{preview.targetGroupName}</strong>{' '}
+              {t.rich('targetGroup', {
+                name: preview.targetGroupName,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}{' '}
               <Typography.Text type="secondary">
-                ({preview.targetGroupExists ? 'existant' : 'nouveau'})
+                {preview.targetGroupExists ? t('existing') : t('new')}
               </Typography.Text>
             </Typography.Text>
             {preview.duplicateCount > 0 && (
               <Alert
                 type="warning"
                 showIcon
-                message={`${preview.duplicateCount} copie(s) existent déjà sous le nom cible`}
+                message={t('alreadyExist', { count: preview.duplicateCount })}
                 description={
                   <Checkbox checked={force} onChange={(event) => setForce(event.target.checked)}>
-                    Dupliquer quand même
+                    {t('force')}
                   </Checkbox>
                 }
               />
@@ -177,8 +185,8 @@ export function GroupDuplicateModal({
               <Alert
                 type="warning"
                 showIcon
-                message={`${unmappedTotal} ressource(s) sans mapping`}
-                description={<Link href="/resource-mappings/create">Déclarer un mapping</Link>}
+                message={t('unmapped', { count: unmappedTotal })}
+                description={<Link href="/resource-mappings/create">{t('declareMapping')}</Link>}
               />
             )}
             <List
@@ -191,11 +199,11 @@ export function GroupDuplicateModal({
                       <Space wrap>
                         {copy.name} → <strong>{copy.targetName}</strong>
                         {copy.sameAsSource ? (
-                          <Tag color="red">déjà dans cet env</Tag>
+                          <Tag color="red">{t('sameEnv')}</Tag>
                         ) : (
-                          copy.alreadyExists && <Tag color="red">copie déjà existante</Tag>
+                          copy.alreadyExists && <Tag color="red">{t('copyExists')}</Tag>
                         )}
-                        {copy.archived && <Tag>archivé dans n8n</Tag>}
+                        {copy.archived && <Tag>{t('archived')}</Tag>}
                       </Space>
                     }
                     description={
@@ -203,14 +211,18 @@ export function GroupDuplicateModal({
                         <Space wrap>
                           {copy.internalCalls.length > 0 && (
                             <Tooltip title={copy.internalCalls.join(', ')}>
-                              <Tag color="blue">{copy.internalCalls.length} appel(s) re-câblé(s)</Tag>
+                              <Tag color="blue">
+                                {t('internalCalls', { count: copy.internalCalls.length })}
+                              </Tag>
                             </Tooltip>
                           )}
                           {copy.externalCalls.length > 0 && (
                             <Tooltip
-                              title={`Hors du groupe, non re-câblés : ${copy.externalCalls.join(', ')}`}
+                              title={t('externalCallsTooltip', { names: copy.externalCalls.join(', ') })}
                             >
-                              <Tag color="orange">{copy.externalCalls.length} appel(s) hors groupe</Tag>
+                              <Tag color="orange">
+                                {t('externalCalls', { count: copy.externalCalls.length })}
+                              </Tag>
                             </Tooltip>
                           )}
                           {copy.unmapped.length > 0 && (
@@ -240,6 +252,7 @@ function ResultView({
   result: GroupDuplicateResult;
   envColor: (env: string | null | undefined) => string;
 }) {
+  const t = useTranslations('settings.groupDuplicate');
   return (
     <>
       <Alert
@@ -247,7 +260,10 @@ function ResultView({
         showIcon
         message={
           <>
-            Copies rattachées au groupe <strong>{result.targetGroupName}</strong>{' '}
+            {t.rich('attached', {
+              name: result.targetGroupName,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}{' '}
             <Tag color={envColor(result.targetEnv)}>{result.targetEnv}</Tag>
           </>
         }
@@ -265,7 +281,7 @@ function ResultView({
               }
               description={
                 <>
-                  {!copy.newN8nId && <Tag color="red">création n8n échouée</Tag>}
+                  {!copy.newN8nId && <Tag color="red">{t('creationFailed')}</Tag>}
                   <SwitchedResources switched={copy.switched} replacements={copy.replacements} />
                 </>
               }

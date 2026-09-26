@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Popover, Tag } from 'antd';
+import { BRAND } from '../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 export interface FindingLocation {
   /** Ligne fautive dans le code du nœud, 1-indexée comme l'éditeur n8n. */
@@ -18,6 +20,7 @@ export interface FindingLocation {
  * la ligne visée — c'est là que passait l'essentiel du temps.
  */
 export function FindingCode({ line, snippet, snippetStart }: FindingLocation) {
+  const t = useTranslations('reviewTools.findingCode');
   if (!line) return null;
   const badge = (
     <Tag color="default" style={{ fontFamily: 'monospace', margin: 0 }}>
@@ -29,7 +32,7 @@ export function FindingCode({ line, snippet, snippetStart }: FindingLocation) {
   return (
     <Popover
       placement="left"
-      title={`Ligne ${line}`}
+      title={t('line', { line })}
       content={<CodeBlock snippet={snippet} start={snippetStart ?? line} highlight={line} />}
     >
       <span style={{ cursor: 'help' }}>{badge}</span>
@@ -56,7 +59,7 @@ export function CodeBlock({
         overflow: 'auto',
         fontSize: 12,
         lineHeight: 1.5,
-        background: '#fafafa',
+        background: BRAND.papier,
         padding: '8px 4px',
         borderRadius: 4,
       }}
@@ -68,7 +71,7 @@ export function CodeBlock({
           <div
             key={number}
             style={{
-              background: isFaulty ? '#fff1f0' : undefined,
+              background: isFaulty ? BRAND.papier : undefined,
               fontWeight: isFaulty ? 600 : undefined,
               padding: '0 8px',
               whiteSpace: 'pre',

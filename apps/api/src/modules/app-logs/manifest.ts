@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const APP_LOGS_MANIFEST: ModuleManifest = {
   id: 'app-logs',
-  name: 'Logs de la plateforme',
-  description: "Dernières lignes de log de l'API, à l'écran",
+  get name() {
+    return msg('ops.moduleAppLogsName');
+  },
+  get description() {
+    return msg('ops.moduleAppLogsDescription');
+  },
 };

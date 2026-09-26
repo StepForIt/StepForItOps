@@ -1,6 +1,15 @@
 import { Inject, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
-import { AI_PORT, AiPort, N8nWorkflow, TimeSavedEstimate, estimateTimeSaved } from '@nwm/core';
+import {
+  AI_PORT,
+  AiPort,
+  N8nWorkflow,
+  TimeSavedEstimate,
+  estimateTimeSaved,
+  msg,
+  writeInLanguage,
+} from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 
 /** Assez pour le raisonnement ET la réponse : un budget trop juste renvoie du tronqué. */
 const MAX_TOKENS = 1024;
@@ -38,6 +47,7 @@ export class TimeSavedService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(AI_PORT) private readonly ai: AiPort,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /**
@@ -59,13 +69,13 @@ export class TimeSavedService implements OnModuleInit {
           select: { id: true, raw: true },
         });
         for (const row of rows) {
-          await this.store(row.id, estimateTimeSaved(row.raw as unknown as N8nWorkflow), 'rules');
+          await this.store(row.id, this.estimate(row.raw as unknown as N8nWorkflow), 'rules');
         }
       }
-      if (pending.length > 0) this.logger.log(`Temps gagné estimé sur ${pending.length} workflow(s)`);
+      if (pending.length > 0) this.logger.log(`Time saved estimated on ${pending.length} workflow(s)`);
     } catch (error) {
       // Une base pas encore migrée ne doit pas empêcher l'api de démarrer.
-      this.logger.warn(`Estimation initiale du temps gagné ignorée : ${(error as Error).message}`);
+      this.logger.warn(`Initial time-saved estimate skipped: ${(error as Error).message}`);
     }
   }
 
@@ -79,12 +89,17 @@ export class TimeSavedService implements OnModuleInit {
     minutesSavedEstimateWhy: string;
     minutesSavedEstimateFrom: string;
   } {
-    const estimate = estimateTimeSaved(raw);
+    const estimate = this.estimate(raw);
     return {
       minutesSavedEstimate: estimate.minutes,
       minutesSavedEstimateWhy: estimate.reason,
       minutesSavedEstimateFrom: 'rules',
     };
+  }
+
+  /** La raison est stockée : elle s'écrit dans la langue de la plateforme, pas dans celle de l'appelant. */
+  private estimate(raw: N8nWorkflow): TimeSavedEstimate {
+    return this.platformLocale.run(() => estimateTimeSaved(raw));
   }
 
   async view(workflowId: string): Promise<TimeSavedView> {
@@ -97,7 +112,7 @@ export class TimeSavedService implements OnModuleInit {
         minutesSavedEstimateFrom: true,
       },
     });
-    if (!workflow) throw new NotFoundException(`Workflow ${workflowId} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('platform.workflowNotFound', { id: workflowId }));
     return {
       minutes: workflow.minutesSavedPerExecution ?? workflow.minutesSavedEstimate ?? null,
       estimated: workflow.minutesSavedPerExecution == null,
@@ -122,10 +137,10 @@ export class TimeSavedService implements OnModuleInit {
       where: { id: workflowId },
       select: { id: true, name: true, raw: true },
     });
-    if (!workflow) throw new NotFoundException(`Workflow ${workflowId} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('platform.workflowNotFound', { id: workflowId }));
 
     const raw = workflow.raw as unknown as N8nWorkflow;
-    const rules = estimateTimeSaved(raw);
+    const rules = this.estimate(raw);
     if (await this.ai.isConfigured()) {
       const refined = await this.askAi(workflow.name, raw, rules);
       if (refined) {
@@ -145,15 +160,16 @@ export class TimeSavedService implements OnModuleInit {
     try {
       const answer = await this.ai.generateJson<{ minutes?: number; reason?: string }>({
         system:
-          "Tu estimes le temps de travail HUMAIN qu'une exécution de ce workflow n8n remplace, " +
-          'en minutes, du point de vue de celui qui aurait dû le faire à la main.\n' +
-          '- Compte les gestes réels : ouvrir un outil et retrouver une donnée, saisir une ligne, ' +
-          'rédiger un message, relire et décider. Ne compte pas la plomberie (Set, IF, Merge, boucles).\n' +
-          '- Un appel de sous-workflow ne compte pas : il a ses propres exécutions.\n' +
-          `- Une règle déterministe propose ${rules.minutes} min (${rules.reason}) : ne la contredis que si le ` +
-          'détail des nœuds le justifie (volume traité, rédaction longue, geste trivial).\n' +
-          `- Reste entre 0 et ${MAX_MINUTES} minutes, et sois prudent : ce chiffre alimente un ROI.\n` +
-          'Réponds en JSON : {"minutes":number,"reason":"une phrase en français, ce que ça remplace"}',
+          'You estimate the HUMAN work time that one execution of this n8n workflow replaces, ' +
+          'in minutes, from the point of view of the person who would have had to do it by hand.\n' +
+          '- Count the real gestures: opening a tool and finding a piece of data, entering a row, ' +
+          'writing a message, reviewing and deciding. Do not count the plumbing (Set, IF, Merge, loops).\n' +
+          '- A sub-workflow call does not count: it has its own executions.\n' +
+          `- A deterministic rule proposes ${rules.minutes} min (${rules.reason}): only contradict it if the ` +
+          'node details justify it (volume processed, long writing, trivial gesture).\n' +
+          `- Stay between 0 and ${MAX_MINUTES} minutes, and be careful: this figure feeds an ROI.\n` +
+          'Reply in JSON: {"minutes":number,"reason":"one sentence, what it replaces"}\n' +
+          this.platformLocale.run(() => writeInLanguage()),
         prompt: JSON.stringify(summarize(name, raw)),
         maxTokens: MAX_TOKENS,
         effort: 'low',
@@ -169,7 +185,7 @@ export class TimeSavedService implements OnModuleInit {
         capped: false,
       };
     } catch (error) {
-      this.logger.warn(`Temps gagné laissé à la règle : ${(error as Error).message}`);
+      this.logger.warn(`Time saved left to the rule: ${(error as Error).message}`);
       return null;
     }
   }

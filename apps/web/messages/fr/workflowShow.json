@@ -1,0 +1,399 @@
+{
+  "page": {
+    "verifySteps": {
+      "structure": "Structure",
+      "js": "JS",
+      "naming": "Naming",
+      "champs": "Champs"
+    },
+    "stepSkipped": "{label} (module désactivé)",
+    "verifyDone": "{count} findings",
+    "verifyDoneSkipped": "{count} findings — modules sautés : {modules}",
+    "analysisNotRerun": "Analyse non relancée — {error}",
+    "docGenerated": "Documentation générée",
+    "noDocYet": "Pas encore de doc — génère-la",
+    "resyncMissing": "n8n ne connaît plus ce workflow : marqué comme absent",
+    "resyncUpdated": "Workflow mis à jour depuis n8n",
+    "upToDate": "Déjà à jour",
+    "alreadyPublished": "Ce workflow était déjà publié.",
+    "published": "Workflow publié : n8n l’ouvre et l’exécute désormais.",
+    "testDone": "Test terminé : {status}",
+    "assistantTooltip": "Assistant IA — ouvrable aussi d'un glissé vers la gauche sur mobile",
+    "assistant": "Assistant IA",
+    "reload": "Recharger depuis n8n",
+    "active": "actif",
+    "inactive": "inactif",
+    "versionTooltip": "Posée par la dernière promotion.",
+    "version": "v{version}",
+    "plugged": "branché : {env}",
+    "pluggedMixed": "branché : {env} (mixte !)",
+    "aiCostLabel": "Coût IA ({days} j)",
+    "aiCostTooltip": "{calls} appel(s) LLM sur {executions} exécution(s)",
+    "aiCostTooltipUnpriced": "{calls} appel(s) LLM sur {executions} exécution(s) — {unpriced} sans tarif : coût plancher",
+    "timeSaved": {
+      "title": "Temps gagné par exécution réussie",
+      "placeholder": "{minutes} (estimé)",
+      "addon": "min / exéc.",
+      "reestimate": "Réestimer (IA)",
+      "why": "pourquoi ?",
+      "label": "Temps gagné :",
+      "value": "{minutes} min / exéc.",
+      "estimatedValue": "{minutes} min / exéc. (estimé)",
+      "toFill": "à renseigner"
+    },
+    "actions": {
+      "verify": "Vérifier",
+      "publish": "Publier",
+      "publishHint": "Aucune version publiée",
+      "checks": "Contrôles",
+      "checksCount": "Contrôles ({enabled}/{total})",
+      "checksHintInherited": "Contrôles à jouer — configuration héritée de : {source}",
+      "checksHint": "Choisir les contrôles à jouer",
+      "remote": "Vérifier le distant",
+      "remoteHint": "Les tables Airtable, NocoDB, Notion, Sheets et Postgres portent-elles les colonnes que ce workflow lit ou écrit ?",
+      "naming": "Suggérer des noms",
+      "envs": "Environnements"
+    },
+    "unavailable": "{count, plural, one {# action indisponible} other {# actions indisponibles}} sur Make",
+    "tabs": {
+      "graph": "Schéma",
+      "nodes": "Nœuds",
+      "nodesCount": "Nœuds ({count})",
+      "samples": "Données réelles",
+      "findings": "Findings ({count})",
+      "doc": "Documentation",
+      "test": "Test"
+    },
+    "filters": {
+      "module": "Type de vérif",
+      "severity": "Sévérité",
+      "structure": "Structure",
+      "js": "JS",
+      "naming": "Naming",
+      "fields": "Champs (exécutions)",
+      "remote": "Tables distantes"
+    },
+    "doc": {
+      "saved": "Documentation enregistrée",
+      "regenerate": "Régénérer (IA)",
+      "empty": "Pas encore de documentation pour ce workflow",
+      "generate": "Générer la documentation (IA)"
+    },
+    "test": {
+      "payloadPlaceholder": "Payload JSON envoyé au webhook, ex: {example}",
+      "trigger": "Déclencher via webhook",
+      "mockTooltip": "Rejoue le workflow avec des réponses simulées : rien n'est écrit ni envoyé au dehors.",
+      "mock": "Tester sans rien envoyer"
+    },
+    "thisGroup": "ce groupe"
+  },
+  "envLinks": {
+    "active": "actif",
+    "inactive": "inactif",
+    "archived": "archivé",
+    "missing": "supprimé dans n8n",
+    "noCopyTooltip": "Aucun exemplaire en {env} — cliquer pour y copier celui-ci",
+    "toCreate": "à créer",
+    "unknownEnv": "env ?"
+  },
+  "groupLinks": {
+    "label": "Groupe{count, plural, one {} other {s}} :",
+    "unreadable": "Groupe illisible",
+    "here": "{name} (ici)",
+    "openGroup": "Ouvrir le groupe →"
+  },
+  "promoteChecks": {
+    "detail": "détail",
+    "title": "Contrôles",
+    "noProblem": "Aucun problème",
+    "othersOk": "{count} autre(s) contrôle(s) sans problème"
+  },
+  "promoteCheckList": {
+    "ok": "OK",
+    "remoteTable": "table « {name} »",
+    "quoted": "« {name} »",
+    "findings": {
+      "label": "Vérification",
+      "errors": "{count} erreur(s)",
+      "more": "… et {count} autre(s).",
+      "open": "Ouvrir les findings"
+    },
+    "tests": {
+      "label": "Tests",
+      "none": "aucun cas de test",
+      "ok": "{passed}/{total} OK",
+      "okNeverRun": "{passed}/{total} OK · {neverRun} jamais joué(s)",
+      "failed": "{count} en échec (onglet Test)"
+    },
+    "subs": {
+      "label": "Sous-workflows",
+      "none": "aucun",
+      "ok": "{mapped}/{total} trouvé(s)",
+      "okCascade": "{mapped}/{total} trouvé(s) · {cascade} à créer",
+      "missing": "introuvable(s) : {names}",
+      "archived": "archivé sur la cible",
+      "mapped": "trouvé",
+      "unchanged": "inchangé",
+      "dynamic": "id calculé à l'exécution, à vérifier",
+      "willCreate": "sera créé",
+      "promoteFirst": "à promouvoir d'abord",
+      "node": "— nœud {name}"
+    },
+    "remote": {
+      "label": "Tables distantes",
+      "notChecked": "non vérifiées",
+      "none": "aucune",
+      "missing": "manquant sur la cible : {names}",
+      "unverified": "{count} non vérifiée(s)"
+    },
+    "credentials": {
+      "label": "Credentials",
+      "missing": "absents de la cible : {names}"
+    },
+    "unmapped": {
+      "label": "Ressources non basculées",
+      "summary": "{names} — resteront sur les mêmes données",
+      "declare": "Déclarer un mapping"
+    }
+  },
+  "promoteChain": {
+    "backward": "{from} → {to} : sens inverse.",
+    "through": "La promotion passera par {skipped} avant la cible",
+    "skips": "Cette promotion saute {skipped}",
+    "throughCheckbox": "Passer par les environnements intermédiaires",
+    "onInstance": "sur {instance}",
+    "toCreate": "à créer",
+    "overwrite": "écrasement",
+    "confirmSkip": "Sauter {skipped}",
+    "blocked": "Saut interdit (chaîne bloquante)."
+  },
+  "promoteVersion": {
+    "levels": {
+      "major": {
+        "label": "Majeure",
+        "hint": "Le contrat change, ou quelque chose disparaît"
+      },
+      "minor": {
+        "label": "Mineure",
+        "hint": "Le workflow fait quelque chose de plus"
+      },
+      "patch": {
+        "label": "Corrective",
+        "hint": "Réglage, correction — rien de nouveau, rien de perdu"
+      },
+      "none": {
+        "label": "Reprise",
+        "hint": "Rien de neuf à publier : le numéro de la source est reporté tel quel"
+      }
+    },
+    "title": "Version",
+    "today": "Aujourd’hui",
+    "noneVersioned": "aucun exemplaire versionné",
+    "after": "Après promotion",
+    "keptAsIs": "numéro repris tel quel",
+    "nameInN8n": "Nom dans n8n",
+    "quotedName": "« {name} »",
+    "sourceAndTarget": "— source et cible",
+    "level": "Niveau",
+    "byAi": "proposé par l’IA",
+    "byRule": "proposé par la règle"
+  },
+  "publishRun": {
+    "states": {
+      "pending": "à publier",
+      "done": "publié",
+      "already": "déjà publié",
+      "keptDraft": "brouillon en source",
+      "notApplicable": "ignoré",
+      "failed": "refusé",
+      "skipped": "passé"
+    },
+    "pausedOn": "Publication en pause sur « {name} » : {reason}",
+    "n8nRefusal": "refus de n8n",
+    "published": "{count} workflow(s) publié(s) comme la source",
+    "nothing": "Rien à publier",
+    "refused": "« {name} » refusé",
+    "resume": "Reprendre",
+    "skipTitle": "Passer cette étape ?",
+    "skipDescription": "Les workflows qui l’appellent seront sans doute refusés à leur tour.",
+    "skip": "Passer",
+    "abandonTitle": "Abandonner la publication ?",
+    "abandon": "Abandonner",
+    "paused": "Publication en pause",
+    "running": "Publication en cours",
+    "modalTitle": "Publier comme la source"
+  },
+  "mockTest": {
+    "title": "Tester sans rien envoyer",
+    "create": "Créer la copie [TEST]",
+    "created": "Copie [TEST] créée",
+    "open": "Ouvrir",
+    "info": "Crée une copie [TEST] ; les nœuds cochés ne partent pas.",
+    "nothing": "Aucun nœud ne sort du système : rien à bouchonner.",
+    "stubTooltip": "L'appel part vers un workflow vide, dont l'exécution montre ce qui aurait été envoyé.",
+    "reroute": "Rerouter {count} sous-workflow(s) vers un bouchon"
+  },
+  "testCases": {
+    "diff": {
+      "value": "valeur différente",
+      "type": "type différent",
+      "missing": "champ disparu",
+      "extra": "champ en plus",
+      "count": "nombre d’éléments",
+      "normalization": "artefact de comparaison",
+      "unknown": "écart"
+    },
+    "status": {
+      "passed": {
+        "label": "conforme",
+        "hint": "Le rejeu a produit la même sortie que la référence (ids et dates neutralisés)."
+      },
+      "failed": {
+        "label": "sortie différente",
+        "hint": "Le workflow est allé au bout, mais sa sortie ne correspond plus à la référence : le détail est sous la ligne."
+      },
+      "error": {
+        "label": "rejeu impossible",
+        "hint": "Rien n’a pu être comparé : webhook absent, workflow inactif, ou aucune exécution déclenchée."
+      }
+    },
+    "created": "Cas de test créé : cette exécution est maintenant la référence.",
+    "detailBelow": "Détail sous la ligne.",
+    "passedMsg": "Conforme — {said}",
+    "failedMsg": "Sortie différente — {said}",
+    "errorMsg": "Rejeu impossible — {said}",
+    "runAllResult": "{passed}/{total} conformes",
+    "title": "Cas de test enregistrés",
+    "runAllTooltip": "Rejoue chaque cas : le webhook est réellement appelé, une exécution part sur n8n.",
+    "runAll": "Tout rejouer ({count})",
+    "selectPlaceholder": "Choisir une exécution récente comme référence…",
+    "create": "En faire un cas de test",
+    "empty": "Aucun cas de test — enregistre une exécution de référence ci-dessus.",
+    "replayExecution": "Exécution n8n du rejeu : #{id}",
+    "inOutput": "dans la sortie : <code>{path}</code>",
+    "columnCase": "Cas",
+    "columnLastRun": "Dernier rejeu",
+    "neverRun": "jamais joué",
+    "replayTooltip": "Rejouer (appelle réellement le webhook)",
+    "deleteConfirm": "Supprimer ce cas de test ?"
+  },
+  "envAssistant": {
+    "choices": {
+      "switchTitle": "Rebrancher ce workflow sur un autre env",
+      "switchDetail": "Remplace les ids sur place.",
+      "switchBlocked": "aucun mapping déclaré",
+      "copyTitle": "Copier vers un autre env",
+      "copyDetail": "Copie inactive « … - {env} ».",
+      "markTitle": "Juste déclarer son env",
+      "markDetail": "Tag <code>env:{env}</code> + suffixe du nom.",
+      "groupTitle": "Traiter tout le groupe",
+      "groupDetail": "Tout le groupe {names}.",
+      "groupBlocked": "dans aucun groupe",
+      "promoteTitleTo": "Promouvoir vers {env}",
+      "promoteTitle": "Promouvoir ce travail",
+      "promoteDetail": "Écrase ou crée le jumeau dans un autre env."
+    },
+    "switched": "Rebranché sur {env}",
+    "copyCreated": "Copie « {name} » créée.",
+    "pinsLost": "Non épinglés : {names} — ils enverront pour de vrai.",
+    "subsMissing": "Sans copie {env} : {names} — appelle l'original.",
+    "marked": "Déclaré env:{env}",
+    "markedRenamed": "Déclaré env:{env} et renommé « {name} »",
+    "actions": {
+      "group": "Ouvrir la duplication du groupe",
+      "switch": "Rebrancher sur {env}",
+      "copy": "Créer la copie {env}",
+      "mark": "Déclarer env:{env}"
+    },
+    "title": "Environnements",
+    "question": "Que veux-tu faire de « {name} » ?",
+    "unavailable": "Indisponible : {reason}.",
+    "declareMapping": "Déclarer un mapping",
+    "createGroup": "Créer un groupe",
+    "addInstance": "Ajouter une instance",
+    "whichGroup": "Quel groupe dupliquer ?",
+    "switchQuestion": "Sur quel env rebrancher ce workflow ?",
+    "copyQuestion": "Copie dans quel env ?",
+    "markQuestion": "Quel est l’env de ce workflow ?",
+    "activeWarning": "Actif : bascule immédiate sur {env}",
+    "understood": "J'ai compris, rebrancher quand même",
+    "nothingToReplace": "Rien à remplacer pour {env}.",
+    "cascade": "Copier les sous-workflows manquants",
+    "pin": "Bouchonner {count, plural, one {# nœud sortant} other {# nœuds sortants}}",
+    "rename": "Renommer aussi en « {name} - {env} »",
+    "alreadyTagged": "déjà env:{env}",
+    "unmapped": "{count} ressource(s) sans mapping"
+  },
+  "promote": {
+    "diff": {
+      "added": "ajouté",
+      "removed": "supprimé",
+      "modified": "modifié",
+      "renamed": "renommé"
+    },
+    "diffCount": {
+      "added": "{count} ajouté(s)",
+      "removed": "{count} supprimé(s)",
+      "modified": "{count} modifié(s)",
+      "renamed": "{count} renommé(s)"
+    },
+    "previewRefreshed": "Aperçu actualisé",
+    "quoted": "« {name} »",
+    "result": {
+      "created": "« {name} » créé sur l'instance cible{version} (inactif, {count} remplacements){rest}",
+      "updated": "« {name} » mis à jour sur l'instance cible{version} ({count} remplacements){rest}",
+      "version": " en {version}",
+      "traversed": " — passé par {envs}",
+      "cascaded": " — {count} sous-workflow(s) créé(s) au passage : {names}",
+      "renamed": " — nom n8n mis à jour ({names})",
+      "noMarker": " — nom n8n inchangé : aucun marqueur de version (1.2.3) dans le nom",
+      "freed": " — URL libérée : {moves}",
+      "moved": "« {name} » passé en /{to}",
+      "calleesPublished": "Sous-workflows publiés : {names}",
+      "manualCallee": "« {name} » reste à publier dans n8n : {reason}",
+      "renameFailed": "« {name} » devait devenir « {renamed} » dans n8n : {error}. La version est posée dans la plateforme, le nom est à corriger à la main.",
+      "n8nRefusal": "refus de n8n",
+      "publicationError": "Publication à faire à la main : {error}"
+    },
+    "title": "Promouvoir",
+    "refreshPreview": "Actualiser l'aperçu",
+    "overwrite": "Écraser sur la cible",
+    "promote": "Promouvoir",
+    "targetInstance": "Instance cible",
+    "sameInstance": "{name} (même instance)",
+    "envRequired": "Env cible (obligatoire)",
+    "envOptional": "Env cible (optionnel)",
+    "noEnv": "Aucun — copie telle quelle",
+    "cascade": "Créer aussi sur la cible les sous-workflows qui y manquent : {names}",
+    "publishLikeSource": "Publier comme la source (sous-workflows d’abord)",
+    "target": "Cible",
+    "onInstance": "sur {instance}",
+    "willCreate": "sera créé (inactif)",
+    "willReplace": "sera remplacé",
+    "active": "ACTIF",
+    "archived": "ARCHIVÉ",
+    "data": "Données {env}",
+    "replacedCount": "{count} base(s)/table(s) remplacée(s) par leur équivalent {env}",
+    "nodesVsTarget": "Nœuds vs la cible",
+    "hide": "masquer",
+    "which": "lesquels ?",
+    "identical": "identiques — rien ne change",
+    "blocked": "Promotion bloquée : {blockers}",
+    "force": "Forcer quand même, en connaissance de cause",
+    "notForceable": "Ce blocage ne se force pas : n8n refuse d’écrire sur un workflow archivé.",
+    "calleesTitle": "Sous-workflows en brouillon sur la cible",
+    "calleesExplain": "n8n refuse d’activer un workflow tant que ses sous-workflows ne sont pas publiés.",
+    "willPublish": "« {name} » : sera publié",
+    "manual": "« {name} » : à publier à la main — {reason}",
+    "publishCallees": "Publier ces sous-workflows avant la promotion",
+    "clashTitle": "URL déjà servie sur la cible",
+    "holderActive": "actif",
+    "holderInactive": "inactif",
+    "clashMove": "« {node} » : <code>/{url}</code> est tenu par « {holder} » ({state}) → <code>/{move}</code>",
+    "clashFree": "« {node} » : <code>/{url}</code> est tenu par « {holder} » ({state}) — à libérer dans n8n",
+    "moveClashing": "Libérer ces URLs pendant la promotion",
+    "webhooksTitle": "URL des webhooks",
+    "preserved": "« {node} » : URL inchangée (<code>/{to}</code>)",
+    "changed": "« {node} » : nouvelle URL <code>/{to}</code>"
+  }
+}

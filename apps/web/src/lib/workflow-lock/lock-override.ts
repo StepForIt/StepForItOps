@@ -13,10 +13,16 @@ export interface LockedWorkflow {
 const REASON_MIN = 5;
 const REASON_MAX = 500;
 
-export function lockReasonError(reason: string): string | null {
+/** Ce qui manque à une raison de forçage, en clé de `reviewTools.lock` (null : elle convient). */
+export interface LockReasonError {
+  key: 'reasonTooShort' | 'reasonTooLong';
+  values: { count: number };
+}
+
+export function lockReasonError(reason: string): LockReasonError | null {
   const trimmed = reason.trim();
-  if (trimmed.length < REASON_MIN) return `${REASON_MIN} caractères au moins`;
-  if (trimmed.length > REASON_MAX) return `${REASON_MAX} caractères au plus`;
+  if (trimmed.length < REASON_MIN) return { key: 'reasonTooShort', values: { count: REASON_MIN } };
+  if (trimmed.length > REASON_MAX) return { key: 'reasonTooLong', values: { count: REASON_MAX } };
   return null;
 }
 

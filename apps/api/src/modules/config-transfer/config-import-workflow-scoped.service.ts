@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { findingMessageKey } from '@nwm/core';
+import { findingMessageKey, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ConfigBundle, ImportReport, ImportStrategy, SectionReport } from './config-bundle.types';
 import { WorkflowRefResolver } from './workflow-ref.resolver';
@@ -54,7 +54,7 @@ export class ConfigImportWorkflowScopedService {
           section.skipped++;
           report.warnings.push(
             WorkflowRefResolver.missing(
-              `Exclusion de finding "${entry.module}/${entry.code}"`,
+              msg('platform.importSubject', { kind: 'findingIgnore', name: `${entry.module}/${entry.code}` }),
               entry.workflowRef,
             ),
           );
@@ -128,7 +128,10 @@ export class ConfigImportWorkflowScopedService {
       if (!instanceId) {
         section.skipped++;
         report.warnings.push(
-          `Groupe "${entry.name}" : instance ${entry.instanceBaseUrl} absente de la cible`,
+          msg('platform.importGroupInstanceMissing', {
+            name: entry.name,
+            instanceUrl: entry.instanceBaseUrl,
+          }),
         );
         continue;
       }
@@ -138,7 +141,14 @@ export class ConfigImportWorkflowScopedService {
         const ref = { instanceBaseUrl: entry.instanceBaseUrl, externalId };
         const id = await this.refs.workflowId(ref);
         if (id) memberIds.push(id);
-        else report.warnings.push(WorkflowRefResolver.missing(`Groupe "${entry.name}"`, ref));
+        else {
+          report.warnings.push(
+            WorkflowRefResolver.missing(
+              msg('platform.importSubject', { kind: 'group', name: entry.name }),
+              ref,
+            ),
+          );
+        }
       }
 
       const existing = await this.prisma.workflowGroup.findUnique({
@@ -181,7 +191,10 @@ export class ConfigImportWorkflowScopedService {
         section.skipped++;
         report.warnings.push(
           WorkflowRefResolver.missing(
-            `Lien manuel "${entry.label || 'sans libellé'}"`,
+            msg('platform.importSubject', {
+              kind: 'link',
+              name: entry.label || msg('platform.importNoLabel'),
+            }),
             fromId ? entry.to : entry.from,
           ),
         );

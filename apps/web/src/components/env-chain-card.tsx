@@ -18,6 +18,7 @@ import {
   message,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { useIsMobile } from './mobile/use-is-mobile';
 import { apiGet, apiPut } from '../lib/api';
 import { EnvDefinition, PlatformSettings, useEnvs } from '../lib/envs';
@@ -44,15 +45,11 @@ function slugifyEnvId(raw: string): string {
  * que la plateforme réserve à chacun. dev et prod sont les deux bouts obligatoires ;
  * tout le reste — preprod comprise — s'ajoute, se renomme et se supprime.
  */
-const FIELD_LABELS = [
-  { key: 'label', label: 'Libellé' },
-  { key: 'color', label: 'Couleur' },
-  { key: 'after', label: 'Vient de' },
-  { key: 'monitored', label: 'Surveillé' },
-  { key: 'canonicalWebhookPath', label: 'URL publique' },
-] as const;
+const FIELD_KEYS = ['label', 'color', 'after', 'monitored', 'canonicalWebhookPath'] as const;
 
 export function EnvChainCard() {
+  const t = useTranslations('settings.envChain');
+  const tc = useTranslations('common');
   const mobile = useIsMobile();
   const [settings, setSettings] = useState<PlatformSettings | null>(null);
   const [envs, setEnvs] = useState<EnvDefinition[]>([]);
@@ -139,7 +136,7 @@ export function EnvChainCard() {
           value={env.id}
           style={{ width: mobile ? 160 : undefined }}
           onChange={(event) => edit(env.id, { id: slugifyEnvId(event.target.value) })}
-          placeholder="recette"
+          placeholder={t('idPlaceholder')}
         />
       ),
     label: (env) => (
@@ -159,7 +156,7 @@ export function EnvChainCard() {
     ),
     after: (env) =>
       env.id === FIRST_ENV_ID ? (
-        <Typography.Text type="secondary">— (racine)</Typography.Text>
+        <Typography.Text type="secondary">{t('root')}</Typography.Text>
       ) : (
         <Select
           value={env.after ?? undefined}
@@ -184,11 +181,7 @@ export function EnvChainCard() {
     ),
     remove: (env) =>
       env.id === FIRST_ENV_ID || env.id === PROD_ENV_ID ? null : (
-        <Popconfirm
-          title="Retirer cet environnement ?"
-          description="Les workflows gardent leur tag."
-          onConfirm={() => remove(env.id)}
-        >
+        <Popconfirm title={t('removeConfirm')} description={t('removeHint')} onConfirm={() => remove(env.id)}>
           <Button type="text" danger icon={<DeleteOutlined />} />
         </Popconfirm>
       ),
@@ -199,7 +192,7 @@ export function EnvChainCard() {
   const duplicated = new Set(envs.map((env) => env.id)).size !== envs.length;
 
   return (
-    <Card size="small" title="Environnements" style={{ marginBottom: 16 }}>
+    <Card size="small" title={t('title')} style={{ marginBottom: 16 }}>
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {/* Sept colonnes de champs éditables : en tableau, elles sortent de l'écran d'un
             téléphone. Mêmes champs, empilés par environnement. */}
@@ -212,9 +205,9 @@ export function EnvChainCard() {
                     {fields.id(env)}
                     {fields.remove(env)}
                   </Space>
-                  {FIELD_LABELS.map(({ key, label }) => (
+                  {FIELD_KEYS.map((key) => (
                     <Space key={key} style={{ justifyContent: 'space-between', width: '100%' }}>
-                      <Typography.Text type="secondary">{label}</Typography.Text>
+                      <Typography.Text type="secondary">{t(`columns.${key}`)}</Typography.Text>
                       {fields[key](env)}
                     </Space>
                   ))}
@@ -225,53 +218,37 @@ export function EnvChainCard() {
         ) : (
           <Table<EnvDefinition> dataSource={envs} rowKey="id" size="small" pagination={false}>
             <Table.Column<EnvDefinition>
-              title={
-                <Tooltip title="S'écrit dans le tag env:<id> et le suffixe du nom (« X - RECETTE »).">
-                  Id
-                </Tooltip>
-              }
+              title={<Tooltip title={t('idTooltip', { tag: 'env:<id>' })}>{t('columns.id')}</Tooltip>}
               dataIndex="id"
               width={200}
               render={(_: string, env) => fields.id(env)}
             />
             <Table.Column<EnvDefinition>
-              title="Libellé"
+              title={t('columns.label')}
               dataIndex="label"
               width={180}
               render={(_: string, env) => fields.label(env)}
             />
             <Table.Column<EnvDefinition>
-              title="Couleur"
+              title={t('columns.color')}
               dataIndex="color"
               width={140}
               render={(_: string, env) => fields.color(env)}
             />
             <Table.Column<EnvDefinition>
-              title={
-                <Tooltip title="L'env dont celui-ci reçoit ses promotions. Deux envs peuvent repartir du même amont : une recette par client, par exemple.">
-                  Vient de
-                </Tooltip>
-              }
+              title={<Tooltip title={t('afterTooltip')}>{t('columns.after')}</Tooltip>}
               dataIndex="after"
               width={180}
               render={(_: string | null, env) => fields.after(env)}
             />
             <Table.Column<EnvDefinition>
-              title={
-                <Tooltip title="Ses erreurs d'exécution sont remontées : monitoring, page Erreurs, alertes. Ailleurs, une erreur est le bruit du travail en cours.">
-                  Surveillé
-                </Tooltip>
-              }
+              title={<Tooltip title={t('monitoredTooltip')}>{t('columns.monitored')}</Tooltip>}
               dataIndex="monitored"
               width={110}
               render={(_: boolean, env) => fields.monitored(env)}
             />
             <Table.Column<EnvDefinition>
-              title={
-                <Tooltip title="Ses webhooks gardent le path nu, sans suffixe d'env : c'est l'URL que les appelants extérieurs connaissent.">
-                  URL publique
-                </Tooltip>
-              }
+              title={<Tooltip title={t('canonicalTooltip')}>{t('columns.canonicalWebhookPath')}</Tooltip>}
               dataIndex="canonicalWebhookPath"
               width={120}
               render={(_: boolean, env) => fields.canonicalWebhookPath(env)}
@@ -282,41 +259,39 @@ export function EnvChainCard() {
 
         <Space>
           <Button icon={<PlusOutlined />} onClick={add} disabled={saving}>
-            Ajouter un environnement
+            {t('add')}
           </Button>
           <Button
             type="primary"
             disabled={!dirty || duplicated || saving}
             loading={saving}
-            onClick={() => save({ envs }, 'Environnements enregistrés')}
+            onClick={() => save({ envs }, t('saved'))}
           >
-            Enregistrer
+            {tc('save')}
           </Button>
           {dirty && (
             <Button type="text" disabled={saving} onClick={() => setEnvs(settings?.envs ?? [])}>
-              Annuler
+              {tc('cancel')}
             </Button>
           )}
-          {duplicated && <Typography.Text type="danger">Deux environnements ont le même id.</Typography.Text>}
+          {duplicated && <Typography.Text type="danger">{t('duplicatedId')}</Typography.Text>}
         </Space>
 
         <div>
-          <Typography.Text strong>Quand une promotion saute une étape</Typography.Text>
+          <Typography.Text strong>{t('skipTitle')}</Typography.Text>
           <div style={{ margin: '8px 0' }}>
             <Radio.Group
               value={mode}
               disabled={saving || settings === null}
-              onChange={(event) => save({ envChainMode: event.target.value }, 'Mode enregistré')}
+              onChange={(event) => save({ envChainMode: event.target.value }, t('modeSaved'))}
             >
-              <Radio value="warn">Avertir et faire confirmer</Radio>
-              <Radio value="block">Refuser</Radio>
+              <Radio value="warn">{t('modeWarn')}</Radio>
+              <Radio value="block">{t('modeBlock')}</Radio>
             </Radio.Group>
           </div>
         </div>
 
-        {mode === 'block' && (
-          <Alert type="warning" showIcon message="Envs en aval : modifiables seulement par promotion." />
-        )}
+        {mode === 'block' && <Alert type="warning" showIcon message={t('blockHint')} />}
       </Space>
     </Card>
   );

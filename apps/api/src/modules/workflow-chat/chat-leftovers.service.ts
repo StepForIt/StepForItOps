@@ -6,6 +6,7 @@ import {
   isBlankWorkflow,
   n8nWorkflowUrl,
   subWorkflowCalls,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { InstancesService } from '../instances/instances.service';
@@ -67,7 +68,7 @@ export class ChatLeftoversService {
     } catch (error) {
       // La provenance est un confort de ménage : la perdre ne doit pas faire
       // échouer le tour, qui a déjà créé le workflow dans n8n.
-      this.logger.warn(`Provenance non enregistrée (${input.workflowId}) : ${(error as Error).message}`);
+      this.logger.warn(`Provenance not recorded (${input.workflowId}): ${(error as Error).message}`);
     }
   }
 
@@ -147,10 +148,7 @@ export class ChatLeftoversService {
   async remove(workflowId: string): Promise<{ ok: true }> {
     const leftover = (await this.list()).find((entry) => entry.workflowId === workflowId);
     if (!leftover) {
-      throw new BadRequestException(
-        "Ce workflow n'est plus un reste : soit il n'a pas été créé par l'assistant, soit il " +
-          "porte désormais des nœuds ou se fait appeler. Rien n'a été supprimé.",
-      );
+      throw new BadRequestException(msg('chat.leftoverNotLeftover'));
     }
     await this.locks.assertWritable(workflowId);
     const { workflow } = await this.workflows.getRaw(workflowId);
@@ -163,7 +161,7 @@ export class ChatLeftoversService {
       where: { id: workflowId },
       data: { missingUpstreamAt: new Date() },
     });
-    this.logger.log(`Sous-workflow vide « ${workflow.name} » supprimé dans n8n (${workflow.externalId})`);
+    this.logger.log(`Empty sub-workflow "${workflow.name}" deleted in n8n (${workflow.externalId})`);
     return { ok: true };
   }
 }

@@ -1,9 +1,12 @@
+import { msg } from '../../i18n';
 import { N8nWorkflow } from './workflow.types';
 
 export const MANUAL_TRIGGER_TYPE = 'n8n-nodes-base.manualTrigger';
 
 /** Nom du déclencheur posé à la création (celui que n8n donne lui-même à ce nœud). */
-export const BLANK_TRIGGER_NAME = 'Exécuter le workflow';
+export function blankTriggerName(): string {
+  return msg('platform.blankTriggerName');
+}
 
 /**
  * Workflow neuf : un déclencheur manuel, et rien d'autre.
@@ -19,7 +22,7 @@ export function buildBlankWorkflow(name: string): N8nWorkflow {
     active: false,
     nodes: [
       {
-        name: BLANK_TRIGGER_NAME,
+        name: blankTriggerName(),
         type: MANUAL_TRIGGER_TYPE,
         typeVersion: 1,
         position: [0, 0],

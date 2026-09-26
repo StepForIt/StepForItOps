@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { Table as AntTable } from 'antd';
 import type { TableProps } from 'antd';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   arrangeColumns,
   moveColumn,
@@ -142,7 +143,7 @@ function ensureStyle() {
 }
 .nwm-resize-handle:hover::after,
 .nwm-resize-handle.nwm-resizing::after {
-  background: var(--ant-color-primary, #1677ff);
+  background: var(--ant-color-primary, #047a76);
 }
 `;
   document.head.appendChild(style);
@@ -160,6 +161,7 @@ function ResizableHeaderCell({
   style,
   ...rest
 }: React.HTMLAttributes<HTMLTableCellElement> & { __resize?: ResizeInfo }) {
+  const t = useTranslations('shell.resizableTable');
   if (!__resize) {
     return (
       <th {...rest} style={style}>
@@ -172,7 +174,7 @@ function ResizableHeaderCell({
       {children}
       <span
         className="nwm-resize-handle"
-        title="Glisser pour redimensionner · double-clic pour revenir à la largeur d'origine"
+        title={t('resizeHandle')}
         onPointerDown={(event) => {
           // Sans cela le clic déclenche le tri de la colonne.
           event.preventDefault();

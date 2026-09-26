@@ -6,6 +6,8 @@
  * doivent matcher, sinon chaque rejeu serait un faux échec.
  */
 
+import { MessageId, msg } from '../i18n';
+
 type Json = Record<string, unknown>;
 
 /** Parties variables d'une chaîne, remplacées avant comparaison. Ordre significatif. */
@@ -95,25 +97,21 @@ export function compareSnapshots(expected: unknown, actual: unknown): SnapshotCo
   return { match: diffs.length === 0, diffs, summary: summarize(diffs) };
 }
 
-const KIND_NOUNS: Record<SnapshotDiffKind, [string, string]> = {
-  value: ['valeur différente', 'valeurs différentes'],
-  type: ['type différent', 'types différents'],
-  missing: ['champ disparu', 'champs disparus'],
-  extra: ['champ en plus', 'champs en plus'],
-  count: ['liste de taille différente', 'listes de taille différente'],
-  normalization: ['artefact de comparaison', 'artefacts de comparaison'],
+const KIND_MESSAGES: Record<SnapshotDiffKind, MessageId> = {
+  value: 'platform.snapKindValue',
+  type: 'platform.snapKindType',
+  missing: 'platform.snapKindMissing',
+  extra: 'platform.snapKindExtra',
+  count: 'platform.snapKindCount',
+  normalization: 'platform.snapKindNormalization',
 };
 
 function summarize(diffs: SnapshotDiff[]): string {
-  if (diffs.length === 0) return 'Sortie conforme à la référence.';
+  if (diffs.length === 0) return msg('platform.snapMatch');
   const counts = new Map<SnapshotDiffKind, number>();
   for (const diff of diffs) counts.set(diff.kind, (counts.get(diff.kind) ?? 0) + 1);
-  const parts = [...counts].map(([kind, count]) => {
-    const [one, many] = KIND_NOUNS[kind];
-    return `${count} ${count > 1 ? many : one}`;
-  });
-  const head = `${diffs.length} écart${diffs.length > 1 ? 's' : ''} avec la référence`;
-  return `${head} : ${parts.join(', ')}.`;
+  const parts = [...counts].map(([kind, count]) => msg(KIND_MESSAGES[kind], { count }));
+  return msg('platform.snapSummary', { count: diffs.length, parts: parts.join(', ') });
 }
 
 function show(value: unknown): string {
@@ -129,7 +127,9 @@ function show(value: unknown): string {
 function fieldOf(path: string): string {
   const trailing = path.match(/(?:\[\d+\])+$/)?.[0] ?? '';
   const named = path.slice(0, path.length - trailing.length).match(/\.([^.[\]]+)$/)?.[1];
-  const ranks = [...trailing.matchAll(/\[(\d+)\]/g)].map((m) => `élément ${Number(m[1]) + 1}`);
+  const ranks = [...trailing.matchAll(/\[(\d+)\]/g)].map((m) =>
+    msg('platform.snapElement', { rank: Number(m[1]) + 1 }),
+  );
   if (named) return ranks.length ? `${named} (${ranks.join(', ')})` : named;
   return ranks.length ? ranks[ranks.length - 1] : path;
 }
@@ -143,19 +143,11 @@ function isNormalizationArtifact(expected: unknown, actual: unknown): boolean {
 
 function typeName(value: unknown): string {
   if (value === null) return 'null';
-  if (Array.isArray(value)) return 'liste';
-  switch (typeof value) {
-    case 'string':
-      return 'texte';
-    case 'number':
-      return 'nombre';
-    case 'boolean':
-      return 'booléen';
-    case 'object':
-      return 'objet';
-    default:
-      return 'rien';
-  }
+  if (Array.isArray(value)) return msg('platform.snapTypeName', { type: 'list' });
+  const type = typeof value;
+  return msg('platform.snapTypeName', {
+    type: type === 'string' || type === 'number' || type === 'boolean' || type === 'object' ? type : 'none',
+  });
 }
 
 function push(diffs: SnapshotDiff[], diff: Omit<SnapshotDiff, 'field'>): void {
@@ -169,7 +161,11 @@ function walk(expected: unknown, actual: unknown, path: string, diffs: SnapshotD
       push(diffs, {
         path,
         kind: 'count',
-        message: `${fieldOf(path)} : le rejeu a produit ${actual.length} élément(s) là où la référence en avait ${expected.length}.`,
+        message: msg('platform.snapDiffCount', {
+          field: fieldOf(path),
+          actual: actual.length,
+          expected: expected.length,
+        }),
       });
       return;
     }
@@ -201,7 +197,7 @@ function walk(expected: unknown, actual: unknown, path: string, diffs: SnapshotD
       path,
       kind: 'missing',
       expected: before,
-      message: `${field} : le champ n'est plus produit par le rejeu (la référence portait ${before}).`,
+      message: msg('platform.snapDiffMissing', { field, before }),
     });
     return;
   }
@@ -210,7 +206,7 @@ function walk(expected: unknown, actual: unknown, path: string, diffs: SnapshotD
       path,
       kind: 'extra',
       actual: after,
-      message: `${field} : le rejeu produit un champ que la référence n'avait pas (${after}).`,
+      message: msg('platform.snapDiffExtra', { field, after }),
     });
     return;
   }
@@ -220,7 +216,7 @@ function walk(expected: unknown, actual: unknown, path: string, diffs: SnapshotD
       kind: 'normalization',
       expected: before,
       actual: after,
-      message: `${field} : partie variable (id, date, url…) reconnue d'un seul côté — ${before} face à ${after}. C'est la comparaison qui bute, pas la donnée : réenregistre le cas de test si l'écart persiste.`,
+      message: msg('platform.snapDiffNormalization', { field, before, after }),
     });
     return;
   }
@@ -230,7 +226,13 @@ function walk(expected: unknown, actual: unknown, path: string, diffs: SnapshotD
       kind: 'type',
       expected: before,
       actual: after,
-      message: `${field} : ${typeName(actual)} ${after} là où la référence avait ${typeName(expected)} ${before}.`,
+      message: msg('platform.snapDiffType', {
+        field,
+        actualType: typeName(actual),
+        after,
+        expectedType: typeName(expected),
+        before,
+      }),
     });
     return;
   }
@@ -239,7 +241,7 @@ function walk(expected: unknown, actual: unknown, path: string, diffs: SnapshotD
     kind: 'value',
     expected: before,
     actual: after,
-    message: `${field} : le rejeu a produit ${after}, la référence disait ${before}.`,
+    message: msg('platform.snapDiffValue', { field, after, before }),
   });
 }
 

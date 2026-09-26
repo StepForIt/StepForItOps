@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Post } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { AuthBootstrapView, AuthSettingsService } from './auth-settings.service';
 
 const MIN_PASSWORD_LENGTH = 10;
@@ -27,7 +28,7 @@ export class AuthSettingsController {
     const username = body.username?.trim() || 'admin';
     const password = body.password ?? '';
     if (password.length < MIN_PASSWORD_LENGTH) {
-      throw new BadRequestException(`Mot de passe : ${MIN_PASSWORD_LENGTH} caractères minimum.`);
+      throw new BadRequestException(msg('platform.passwordTooShort', { min: MIN_PASSWORD_LENGTH }));
     }
     return this.auth.bootstrap(username, password);
   }

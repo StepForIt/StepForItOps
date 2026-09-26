@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button, Checkbox, Form, Select, Space } from 'antd';
 import { DownOutlined, RightOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { useEnvOptions } from '../../../lib/envs';
 import { useEnabledModules } from '../../../lib/enabled-modules';
 import { useInstanceScope } from '../../../lib/instance-scope';
@@ -24,6 +25,7 @@ export function BulkEnvSettingsForm({
   onChange: (value: BulkSettings) => void;
   instances: Array<{ id: string; name: string }>;
 }) {
+  const t = useTranslations('workflowsList.bulkEnv.settings');
   const envOptions = useEnvOptions();
   const { instanceName } = useInstanceScope();
   const { enabled } = useEnabledModules();
@@ -35,7 +37,7 @@ export function BulkEnvSettingsForm({
     <Form layout="vertical">
       <Space wrap size="large" align="start">
         {action !== 'mark' && (
-          <Form.Item label="Depuis l’env" required>
+          <Form.Item label={t('from')} required>
             <Select
               style={{ width: 180 }}
               options={envOptions}
@@ -44,7 +46,7 @@ export function BulkEnvSettingsForm({
             />
           </Form.Item>
         )}
-        <Form.Item label={action === 'mark' ? 'Déclarer en' : 'Vers l’env'} required>
+        <Form.Item label={action === 'mark' ? t('markAs') : t('to')} required>
           <Select
             style={{ width: 180 }}
             options={envOptions.filter((option) => option.value !== value.sourceEnv)}
@@ -53,14 +55,11 @@ export function BulkEnvSettingsForm({
           />
         </Form.Item>
         {action === 'promote' && (
-          <Form.Item
-            label="Instance (si l’env n’existe pas)"
-            tooltip="Une famille qui a déjà l’env cible est promue là où il vit."
-          >
+          <Form.Item label={t('fallbackInstance')} tooltip={t('fallbackTooltip')}>
             <Select
               style={{ width: 240 }}
               allowClear
-              placeholder="Même instance"
+              placeholder={t('sameInstance')}
               options={instances.map((instance) => ({
                 value: instance.id,
                 label: instance.name || instanceName(instance.id),
@@ -78,22 +77,22 @@ export function BulkEnvSettingsForm({
         icon={showOptions ? <DownOutlined /> : <RightOutlined />}
         onClick={() => setShowOptions(!showOptions)}
       >
-        Options
+        {t('options')}
       </Button>
       <Space direction="vertical" size={2} style={{ display: showOptions ? undefined : 'none' }}>
         {action === 'promote' && (
           <Checkbox checked={value.throughChain} onChange={(e) => set({ throughChain: e.target.checked })}>
-            Via envs intermédiaires
+            {t('throughChain')}
           </Checkbox>
         )}
         {action !== 'mark' && (
           <Checkbox checked={value.cascade} onChange={(e) => set({ cascade: e.target.checked })}>
-            Créer les sous-workflows manquants
+            {t('cascade')}
           </Checkbox>
         )}
         {action === 'promote' && remoteAvailable && (
           <Checkbox checked={value.checkRemote} onChange={(e) => set({ checkRemote: e.target.checked })}>
-            Vérifier les tables distantes
+            {t('checkRemote')}
           </Checkbox>
         )}
         {action === 'promote' && (
@@ -101,12 +100,12 @@ export function BulkEnvSettingsForm({
             checked={value.publishLikeSource}
             onChange={(e) => set({ publishLikeSource: e.target.checked })}
           >
-            Publier comme la source
+            {t('publishLikeSource')}
           </Checkbox>
         )}
         {action === 'mark' && (
           <Checkbox checked={value.rename} onChange={(e) => set({ rename: e.target.checked })}>
-            Suffixer le nom
+            {t('rename')}
           </Checkbox>
         )}
       </Space>

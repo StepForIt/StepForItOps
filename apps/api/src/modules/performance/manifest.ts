@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const PERFORMANCE_MANIFEST: ModuleManifest = {
   id: 'performance',
-  name: 'Performance',
-  description: "Durées et statuts d'exécution, dérives de durée",
+  get name() {
+    return msg('ops.modulePerformanceName');
+  },
+  get description() {
+    return msg('ops.modulePerformanceDescription');
+  },
 };

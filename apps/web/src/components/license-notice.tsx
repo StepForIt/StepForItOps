@@ -1,14 +1,10 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Tooltip, Typography } from 'antd';
 
 const { Text } = Typography;
-
-const SUMMARY =
-  'StepForIt Ops — Business Source License 1.1. Usage libre, y compris commercial, ' +
-  'y compris pour piloter les instances n8n de vos clients. En faire une offre hébergée ' +
-  "ou revendue n'est pas couvert : mathieu@stepforit.fr.";
 
 /**
  * Mention de licence, en pied du menu latéral.
@@ -18,8 +14,9 @@ const SUMMARY =
  * probatoire : la retirer devient un geste volontaire et daté dans un dépôt.
  */
 export function LicenseNotice({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations('shell.license');
   return (
-    <Tooltip placement="right" title={SUMMARY}>
+    <Tooltip placement="right" title={t('summary')}>
       <div
         style={{
           padding: collapsed ? '12px 4px' : '12px 12px',

@@ -4,8 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { Badge, Button, Collapse, Segmented, Space, Tag, Tooltip, message } from 'antd';
 import { Table } from './resizable-table';
 import { RobotOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
-import { ruleLabel } from '../lib/finding-rules';
+import { useRuleLabel } from '../lib/finding-rules';
 import { FindingCode } from './finding-code';
 import { IgnorableFinding, IgnoreFindingModal } from './ignore-finding-modal';
 import { useWorkflowChat } from './workflow-chat-drawer';
@@ -59,8 +60,14 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
   const [fixing, setFixing] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const chat = useWorkflowChat();
+  const t = useTranslations('reviewTools.findings');
+  const tCommon = useTranslations('common');
+  const ruleLabel = useRuleLabel();
 
-  const groups = useMemo(() => buildGroups(findings, groupBy), [findings, groupBy]);
+  const groups = useMemo(
+    () => buildGroups(findings, groupBy, { rule: ruleLabel, noNode: t('noNode') }),
+    [findings, groupBy, ruleLabel, t],
+  );
 
   /** Un ou plusieurs findings → conversation IA pré-alimentée, proposition revue en diff. */
   const proposeFix = async (key: string, target: DisplayFinding[]) => {
@@ -68,7 +75,7 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
     // L'appel dure plusieurs secondes : sans ce mot, un bouton qui tourne se lit
     // comme une page figée, et on reclique.
     const done = message.loading(
-      `L’IA rédige un correctif pour ${target.length === 1 ? 'cette remarque' : `ces ${target.length} remarques`}…`,
+      target.length === 1 ? t('fixingOne') : t('fixingMany', { count: target.length }),
       0,
     );
     try {
@@ -76,11 +83,7 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
         '/workflow-chat/finding-fix',
         { findingIds: target.map((finding) => finding.id) },
       );
-      message.success(
-        result.proposalId
-          ? 'Correctif proposé — relis le diff avant d’appliquer.'
-          : 'Pas de modification proposée — voir le chat',
-      );
+      message.success(result.proposalId ? t('fixProposed') : t('noFixProposed'));
       // La réponse s'ouvre sur place : y aller par un changement de page rechargeait
       // toute la console juste pour lire un diff, et faisait perdre la liste en cours.
       chat.open({
@@ -106,8 +109,7 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
           findingIds: target.map((finding) => finding.id),
         },
       );
-      if (result.skipped > 0)
-        message.info(`${result.skipped} remarque(s) ne se corrigent plus seules — relance l’analyse.`);
+      if (result.skipped > 0) message.info(t('autofixSkipped', { count: result.skipped }));
       setReviewing(result.proposalId);
     } catch (error) {
       message.error((error as Error).message);
@@ -117,7 +119,7 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
   };
 
   if (findings.length === 0) {
-    return <p style={{ color: '#999' }}>{emptyText ?? 'Aucun finding — lance une analyse.'}</p>;
+    return <p style={{ color: '#999' }}>{emptyText ?? t('empty')}</p>;
   }
 
   return (
@@ -128,10 +130,10 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
           value={groupBy}
           onChange={setGroupBy}
           options={[
-            { value: 'node', label: 'Par nœud' },
-            { value: 'rule', label: 'Par règle' },
-            { value: 'module', label: 'Par module' },
-            { value: 'none', label: 'À plat' },
+            { value: 'node', label: t('groupBy.node') },
+            { value: 'rule', label: t('groupBy.rule') },
+            { value: 'module', label: t('groupBy.module') },
+            { value: 'none', label: t('groupBy.none') },
           ]}
         />
         {actions}
@@ -161,7 +163,7 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
             extra: (
               <Space size={4} onClick={(event) => event.stopPropagation()}>
                 {group.findings.some((finding) => finding.autoFix) && (
-                  <Tooltip title="Correctif calculé par la règle, sans IA — relu en diff avant d’écrire">
+                  <Tooltip title={t('autofixTooltip')}>
                     <Button
                       size="small"
                       icon={<ThunderboltOutlined />}
@@ -173,23 +175,23 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
                         )
                       }
                     >
-                      Appliquer
+                      {tCommon('apply')}
                     </Button>
                   </Tooltip>
                 )}
-                <Tooltip title="Corriger avec l’IA">
+                <Tooltip title={t('fixWithAi')}>
                   <Button
                     size="small"
                     icon={<RobotOutlined />}
                     loading={fixing === group.key}
                     onClick={() => proposeFix(group.key, group.findings)}
                   >
-                    Corriger
+                    {t('fix')}
                   </Button>
                 </Tooltip>
-                <Tooltip title="Ces findings sont normaux / voulus : ne plus les remonter">
+                <Tooltip title={t('ignoreGroupTooltip')}>
                   <Button size="small" onClick={() => setIgnoring(group.findings)}>
-                    Ignorer
+                    {t('ignore')}
                   </Button>
                 </Tooltip>
               </Space>
@@ -253,18 +255,21 @@ function FindingsTable({
   onApply: (finding: DisplayFinding) => void;
   fixing: string | null;
 }) {
+  const t = useTranslations('reviewTools.findings');
+  const tCommon = useTranslations('common');
+  const ruleLabel = useRuleLabel();
   return (
     <Table dataSource={findings} rowKey="id" size="small" pagination={false}>
       <Table.Column
         dataIndex="severity"
-        title="Sévérité"
+        title={t('columns.severity')}
         width={90}
         render={(severity: string) => <Tag color={SEVERITY_COLOR[severity]}>{severity}</Tag>}
       />
       {columns.module && (
         <Table.Column
           dataIndex="module"
-          title="Module"
+          title={t('columns.module')}
           width={110}
           render={(module: string) => <Tag>{module}</Tag>}
         />
@@ -272,7 +277,7 @@ function FindingsTable({
       {columns.rule && (
         <Table.Column
           dataIndex="code"
-          title="Règle"
+          title={t('columns.rule')}
           width={200}
           render={(code: string) => <Tooltip title={code}>{ruleLabel(code)}</Tooltip>}
         />
@@ -280,14 +285,14 @@ function FindingsTable({
       {columns.node && (
         <Table.Column
           dataIndex="nodeName"
-          title="Nœud"
+          title={tCommon('columns.node')}
           width={180}
           render={(nodeName?: string | null) => nodeName ?? '—'}
         />
       )}
       <Table.Column<DisplayFinding>
         dataIndex="message"
-        title="Message"
+        title={tCommon('columns.message')}
         render={(text: string, record) => (
           <>
             {text}
@@ -298,7 +303,7 @@ function FindingsTable({
         )}
       />
       <Table.Column<DisplayFinding>
-        title="Code"
+        title={t('columns.code')}
         width={70}
         render={(_, record) => (
           <FindingCode
@@ -314,7 +319,7 @@ function FindingsTable({
         render={(_, record) => (
           <Space size={4}>
             {record.autoFix ? (
-              <Tooltip title="Correctif calculé par la règle, sans IA — relu en diff avant d’écrire">
+              <Tooltip title={t('autofixTooltip')}>
                 <Button
                   size="small"
                   icon={<ThunderboltOutlined />}
@@ -323,7 +328,7 @@ function FindingsTable({
                 />
               </Tooltip>
             ) : (
-              <Tooltip title="Corriger avec l’IA">
+              <Tooltip title={t('fixWithAi')}>
                 <Button
                   size="small"
                   icon={<RobotOutlined />}
@@ -332,9 +337,9 @@ function FindingsTable({
                 />
               </Tooltip>
             )}
-            <Tooltip title="Ce finding est normal / voulu : ne plus le remonter">
+            <Tooltip title={t('ignoreTooltip')}>
               <Button size="small" onClick={() => onIgnore(record)}>
-                Ignorer
+                {t('ignore')}
               </Button>
             </Tooltip>
           </Space>
@@ -351,10 +356,15 @@ interface FindingGroup {
 }
 
 /** Groupes triés par gravité puis par volume : le plus urgent en haut. */
-function buildGroups(findings: DisplayFinding[], groupBy: GroupBy): FindingGroup[] {
+interface GroupLabels {
+  rule: (code: string) => string;
+  noNode: string;
+}
+
+function buildGroups(findings: DisplayFinding[], groupBy: GroupBy, labels: GroupLabels): FindingGroup[] {
   const groups = new Map<string, FindingGroup>();
   for (const finding of findings) {
-    const { key, label } = groupKey(finding, groupBy);
+    const { key, label } = groupKey(finding, groupBy, labels);
     if (!groups.has(key)) groups.set(key, { key, label, findings: [] });
     groups.get(key)!.findings.push(finding);
   }
@@ -364,12 +374,17 @@ function buildGroups(findings: DisplayFinding[], groupBy: GroupBy): FindingGroup
   });
 }
 
-function groupKey(finding: DisplayFinding, groupBy: GroupBy): { key: string; label: string } {
-  if (groupBy === 'rule') return { key: `${finding.module}|${finding.code}`, label: ruleLabel(finding.code) };
+function groupKey(
+  finding: DisplayFinding,
+  groupBy: GroupBy,
+  labels: GroupLabels,
+): { key: string; label: string } {
+  if (groupBy === 'rule')
+    return { key: `${finding.module}|${finding.code}`, label: labels.rule(finding.code) };
   if (groupBy === 'module') return { key: finding.module, label: finding.module };
   return finding.nodeName
     ? { key: `node|${finding.nodeName}`, label: finding.nodeName }
-    : { key: 'node|', label: 'Workflow (aucun nœud visé)' };
+    : { key: 'node|', label: labels.noNode };
 }
 
 function worstSeverity(findings: DisplayFinding[]): number {

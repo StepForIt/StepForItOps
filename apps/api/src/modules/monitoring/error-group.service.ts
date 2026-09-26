@@ -1,8 +1,16 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { EVENTS, ErrorGroupNotableEvent, categorizeError, errorSignature } from '@nwm/core';
+import {
+  EVENTS,
+  ErrorGroupNotableEvent,
+  categorizeError,
+  currentLocale,
+  errorSignature,
+  msg,
+} from '@nwm/core';
 import { ErrorGroup, ExecutionError, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 
 /** Statuts d'un groupe. `ignored` = erreur connue et acceptée : plus de réouverture auto. */
 export type ErrorGroupStatus = 'open' | 'resolved' | 'ignored';
@@ -32,6 +40,7 @@ export class ErrorGroupService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /** Rattache une erreur à son groupe (l'en détache si sa signature a changé, détail arrivé après coup). */
@@ -112,7 +121,7 @@ export class ErrorGroupService {
         const group = await this.assign(row);
         groups.add(group.id);
       } catch (error) {
-        this.logger.warn(`Regroupement KO pour l'erreur ${row.id} : ${(error as Error).message}`);
+        this.logger.warn(`Grouping failed for error ${row.id}: ${(error as Error).message}`);
       }
     }
     return {
@@ -201,7 +210,7 @@ export class ErrorGroupService {
 
   private async find(id: string): Promise<ErrorGroup> {
     const group = await this.prisma.errorGroup.findUnique({ where: { id } });
-    if (!group) throw new NotFoundException(`Groupe d'erreurs ${id} introuvable`);
+    if (!group) throw new NotFoundException(msg('ops.errorGroupNotFound', { id }));
     return group;
   }
 
@@ -264,9 +273,15 @@ export class ErrorGroupService {
       data: { status: 'open', reopenedAt: new Date(), regressions: { increment: 1 } },
     });
     await this.log(reopened, 'regression', {
-      note:
-        `Revenue le ${row.startedAt.toLocaleString('fr-FR')} (exécution ${row.executionId})` +
-        (group.resolvedAt ? `, alors que traitée le ${group.resolvedAt.toLocaleString('fr-FR')}.` : '.'),
+      // Le journal du groupe est relu par toute l'équipe : langue de la plateforme.
+      note: this.platformLocale.run(() =>
+        msg('ops.regressionNote', {
+          at: row.startedAt.toLocaleString(currentLocale()),
+          executionId: row.executionId,
+          resolved: group.resolvedAt !== null,
+          resolvedAt: group.resolvedAt?.toLocaleString(currentLocale()) ?? '',
+        }),
+      ),
     });
     this.emitNotable(EVENTS.errorGroupRegressed, reopened, row);
     return reopened;

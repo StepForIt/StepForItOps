@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { N8N_API_PORT, N8nApiPort, N8nInstanceConfig, N8nWorkflow } from '@nwm/core';
+import { N8N_API_PORT, N8nApiPort, N8nInstanceConfig, N8nWorkflow, msg } from '@nwm/core';
 
 export interface ProbeOptions {
   /**
@@ -48,8 +48,7 @@ export class N8nProbeService {
     } catch (error) {
       // Conservé tel quel — activation comprise : c'est l'état du plantage
       // qu'on vient débugger, le remettre au propre l'effacerait.
-      if (options.keepOnError)
-        this.logger.warn(`Sonde en échec : workflow ${externalId} conservé pour debug`);
+      if (options.keepOnError) this.logger.warn(`Probe failed: workflow ${externalId} kept for debugging`);
       else await this.cleanup(config, externalId);
       throw error;
     }
@@ -59,7 +58,7 @@ export class N8nProbeService {
 
   /** Le webhook de prod peut mettre ~1 s à s'enregistrer après l'activation. */
   private async callWithRetry(config: N8nInstanceConfig, path: string, payload: unknown): Promise<unknown> {
-    let lastError: Error = new Error('Webhook de la sonde injoignable');
+    let lastError: Error = new Error(msg('platform.probeWebhookUnreachable'));
     for (let attempt = 0; attempt < 4; attempt++) {
       if (attempt > 0) await sleep(700);
       try {
@@ -84,7 +83,7 @@ export class N8nProbeService {
     try {
       await this.n8n.deleteWorkflow(config, externalId);
     } catch (error) {
-      this.logger.warn(`Workflow temporaire ${externalId} non supprimé : ${(error as Error).message}`);
+      this.logger.warn(`Temporary workflow ${externalId} not deleted: ${(error as Error).message}`);
     }
   }
 }

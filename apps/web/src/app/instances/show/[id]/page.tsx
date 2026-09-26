@@ -7,6 +7,7 @@ import { useOne, useList } from '@refinedev/core';
 import { Show, EditButton } from '@refinedev/antd';
 import { Alert, Button, Card, Descriptions, Space, Tag, Typography } from 'antd';
 import { ApiOutlined, CloudSyncOutlined, MonitorOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiPost } from '../../../../lib/api';
 import { MonitoringChecklistModal } from '../../monitoring-checklist-modal';
 import { SyncModal } from '../../sync-modal';
@@ -29,6 +30,9 @@ interface TestResult {
 
 /** Détail d'une instance : identité, état de la connexion, workflows synchronisés, actions. */
 export default function InstanceShow() {
+  const t = useTranslations('settings.instanceShow');
+  const tc = useTranslations('common');
+  const locale = useLocale();
   const params = useParams<{ id: string }>();
   const instanceId = params.id;
   const { data, isLoading } = useOne<Instance>({ resource: 'instances', id: instanceId });
@@ -65,24 +69,24 @@ export default function InstanceShow() {
   return (
     <Show
       isLoading={isLoading}
-      title={instance?.name ?? 'Instance'}
+      title={instance?.name ?? tc('columns.instance')}
       headerButtons={<EditButton recordItemId={instanceId} />}
     >
       <Descriptions bordered column={1} size="small">
-        <Descriptions.Item label="Nom">{instance?.name}</Descriptions.Item>
-        <Descriptions.Item label="Plateforme">
+        <Descriptions.Item label={tc('columns.name')}>{instance?.name}</Descriptions.Item>
+        <Descriptions.Item label={t('platform')}>
           <Tag color={instance?.platform === 'make' ? 'purple' : 'blue'}>
             {instance?.platform === 'make' ? 'Make.com' : 'n8n'}
           </Tag>
         </Descriptions.Item>
         {instance?.platform === 'make' ? (
-          <Descriptions.Item label="Compte Make">
+          <Descriptions.Item label={t('makeAccount')}>
             {instance.zone ?? '—'}
-            {instance.externalTeamId ? ` · team ${instance.externalTeamId}` : ''}
-            {instance.externalOrgId ? ` · organisation ${instance.externalOrgId}` : ''}
+            {instance.externalTeamId ? t('team', { id: instance.externalTeamId }) : ''}
+            {instance.externalOrgId ? t('org', { id: instance.externalOrgId }) : ''}
           </Descriptions.Item>
         ) : (
-          <Descriptions.Item label="URL de base">
+          <Descriptions.Item label={t('baseUrl')}>
             {instance?.baseUrl && (
               <a href={instance.baseUrl} target="_blank" rel="noreferrer">
                 {instance.baseUrl}
@@ -90,40 +94,40 @@ export default function InstanceShow() {
             )}
           </Descriptions.Item>
         )}
-        <Descriptions.Item label="Clé API">
-          <Tag>enregistrée</Tag>
+        <Descriptions.Item label={t('apiKey')}>
+          <Tag>{t('stored')}</Tag>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            modifiable depuis « Éditer »
+            {t('storedHint')}
           </Typography.Text>
         </Descriptions.Item>
-        <Descriptions.Item label="Workflows synchronisés">
+        <Descriptions.Item label={t('synced')}>
           {workflows?.total ?? 0}
           {workflows?.total ? (
             <>
               {' — '}
-              <Link href="/workflows">voir la liste</Link>
+              <Link href="/workflows">{t('seeList')}</Link>
             </>
           ) : null}
         </Descriptions.Item>
-        <Descriptions.Item label="Dernière synchronisation">
+        <Descriptions.Item label={t('lastSync')}>
           {lastSync ? (
-            new Date(lastSync).toLocaleString('fr-FR')
+            new Date(lastSync).toLocaleString(locale)
           ) : (
-            <Typography.Text type="secondary">jamais synchronisée</Typography.Text>
+            <Typography.Text type="secondary">{t('neverSynced')}</Typography.Text>
           )}
         </Descriptions.Item>
       </Descriptions>
 
-      <Card size="small" title="Actions" style={{ marginTop: 16 }}>
+      <Card size="small" title={tc('columns.actions')} style={{ marginTop: 16 }}>
         <Space wrap>
           <Button icon={<ApiOutlined />} loading={testing} onClick={testConnection}>
-            Tester la connexion
+            {t('testConnection')}
           </Button>
           <Button type="primary" icon={<CloudSyncOutlined />} onClick={() => setSyncOpen(true)}>
-            Synchroniser
+            {t('sync')}
           </Button>
           <Button icon={<MonitorOutlined />} onClick={() => setMonitoringOpen(true)}>
-            Monitoring
+            {t('monitoring')}
           </Button>
         </Space>
 
@@ -132,13 +136,12 @@ export default function InstanceShow() {
             style={{ marginTop: 12 }}
             type={test.ok ? 'success' : 'error'}
             showIcon
-            message={test.ok ? 'Connexion OK' : 'Connexion KO'}
-            description={test.ok ? `${test.workflowCount} workflows visibles depuis l'API n8n.` : test.error}
+            message={test.ok ? t('connectionOk') : t('connectionKo')}
+            description={test.ok ? t('visible', { count: test.workflowCount ?? 0 }) : test.error}
           />
         )}
         <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginTop: 12, marginBottom: 0 }}>
-          Le test appelle l&apos;API n8n en lecture seule avec la clé enregistrée. Pour tester des
-          identifiants avant de les enregistrer, utilise le bouton du formulaire d&apos;édition.
+          {t('testHint')}
         </Typography.Paragraph>
       </Card>
 

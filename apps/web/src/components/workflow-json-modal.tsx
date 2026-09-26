@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Checkbox, Modal, Space, Spin, Tag, Tooltip, Typography, message } from 'antd';
 import { CopyOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
 
 interface WorkflowJsonExport {
@@ -23,21 +24,8 @@ interface Props {
   onClose: () => void;
 }
 
-/** Ce qui se dit différemment d'une plateforme à l'autre. */
-const WORDING = {
-  n8n: {
-    platform: 'n8n',
-    title: 'JSON du workflow',
-    items: 'nœud(s)',
-    ready: 'Importable dans n8n, sans secrets.',
-  },
-  make: {
-    platform: 'Make',
-    title: 'Blueprint du scénario',
-    items: 'module(s)',
-    ready: 'Importable dans Make, sans secrets.',
-  },
-} as const;
+/** Le nom affiché de la plateforme ; le reste de ce qui en dépend est un `select` des messages. */
+const PLATFORM_NAME = { n8n: 'n8n', make: 'Make' } as const;
 
 /**
  * Le contenu du workflow, à copier (assistant IA, ticket) ou à télécharger pour
@@ -46,6 +34,9 @@ const WORDING = {
  * ce qu'elle enverra, à l'octet près.
  */
 export function WorkflowJsonModal({ workflowId, open, onClose }: Props) {
+  const t = useTranslations('reviewTools.workflowJson');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [data, setData] = useState<WorkflowJsonExport | null>(null);
   const [loading, setLoading] = useState(false);
   const [includePinData, setIncludePinData] = useState(false);
@@ -66,10 +57,10 @@ export function WorkflowJsonModal({ workflowId, open, onClose }: Props) {
     if (!data) return;
     try {
       await navigator.clipboard.writeText(data.json);
-      message.success('JSON copié dans le presse-papier');
+      message.success(t('copied'));
     } catch {
       // Presse-papier refusé (page non sécurisée, permission) : la sélection manuelle reste possible.
-      message.error('Copie refusée par le navigateur — sélectionne le texte et copie-le à la main');
+      message.error(t('copyRefused'));
     }
   };
 
@@ -83,55 +74,61 @@ export function WorkflowJsonModal({ workflowId, open, onClose }: Props) {
     URL.revokeObjectURL(url);
   };
 
-  const wording = WORDING[data?.platform ?? 'n8n'];
+  const platform = data?.platform ?? 'n8n';
+  const platformName = PLATFORM_NAME[platform];
   const sizeKb = data ? Math.max(1, Math.round(data.json.length / 1024)) : 0;
 
   return (
     <Modal
-      title={wording.title}
+      title={platform === 'make' ? t('titleMake') : t('titleN8n')}
       open={open}
       onCancel={onClose}
       width={900}
       footer={
         <Space>
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{tCommon('close')}</Button>
           <Button icon={<DownloadOutlined />} disabled={!data} onClick={download}>
-            Télécharger
+            {tCommon('download')}
           </Button>
           <Button type="primary" icon={<CopyOutlined />} disabled={!data} onClick={copy}>
-            Copier
+            {t('copy')}
           </Button>
         </Space>
       }
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{wording.ready}</Typography.Text>
+        <Typography.Text type="secondary">{t('ready', { platform: platformName })}</Typography.Text>
         {data?.stale && (
           <Alert
             type="warning"
             showIcon
-            message="Export depuis la copie locale"
-            description={`${wording.platform} n'a pas répondu (ou ne connaît plus ce workflow) : ce contenu est celui de la dernière synchro, le ${new Date(data.syncedAt).toLocaleString('fr-FR')}.`}
+            message={t('staleTitle')}
+            description={t('staleDescription', {
+              platform: platformName,
+              date: new Date(data.syncedAt).toLocaleString(locale),
+            })}
           />
         )}
         <Space wrap>
           {data && (
             <>
               <Tag>
-                {data.nodeCount} {wording.items}
+                {platform === 'make'
+                  ? t('itemsMake', { count: data.nodeCount })
+                  : t('itemsN8n', { count: data.nodeCount })}
               </Tag>
-              <Tag>{sizeKb} Ko</Tag>
+              <Tag>{t('size', { size: sizeKb })}</Tag>
             </>
           )}
-          <Tooltip title={`Redemande le workflow à ${wording.platform}`}>
+          <Tooltip title={t('reloadTooltip', { platform: platformName })}>
             <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={load}>
-              Recharger
+              {t('reload')}
             </Button>
           </Tooltip>
           {data?.hasPinData && (
-            <Tooltip title="Donnée d'exécution réelle.">
+            <Tooltip title={t('pinDataTooltip')}>
               <Checkbox checked={includePinData} onChange={(e) => setIncludePinData(e.target.checked)}>
-                Inclure les données épinglées (pinData)
+                {t('includePinData')}
               </Checkbox>
             </Tooltip>
           )}

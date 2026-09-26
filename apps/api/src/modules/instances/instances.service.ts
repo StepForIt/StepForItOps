@@ -9,6 +9,7 @@ import {
   WorkflowPlatformPort,
   WorkflowPlatformPorts,
   WORKFLOW_PLATFORM_PORTS,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PrismaListArgs } from '../../common/crud/paginate';
@@ -122,9 +123,9 @@ export class InstancesService {
    */
   async capabilities(id: string): Promise<{ platform: PlatformId } & PlatformCapabilities> {
     const row = await this.prisma.instance.findUnique({ where: { id }, select: { platform: true } });
-    if (!row) throw new NotFoundException('Instance introuvable');
+    if (!row) throw new NotFoundException(msg('platform.instanceNotFoundAnon'));
     const port = this.platforms[row.platform as PlatformId];
-    if (!port) throw new BadRequestException(`Plateforme « ${row.platform} » non gérée par cette version.`);
+    if (!port) throw new BadRequestException(msg('platform.platformUnsupported', { platform: row.platform }));
     return { platform: port.platform, ...port.capabilities() };
   }
 
@@ -135,7 +136,7 @@ export class InstancesService {
 
   async get(id: string): Promise<InstanceView> {
     const row = await this.prisma.instance.findUnique({ where: { id }, select: VIEW_SELECT });
-    if (!row) throw new NotFoundException(`Instance ${id} introuvable`);
+    if (!row) throw new NotFoundException(msg('platform.instanceNotFound', { id }));
     return toView(row);
   }
 
@@ -159,11 +160,11 @@ export class InstancesService {
         externalTeamId: true,
       },
     });
-    if (!instance) throw new NotFoundException(`Instance ${id} introuvable`);
+    if (!instance) throw new NotFoundException(msg('platform.instanceNotFound', { id }));
     const platform = instance.platform as PlatformId;
     const port = this.platforms[platform];
     if (!port)
-      throw new BadRequestException(`Plateforme « ${instance.platform} » non gérée par cette version.`);
+      throw new BadRequestException(msg('platform.platformUnsupported', { platform: instance.platform }));
     return {
       platform,
       port,
@@ -182,7 +183,7 @@ export class InstancesService {
       where: { id },
       select: { baseUrl: true, apiKey: true, n8nEmail: true, n8nPassword: true },
     });
-    if (!instance) throw new NotFoundException(`Instance ${id} introuvable`);
+    if (!instance) throw new NotFoundException(msg('platform.instanceNotFound', { id }));
     return {
       baseUrl: instance.baseUrl,
       apiKey: instance.apiKey,
@@ -194,7 +195,7 @@ export class InstancesService {
 
   async create(input: InstanceInput): Promise<InstanceView> {
     const apiKey = input.apiKey?.trim();
-    if (!apiKey) throw new BadRequestException('Clé API requise');
+    if (!apiKey) throw new BadRequestException(msg('platform.apiKeyRequired'));
     const row = await this.prisma.instance.create({
       data: {
         name: input.name,
@@ -278,11 +279,11 @@ export class InstancesService {
   ): Promise<{ ok: boolean; workflowCount?: number; error?: string }> {
     let apiKey = config.apiKey?.trim();
     if (!apiKey && instanceId) apiKey = (await this.getConfig(instanceId)).apiKey;
-    if (!apiKey) throw new BadRequestException('Clé API requise pour tester la connexion');
+    if (!apiKey) throw new BadRequestException(msg('platform.apiKeyRequiredForTest'));
 
     const platform = config.platform ?? 'n8n';
     const port = this.platforms[platform];
-    if (!port) return { ok: false, error: `Plateforme « ${platform} » non gérée par cette version.` };
+    if (!port) return { ok: false, error: msg('platform.platformUnsupported', { platform }) };
 
     try {
       const workflows = await port.listWorkflows({

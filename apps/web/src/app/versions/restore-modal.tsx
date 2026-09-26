@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Alert, Descriptions, Modal, Skeleton, Space, Tag, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 
 interface RestorePreview {
@@ -23,20 +24,16 @@ interface RestorePreview {
   notes: string[];
 }
 
-/** Les mots de chaque plateforme : un scénario Make n'a pas de nœuds. */
-const VOCAB = {
-  n8n: { platform: 'n8n', items: 'nœuds', Items: 'Nœuds' },
-  make: { platform: 'Make', items: 'modules', Items: 'Modules' },
-} as const;
-
-const fr = (iso: string) => new Date(iso).toLocaleString('fr-FR');
+/** Le nom de chaque plateforme ; ses mots (nœuds, modules) sont dans les messages. */
+const PLATFORM_NAME = { n8n: 'n8n', make: 'Make' } as const;
 
 function NodeList({ label, names, color }: { label: string; names: string[]; color: string }) {
+  const t = useTranslations('inventory.versions.restore');
   if (names.length === 0) return null;
   return (
     <div style={{ marginTop: 6 }}>
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        {label} ({names.length}) :{' '}
+        {t('nodeList', { label, count: names.length })}{' '}
       </Typography.Text>
       {names.slice(0, 8).map((name) => (
         <Tag key={name} color={color} style={{ marginBottom: 4 }}>
@@ -45,7 +42,7 @@ function NodeList({ label, names, color }: { label: string; names: string[]; col
       ))}
       {names.length > 8 && (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          +{names.length - 8} autres
+          {t('more', { count: names.length - 8 })}
         </Typography.Text>
       )}
     </div>
@@ -54,6 +51,9 @@ function NodeList({ label, names, color }: { label: string; names: string[]; col
 
 /** Confirmation d'une restauration : montre ce qui sera écrasé sur la plateforme du workflow. */
 export function RestoreModal({ versionId, onClose }: { versionId: string | null; onClose: () => void }) {
+  const t = useTranslations('inventory.versions.restore');
+  const locale = useLocale();
+  const fr = (iso: string) => new Date(iso).toLocaleString(locale);
   const [preview, setPreview] = React.useState<RestorePreview | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [running, setRunning] = React.useState(false);
@@ -86,23 +86,24 @@ export function RestoreModal({ versionId, onClose }: { versionId: string | null;
     }
   };
 
-  const vocab = VOCAB[preview?.platform ?? 'n8n'];
+  const platformId = preview?.platform ?? 'n8n';
+  const platform = PLATFORM_NAME[platformId];
   const changed = preview
     ? preview.nodes.added.length + preview.nodes.removed.length + preview.nodes.modified.length
     : 0;
   const otherChanges = [
-    preview?.otherChanges.connections ? 'les connexions' : null,
-    preview?.otherChanges.settings ? 'les réglages' : null,
+    preview?.otherChanges.connections ? t('connections') : null,
+    preview?.otherChanges.settings ? t('settings') : null,
   ].filter((label): label is string => label !== null);
 
   return (
     <Modal
-      title={preview ? `Restaurer cette version vers ${vocab.platform}` : 'Restaurer cette version'}
+      title={preview ? t('titleTo', { platform }) : t('title')}
       open={versionId !== null}
       onCancel={onClose}
       width={680}
-      okText={done ? 'Fermer' : `Restaurer — écraser dans ${vocab.platform}`}
-      cancelText="Annuler"
+      okText={done ? t('close') : t('ok', { platform })}
+      cancelText={t('cancel')}
       okButtonProps={{ danger: !done, loading: running, disabled: loading || (!done && !preview) }}
       cancelButtonProps={{ style: done ? { display: 'none' } : undefined }}
       onOk={done ? onClose : run}
@@ -112,74 +113,68 @@ export function RestoreModal({ versionId, onClose }: { versionId: string | null;
       {preview && !done && (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           {preview.identicalToCurrent ? (
-            <Alert type="info" showIcon message="Identique : sans effet." />
+            <Alert type="info" showIcon message={t('identical')} />
           ) : (
             <Alert
               type="warning"
               showIcon
-              message={
-                <>
-                  Écrase « {preview.workflow.name} » sur {preview.instance.name}. Modifs {vocab.platform}{' '}
-                  depuis le {fr(preview.createdAt)} perdues.
-                </>
-              }
+              message={t('overwrite', {
+                name: preview.workflow.name,
+                instance: preview.instance.name,
+                platform,
+                date: fr(preview.createdAt),
+              })}
             />
           )}
 
           <Descriptions size="small" column={1} bordered>
-            <Descriptions.Item label="Version restaurée">
+            <Descriptions.Item label={t('restoredVersion')}>
               <code>{preview.hash.slice(0, 10)}</code> — {fr(preview.createdAt)} <Tag>{preview.origin}</Tag>
               {preview.message && <Typography.Text type="secondary">{preview.message}</Typography.Text>}
             </Descriptions.Item>
             {!preview.isLatest && (
-              <Descriptions.Item label="Versions plus récentes">
-                <Tag color="orange">{preview.versionsAfter} contournée(s)</Tag>
+              <Descriptions.Item label={t('newerVersions')}>
+                <Tag color="orange">{t('bypassed', { count: preview.versionsAfter })}</Tag>
               </Descriptions.Item>
             )}
             {!preview.identicalToCurrent && (
-              <Descriptions.Item label={vocab.Items}>
+              <Descriptions.Item label={t(`itemsTitle.${platformId}`)}>
                 {preview.nodes.current} → {preview.nodes.restored}
                 {changed === 0 && (
                   <Typography.Text type="secondary">
                     {' '}
-                    — {vocab.items} inchangés
-                    {otherChanges.length > 0 ? ` ; diffère : ${otherChanges.join(', ')}` : ''}
+                    {t('unchanged', { items: t(`items.${platformId}`) })}
+                    {otherChanges.length > 0 ? t('differs', { list: otherChanges.join(', ') }) : ''}
                   </Typography.Text>
                 )}
-                <NodeList label="Ajoutés" names={preview.nodes.added} color="green" />
-                <NodeList label="Supprimés" names={preview.nodes.removed} color="red" />
-                <NodeList label="Modifiés" names={preview.nodes.modified} color="blue" />
+                <NodeList label={t('added')} names={preview.nodes.added} color="green" />
+                <NodeList label={t('removed')} names={preview.nodes.removed} color="red" />
+                <NodeList label={t('modified')} names={preview.nodes.modified} color="blue" />
                 {changed > 0 && otherChanges.length > 0 && (
                   <div style={{ marginTop: 6 }}>
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      Également modifié : {otherChanges.join(', ')}.
+                      {t('alsoChanged', { list: otherChanges.join(', ') })}
                     </Typography.Text>
                   </div>
                 )}
               </Descriptions.Item>
             )}
             {preview.renameTo && (
-              <Descriptions.Item label="Renommage">
+              <Descriptions.Item label={t('rename')}>
                 <Tag color="orange">
-                  « {preview.workflow.name} » → « {preview.renameTo} »
+                  {t('renameTag', { from: preview.workflow.name, to: preview.renameTo })}
                 </Tag>
               </Descriptions.Item>
             )}
           </Descriptions>
 
-          {preview.workflow.active && (
-            <Alert
-              type="error"
-              showIcon
-              message={`Actif sur ${vocab.platform} : la version restaurée tournera dès le prochain déclenchement.`}
-            />
-          )}
+          {preview.workflow.active && <Alert type="error" showIcon message={t('active', { platform })} />}
 
           {preview.notes.length > 0 && (
             <Alert
               type="warning"
               showIcon
-              message="À savoir avant de restaurer"
+              message={t('notesTitle')}
               description={
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
                   {preview.notes.map((note) => (
@@ -190,26 +185,14 @@ export function RestoreModal({ versionId, onClose }: { versionId: string | null;
             />
           )}
 
-          {preview.archived && (
-            <Alert
-              type="error"
-              showIcon
-              message="Archivé côté n8n : la restauration échouera. Désarchive-le d'abord."
-            />
-          )}
+          {preview.archived && <Alert type="error" showIcon message={t('archived')} />}
         </Space>
       )}
 
-      {done && <Alert type="success" showIcon message={`Version restaurée vers ${vocab.platform}`} />}
+      {done && <Alert type="success" showIcon message={t('done', { platform })} />}
 
       {error && (
-        <Alert
-          style={{ marginTop: 12 }}
-          type="error"
-          showIcon
-          message="Restauration impossible"
-          description={error}
-        />
+        <Alert style={{ marginTop: 12 }} type="error" showIcon message={t('failed')} description={error} />
       )}
     </Modal>
   );

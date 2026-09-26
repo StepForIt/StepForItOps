@@ -1,4 +1,4 @@
-import { ModelCatalogEntry, ModelPricingPort, ModelStatus, ModelTier } from '@nwm/core';
+import { ModelCatalogEntry, ModelPricingPort, ModelStatus, ModelTier, msg } from '@nwm/core';
 
 /**
  * Source déclarative des tarifs et capacités : le
@@ -47,15 +47,16 @@ export class LiteLlmPricingAdapter implements ModelPricingPort {
     const response = await fetch(REVISION_URL, {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'nwm-model-catalog' },
     });
-    if (!response.ok) throw new Error(`Révision LiteLLM indisponible (HTTP ${response.status})`);
+    if (!response.ok)
+      throw new Error(msg('platform.litellmRevisionUnavailable', { status: response.status }));
     const body = (await response.json()) as { sha?: string };
-    if (!body.sha) throw new Error('Révision LiteLLM illisible : pas de sha');
+    if (!body.sha) throw new Error(msg('platform.litellmRevisionUnreadable'));
     return body.sha;
   }
 
   async fetchModels(): Promise<ModelCatalogEntry[]> {
     const response = await fetch(BLOB_URL, { headers: { 'User-Agent': 'nwm-model-catalog' } });
-    if (!response.ok) throw new Error(`Tarifs LiteLLM indisponibles (HTTP ${response.status})`);
+    if (!response.ok) throw new Error(msg('platform.litellmPricesUnavailable', { status: response.status }));
     const body = (await response.json()) as Record<string, LiteLlmModel>;
 
     const entries: ModelCatalogEntry[] = [];

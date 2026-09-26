@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { detectWorkflowEnv, envIds, envLabel, isDownstreamEnv, upstreamEnv } from '@nwm/core';
+import { detectWorkflowEnv, envIds, envLabel, isDownstreamEnv, msg, upstreamEnv } from '@nwm/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlatformSettingsService } from './platform-settings.service';
 
@@ -36,8 +36,11 @@ export class EnvChainGuardService {
     if (!isDownstreamEnv(envs, env)) return;
     const upstream = upstreamEnv(envs, env);
     throw new BadRequestException(
-      `« ${workflow.name} » est en ${envLabel(envs, env)}, et la chaîne d'environnements est en mode bloquant : ` +
-        `un env aval ne se modifie qu'en y promouvant. Fais le changement en ${envLabel(envs, upstream)}, puis promeus.`,
+      msg('env.chainGuardRefusal', {
+        name: workflow.name,
+        env: envLabel(envs, env),
+        upstream: envLabel(envs, upstream),
+      }),
     );
   }
 }

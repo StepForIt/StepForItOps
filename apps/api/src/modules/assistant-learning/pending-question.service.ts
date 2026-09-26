@@ -69,7 +69,7 @@ export class PendingQuestionService {
       data: { status: 'answered', answer: input.answer, answeredAt: new Date() },
     });
     this.logger.log(
-      `Question de correction répondue (${correction.id}) — ${learned ? 'règle apprise' : 'rien appris'}`,
+      `Correction question answered (${correction.id}) — ${learned ? 'rule learned' : 'nothing learned'}`,
     );
     return { learned };
   }
@@ -91,7 +91,7 @@ export class PendingQuestionService {
         author: event.author,
       });
     } catch (error) {
-      this.logger.warn(`Réponse non exploitée (${event.correctionId}) : ${(error as Error).message}`);
+      this.logger.warn(`Answer not used (${event.correctionId}): ${(error as Error).message}`);
     }
   }
 

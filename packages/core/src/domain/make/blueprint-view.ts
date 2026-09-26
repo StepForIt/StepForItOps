@@ -5,6 +5,7 @@
  * portent à sa place. Ce fichier les rend explicites, une fois, pour que la vue,
  * la carte et la documentation lisent la même chose.
  */
+import { msg } from '../../i18n';
 import { FlatModule, MakeBlueprint, MakeModule, flattenModules, moduleLabel } from './blueprint';
 
 export interface MakeEdge {
@@ -30,14 +31,22 @@ export function makeModuleEdges(blueprint: MakeBlueprint): MakeEdge[] {
 
       (module.routes ?? []).forEach((route, i) => {
         const first = (route.flow ?? [])[0];
-        if (first) edges.push({ fromId: module.id, toId: first.id, label: `route ${i + 1}` });
+        if (first)
+          edges.push({
+            fromId: module.id,
+            toId: first.id,
+            label: msg('platform.makeEdgeRoute', { index: i + 1 }),
+          });
         walk(route.flow);
       });
 
       (module.branches ?? []).forEach((branch, i) => {
         const first = (branch.flow ?? [])[0];
         // Une branche `else` n'a pas de conditions : elle se nomme d'elle-même.
-        const label = branch.type === 'else' ? 'sinon' : `si ${i + 1}`;
+        const label =
+          branch.type === 'else'
+            ? msg('platform.makeEdgeElse')
+            : msg('platform.makeEdgeIf', { index: i + 1 });
         if (first) edges.push({ fromId: module.id, toId: first.id, label });
         walk(branch.flow);
       });
@@ -61,7 +70,7 @@ export type MakeFlag = 'error' | 'warning';
  */
 export function makeMermaid(blueprint: MakeBlueprint, flagged: Map<number, MakeFlag> = new Map()): string {
   const modules = flattenModules(blueprint);
-  if (modules.length === 0) return 'graph TD\n  vide["Scénario sans module"]';
+  if (modules.length === 0) return `graph TD\n  vide["${escapeLabel(msg('platform.makeScenarioEmpty'))}"]`;
 
   const lines = ['graph TD'];
   for (const { module } of modules) {

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FindingIgnore, Prisma } from '@prisma/client';
-import { N8nWorkflow, findingIgnoreCovers, findingMessageKey, workflowFamilyKey } from '@nwm/core';
+import { N8nWorkflow, findingIgnoreCovers, findingMessageKey, workflowFamilyKey, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 
@@ -239,7 +239,7 @@ export class FindingIgnoreService {
       where: { id: findingId },
       include: { workflow: { select: { name: true } } },
     });
-    if (!finding) throw new NotFoundException(`Finding ${findingId} introuvable`);
+    if (!finding) throw new NotFoundException(msg('platform.findingNotFound', { id: findingId }));
     const scope = options.scope ?? 'family';
     const targetsNode = options.nodeScope !== 'any-node' && Boolean(finding.nodeName);
     const nodeIds = targetsNode ? await this.nodeIdsByName(finding.workflowId) : null;
@@ -261,7 +261,7 @@ export class FindingIgnoreService {
 
   async remove(id: string): Promise<FindingIgnore> {
     const rule = await this.prisma.findingIgnore.findUnique({ where: { id } });
-    if (!rule) throw new NotFoundException(`Règle ${id} introuvable`);
+    if (!rule) throw new NotFoundException(msg('platform.ignoreRuleNotFound', { id }));
     return this.prisma.findingIgnore.delete({ where: { id } });
   }
 }

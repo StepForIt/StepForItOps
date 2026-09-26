@@ -57,6 +57,7 @@ model Instance {
   llmUsageCursor      LlmUsageCursor?
   nodeTypes           InstanceNodeType[]
   nodeTypeVersions    InstanceNodeTypeVersion[]
+  nodePackages        InstanceNodePackage[]
 }
 
 // Groupe fonctionnel de workflows : découverte de mappings agrégée, vue credentials,
@@ -780,6 +781,9 @@ model PlatformSettings {
   /// `warn` : sauter une étape s'annonce et se confirme. `block` : la promotion est
   /// refusée, et un env aval ne se modifie plus qu'en y promouvant depuis l'amont.
   envChainMode    String   @default("warn")
+  /// Langue de ce qui s'écrit sans utilisateur pour la lire : findings, alertes,
+  /// textes posés par un cron. Une requête de la console répond dans la sienne.
+  defaultLocale   String   @default("fr")
   updatedAt       DateTime @updatedAt
 }
 
@@ -1162,6 +1166,46 @@ model InstanceNodeTypeVersion {
 
   @@unique([instanceId, nodeType, version])
   @@index([instanceId, nodeType])
+}
+
+/// Un paquet de nœuds communautaires installé sur une instance, et sa version.
+/// Elle ne se lit que par `/rest/community-packages` (compte propriétaire ou
+/// admin) : sans ce droit, `version` reste vide et le README est celui de la
+/// dernière version publiée.
+model InstanceNodePackage {
+  id          String   @id @default(uuid())
+  instanceId  String
+  instance    Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  packageName String
+  version     String?
+  fetchedAt   DateTime @default(now())
+
+  @@unique([instanceId, packageName])
+}
+
+/// Mode d'emploi d'un paquet de nœuds communautaires, servi à l'assistant.
+///
+/// Rangé chez nous, contrairement à la doc d'une API tierce : le README d'une
+/// version publiée ne périme pas, et l'assistant le lit sans appel réseau.
+/// Deux sortes par paquet — `auto` (README npm ou GitHub, une ligne par version
+/// rencontrée) et `manual` (collé ou désigné par un humain, sans version) — qui
+/// se COMPLÈTENT : la doc manuelle dit souvent ce que le README tait.
+model NodePackageDoc {
+  id          String   @id @default(uuid())
+  packageName String
+  /// `auto` | `manual`
+  kind        String
+  /// Version décrite ; '' quand inconnue (une clé unique ne tolère pas NULL).
+  version     String   @default("")
+  /// `npm` | `github` | `url` | `text`
+  source      String
+  url         String?
+  content     String
+  updatedBy   String?
+  fetchedAt   DateTime @default(now())
+
+  @@unique([packageName, kind, version])
+  @@index([packageName])
 }
 
 /// Journal des synchronisations du catalogue. Sert à deux choses : ne rien

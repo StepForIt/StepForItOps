@@ -138,7 +138,7 @@ describe('findNodeExamples', () => {
     const rendered = JSON.stringify(examples[0].parameters);
     expect(examples[0].parametersOmitted).toBeUndefined();
     expect(rendered).toContain('Tu es copywriter.');
-    expect(rendered).toContain('coupé'); // tronqué, jamais retiré
+    expect(rendered).toContain('truncated'); // tronqué, jamais retiré
     expect(examples[0].parameters.modelId).toBe('gpt-5.4-mini');
   });
 

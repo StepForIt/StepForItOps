@@ -30,6 +30,7 @@ import {
   parseAssistantTurn,
   limitHistoryFiles,
   limitHistoryImages,
+  msg,
   parseChatFiles,
   parseChatImages,
   renderChatFiles,
@@ -61,6 +62,11 @@ import { ChatHistoryService } from './chat-history.service';
 import { InstanceShapesService } from './instance-shapes.service';
 import { ExampleCorpusService } from './example-corpus.service';
 import { NodeCatalogService } from '../../infra/node-catalog/node-catalog.service';
+import {
+  NodePackageDocsService,
+  PackageDocAnnounce,
+} from '../../infra/node-catalog/node-package-docs.service';
+import { NodePackageDocsSyncService } from '../../infra/node-catalog/node-package-docs-sync.service';
 import { ChatProgressService } from './chat-progress.service';
 import { ChatCancelService } from './chat-cancel.service';
 import { DraftRepairService, ResolvedTargets } from './draft-repair.service';
@@ -96,39 +102,22 @@ const CHAT_EFFORT: AiEffort = 'medium';
 const MAX_TOOL_ROUNDS = 14;
 
 /**
- * Premier message d'une conversation ouverte sur un workflow encore vide.
- * Écrit ici et non demandé au modèle : la question est toujours la même, et un
- * appel IA pour la poser retarderait l'ouverture du tiroir de plusieurs secondes.
+ * Textes que la plateforme écrit elle-même dans le fil, lus par l'humain ET rejoués au
+ * modèle — d'où la langue de la requête :
+ * - le premier message d'une conversation ouverte sur un workflow encore vide, écrit ici
+ *   et non demandé au modèle (la question est toujours la même, et un appel IA pour la
+ *   poser retarderait l'ouverture du tiroir de plusieurs secondes) ;
+ * - la demande portée par un message qui n'a qu'une pièce jointe : le modèle a besoin
+ *   d'une demande, et l'historique d'une ligne lisible (le web affiche la même) ;
+ * - la note écrite quand le modèle rend un tour SANS texte. Jamais la chaîne vide : un
+ *   message d'assistant vide repart dans l'historique au tour suivant, et les deux
+ *   fournisseurs le refusent (Mistral en 400 « Assistant message must have either
+ *   content or tool_calls ») — la conversation deviendrait définitivement inutilisable.
  */
-const BLANK_WORKFLOW_GREETING = [
-  'Ce workflow est vide : il ne contient que son déclencheur. **Que doit-il faire ?**',
-  '',
-  'Le plus utile à me dire :',
-  '- ce qui le déclenche (appel webhook, planification, action manuelle) ;',
-  '- les données qui entrent et d’où elles viennent ;',
-  '- ce qui doit sortir à la fin, et où.',
-  '',
-  'Je proposerai les nœuds et leurs connexions ; rien ne part dans n8n avant que tu aies revu le diff.',
-].join('\n');
-
-/**
- * Texte porté par un message qui n'a qu'une capture. Écrit ici plutôt que laissé
- * vide : le modèle a besoin d'une demande, et l'historique d'une ligne lisible.
- */
-const DEFAULT_IMAGE_PROMPT = 'Voici une capture d’écran. Que montre-t-elle, et que faut-il en faire ?';
-
-/** Même chose pour un envoi qui n'a que des fichiers : la demande manque, on l'écrit. */
-const DEFAULT_FILE_PROMPT = 'Voici un ou plusieurs fichiers joints. Que contiennent-ils, et qu’en faire ?';
-
-/**
- * Ce qu'on écrit quand le modèle rend un tour SANS texte. Jamais la chaîne vide :
- * un message d'assistant vide repart dans l'historique au tour suivant, et les
- * deux fournisseurs le refusent (Mistral en 400 « Assistant message must have
- * either content or tool_calls »). La conversation devient alors définitivement
- * inutilisable — chaque relance rejoue le même message et échoue avant l'appel.
- */
-const EMPTY_REPLY_NOTE =
-  '⚠️ L’IA a terminé son tour sans rien répondre. Reformule ta demande, ou découpe-la en plusieurs étapes.';
+const blankWorkflowGreeting = (): string => msg('chat.blankWorkflowGreeting');
+const defaultImagePrompt = (): string => msg('chat.defaultImagePrompt');
+const defaultFilePrompt = (): string => msg('chat.defaultFilePrompt');
+const emptyReplyNote = (): string => msg('chat.emptyReplyNote');
 
 export interface SendMessageOptions {
   /** Nœuds au cœur de la demande : leurs paramètres survivent à l'élagage du contexte. */
@@ -225,6 +214,8 @@ export class ChatService {
     private readonly workflowCreate: WorkflowCreateService,
     private readonly leftovers: ChatLeftoversService,
     private readonly makeTurn: MakeChatTurnService,
+    private readonly packageDocs: NodePackageDocsService,
+    private readonly packageDocsSync: NodePackageDocsSyncService,
     @Inject(AI_PORT) private readonly ai: AiPort,
     @Inject(DOCS_PORT) private readonly docs: DocsPort,
   ) {}
@@ -254,18 +245,18 @@ export class ChatService {
   async createSession(workflowId: string): Promise<WorkflowChatSession> {
     const { workflow, raw } = await this.workflows.getRawAny(workflowId); // 404 si le workflow n'existe pas
     const session = await this.prisma.workflowChatSession.create({
-      data: { workflowId, title: 'Nouvelle conversation' },
+      data: { workflowId, title: msg('chat.sessionNewTitle') },
     });
     // Sur un workflow neuf, la conversation s'ouvre sur la question qui manque —
     // sinon l'assistant attend une demande sur un contenu qui n'existe pas encore.
     // Un scénario Make ne se construit pas ici : l'assistant n'y ajoute pas de module.
     if (workflow.platform === 'n8n' && isBlankWorkflow(raw as N8nWorkflow)) {
       await this.prisma.workflowChatMessage.create({
-        data: { sessionId: session.id, role: 'assistant', content: BLANK_WORKFLOW_GREETING },
+        data: { sessionId: session.id, role: 'assistant', content: blankWorkflowGreeting() },
       });
       return this.prisma.workflowChatSession.update({
         where: { id: session.id },
-        data: { title: 'Construction du workflow' },
+        data: { title: msg('chat.sessionBuildTitle') },
       });
     }
     return session;
@@ -284,7 +275,7 @@ export class ChatService {
         },
       },
     });
-    if (!session) throw new NotFoundException(`Conversation ${sessionId} introuvable`);
+    if (!session) throw new NotFoundException(msg('chat.sessionNotFound', { id: sessionId }));
     // L'état est calculé ici et non déduit côté web : le délai de grâce est une
     // règle, et une règle recopiée dans le navigateur dérive du serveur.
     return {
@@ -322,7 +313,7 @@ export class ChatService {
       where: { id: attachmentId },
       select: { mediaType: true, name: true, data: true },
     });
-    if (!attachment) throw new NotFoundException(`Pièce jointe ${attachmentId} introuvable`);
+    if (!attachment) throw new NotFoundException(msg('chat.attachmentNotFound', { id: attachmentId }));
     return { mediaType: attachment.mediaType, name: attachment.name, data: Buffer.from(attachment.data) };
   }
 
@@ -339,7 +330,7 @@ export class ChatService {
     const session = await this.getSession(sessionId);
     const pending = unansweredRequest(session.messages);
     if (!pending) {
-      throw new BadRequestException('Aucune demande en attente dans cette conversation.');
+      throw new BadRequestException(msg('chat.noPendingRequest'));
     }
 
     const last = session.messages[session.messages.length - 1];
@@ -347,7 +338,7 @@ export class ChatService {
     // texte amputé de ce qui le rendait compréhensible.
     const joined = await this.loadAttachments([last], {});
     const attached = joined.get(last.id) ?? { images: [], files: [] };
-    this.logger.log(`Rejeu de la demande ${last.id} (session ${sessionId})`);
+    this.logger.log(`Replaying request ${last.id} (session ${sessionId})`);
     return this.runTurn(session, last, last.content, attached);
   }
 
@@ -430,10 +421,10 @@ export class ChatService {
         content: message.content.trim()
           ? message.content
           : message.role === 'assistant'
-            ? EMPTY_REPLY_NOTE
+            ? emptyReplyNote()
             : files.length > 0
-              ? DEFAULT_FILE_PROMPT
-              : DEFAULT_IMAGE_PROMPT,
+              ? defaultFilePrompt()
+              : defaultImagePrompt(),
         ...(images.length > 0 ? { images } : {}),
         ...(files.length > 0 ? { files } : {}),
       };
@@ -486,7 +477,7 @@ export class ChatService {
     // lecture de ce qui suit. Après, il passait pour une remarque de fin.
     const brief = await this.memory.brief(workflowId);
     const preamble = brief
-      ? `Ce qui t'a déjà été dit sur ce workflow, et qui reste vrai :\n${brief}\n\n`
+      ? `What you have already been told about this workflow, and which still holds:\n${brief}\n\n`
       : '';
     // Ce que n8n refuse DÉJÀ d'écrire, dit d'entrée et non au moment du refus :
     // il rejette le workflow entier, donc rien de ce qui sera proposé ne pourra
@@ -499,35 +490,58 @@ export class ChatService {
     // bloc « PIÈGES n8n » de `chat-prompt.ts`, payé en entier à chaque tour.
     const learned = await this.lessons.recall({ workflowId, raw, question });
     const lessons = learned.brief
-      ? `Ce que tu as appris de corrections passées, et qui s'applique ici :\n${learned.brief}\n\n`
+      ? `What you have learned from past corrections, and which applies here:\n${learned.brief}\n\n`
       : '';
     // Une correction dont on n'a pas su dire si elle venait d'une erreur ou d'un
     // changement d'avis. On demande UNE fois : la réponse vaut règle, le silence
     // vaut abandon.
     const pending = learned.question
-      ? `AVANT DE RÉPONDRE — une correction faite à la main sur ce workflow est restée ` +
-        `inexpliquée :\n${learned.question.text}\nPose la question en UNE ligne à la fin de ta ` +
-        `réponse, sans y consacrer plus de place, et n'y reviens pas si on ne te répond pas.\n\n`
+      ? `BEFORE REPLYING — a manual correction made to this workflow is still ` +
+        `unexplained:\n${learned.question.text}\nAsk the question in ONE line at the end of your ` +
+        `reply, without spending more space on it, and do not come back to it if nobody answers.\n\n`
       : '';
     const refusals = writeRefusingFindings(await this.nodeCatalog.check(raw, workflow.instanceId));
     const blocked =
       refusals.length > 0
-        ? `À CORRIGER EN PRIORITÉ — n8n refuse en l'état d'enregistrer ce workflow, et ce refus ` +
-          `vaut pour TOUTE écriture, pas seulement celle qu'on va te demander :\n` +
+        ? `FIX FIRST — n8n refuses to save this workflow as it stands, and this refusal ` +
+          `applies to EVERY write, not only the one you are about to be asked for:\n` +
           refusals
-            .map((finding) => `- ${finding.nodeName ? `« ${finding.nodeName} » : ` : ''}${finding.message}`)
+            .map((finding) => `- ${finding.nodeName ? `"${finding.nodeName}": ` : ''}${finding.message}`)
             .join('\n') +
-          `\n\nCorrige-le dans le MÊME brouillon que ce qu'on te demande (ou seul, si on ne te demande ` +
-          `rien d'autre) : relis le nœud avec read_node, réécris le paramètre entier avec le nom ` +
-          `déclaré, et vérifie avec check_workflow avant de proposer.\n\n`
+          `\n\nFix it in the SAME draft as what you are asked for (or on its own, if nothing else is ` +
+          `asked): read the node again with read_node, rewrite the whole parameter with the declared ` +
+          `name, and check with check_workflow before proposing.\n\n`
         : '';
+    const community = await this.communityBrief(raw, workflow.instanceId);
     return {
       message: {
         role: 'user',
-        content: `${preamble}${lessons}${pending}${blocked}Workflow analysé :\n${JSON.stringify(context)}`,
+        content: `${preamble}${lessons}${pending}${blocked}${community}Workflow under analysis:\n${JSON.stringify(context)}`,
       },
       blank: isBlankWorkflow(raw),
     };
+  }
+
+  /**
+   * Les nœuds communautaires du workflow, ANNONCÉS et non servis : leur mode
+   * d'emploi se lit avec `read_node_docs`, et un tour qui n'y touche pas ne paie
+   * pas un README de 30 Ko. Un paquet encore sans doc est lu en arrière-plan —
+   * le tour n'attend pas le registre npm, la doc sera là au suivant.
+   */
+  private async communityBrief(raw: N8nWorkflow, instanceId: string): Promise<string> {
+    const packages = await this.packageDocs.announce(raw, instanceId);
+    if (packages.length === 0) return '';
+    this.packageDocsSync.ensureInBackground(
+      packages
+        .filter((entry) => !entry.docs.some((doc) => doc.kind === 'auto'))
+        .map((entry) => entry.packageName),
+    );
+    return (
+      `COMMUNITY nodes in this workflow — outside n8n core, you do not know how they are used:\n` +
+      packages.map(renderCommunityPackage).join('\n') +
+      `\nBefore configuring or explaining one of them, read its user guide with read_node_docs. ` +
+      `Without docs, say so instead of assuming what an operation does.\n\n`
+    );
   }
 
   /**
@@ -541,7 +555,7 @@ export class ChatService {
     try {
       return await this.workflows.getFreshRaw(workflowId);
     } catch (error) {
-      this.logger.warn(`Relecture n8n impossible (${workflowId}) : ${(error as Error).message}`);
+      this.logger.warn(`Cannot reload from n8n (${workflowId}): ${(error as Error).message}`);
       return this.workflows.getRaw(workflowId);
     }
   }
@@ -570,11 +584,11 @@ export class ChatService {
     const userText =
       text ||
       (attached.files.length > 0
-        ? DEFAULT_FILE_PROMPT
+        ? defaultFilePrompt()
         : attached.images.length > 0
-          ? DEFAULT_IMAGE_PROMPT
+          ? defaultImagePrompt()
           : '');
-    if (!userText) throw new BadRequestException('Message vide');
+    if (!userText) throw new BadRequestException(msg('chat.emptyMessage'));
 
     const rows = [
       ...attached.images.map((image) => ({
@@ -628,17 +642,16 @@ export class ChatService {
       // du SDK, tantôt de la boucle d'outils, sous des noms différents.
       if (this.cancels.wasCancelled(session.id)) return this.undoTurn(userMessage, userText, attached);
       this.progress.fail(session.id);
-      const detail = (error as Error).message ?? 'erreur inconnue';
+      const detail = (error as Error).message ?? msg('chat.unknownError');
       this.logger.error(
-        `Tour en échec (session ${session.id}) : ${detail}`,
+        `Turn failed (session ${session.id}): ${detail}`,
         error instanceof Error ? error.stack : undefined,
       );
       return this.persistAssistantTurn(
         session,
         userMessage,
         userText,
-        `⚠️ Ce tour a échoué avant que je puisse répondre : ${detail}\n\n` +
-          'Ta demande est conservée telle quelle — relance-la depuis le bandeau au-dessus de la saisie.',
+        msg('chat.turnFailed', { detail }),
         null,
       );
     } finally {
@@ -658,7 +671,7 @@ export class ChatService {
     userText: string,
     attached: TurnAttachments,
   ): Promise<SendMessageResult> {
-    this.logger.log(`Tour arrêté à la demande de l'utilisateur (session ${userMessage.sessionId})`);
+    this.logger.log(`Turn stopped at the user's request (session ${userMessage.sessionId})`);
     await this.prisma.workflowChatMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
     return {
       userMessage,
@@ -708,9 +721,9 @@ export class ChatService {
       );
     }
 
-    this.progress.step(sessionId, { label: 'Relecture du workflow depuis n8n', done: false });
+    this.progress.step(sessionId, { label: msg('chat.progressSyncWorkflow'), done: false });
     const { workflow, raw } = await this.freshWorkflow(session.workflowId);
-    this.progress.step(sessionId, { label: 'Préparation du contexte', done: false });
+    this.progress.step(sessionId, { label: msg('chat.progressContext'), done: false });
     // Le périmètre du tour : ce workflow, et les sous-workflows qu'il appelle.
     // Tableau MUTABLE — `create_sub_workflow` l'agrandit en cours de tour, et les
     // outils doivent alors accepter comme cible le workflow qui vient de naître.
@@ -755,8 +768,8 @@ export class ChatService {
         // viennent. Le refus est rendu à l'outil, qui saura s'en servir.
         if (scope.some((entry) => entry.created)) {
           throw new Error(
-            'Un sous-workflow a déjà été créé dans ce tour. Propose d’abord son contenu et ' +
-              'l’appel qui le déclenche ; la découpe suivante se fera au tour d’après.',
+            'A sub-workflow has already been created in this turn. First propose its content and ' +
+              'the call that triggers it; the next split will happen in the following turn.',
           );
         }
         const created = await this.workflowCreate.create(workflow.instanceId, name);
@@ -781,7 +794,7 @@ export class ChatService {
         };
         scope.push(entry);
         this.logger.log(
-          `Sous-workflow « ${created.name} » créé depuis la conversation ${sessionId} (n8n ${created.externalId})`,
+          `Sub-workflow "${created.name}" created from conversation ${sessionId} (n8n ${created.externalId})`,
         );
         return entry;
       },
@@ -798,6 +811,8 @@ export class ChatService {
       // L'instance d'abord : c'est le n8n qui exécutera ce workflow. Le
       // catalogue mutualisé ne prend le relais que pour ce qu'elle n'a pas.
       describeNodeType: (nodeType) => this.nodeCatalog.describe(nodeType, workflow.instanceId),
+      readNodeDocs: (nodeType, section) =>
+        this.packageDocs.read(nodeType, { instanceId: workflow.instanceId, section }),
       searchNodeTypes: (query) => this.nodeCatalog.search(query),
       schemaCheck: (candidate) => this.nodeCatalog.check(candidate, workflow.instanceId),
       // Le parc entier, et non la seule instance : un montage voyage, et le
@@ -842,7 +857,7 @@ export class ChatService {
       onProgress: (event: AiAgentEvent) => {
         if (event.type === 'round') {
           this.progress.step(sessionId, {
-            label: event.round === 0 ? 'Analyse du workflow' : 'Poursuite de l’analyse',
+            label: msg(event.round === 0 ? 'chat.progressAnalyse' : 'chat.progressAnalyseMore'),
             done: false,
           });
         } else if (event.type === 'tool') {
@@ -854,7 +869,7 @@ export class ChatService {
     };
     const messages: AiMessage[] = [
       context.message,
-      { role: 'assistant', content: 'Contexte du workflow reçu.' },
+      { role: 'assistant', content: 'Workflow context received.' },
       ...history,
     ];
 
@@ -877,8 +892,8 @@ export class ChatService {
       if (signal?.aborted) throw error;
       // L'échec reste DANS la conversation : en 500, il ne laissait qu'un toast
       // fugace et la demande semblait s'être perdue toute seule.
-      const detail = (error as Error).message ?? 'erreur inconnue';
-      this.logger.warn(`Appel IA en échec (session ${sessionId}) : ${detail}`);
+      const detail = (error as Error).message ?? msg('chat.unknownError');
+      this.logger.warn(`AI call failed (session ${sessionId}): ${detail}`);
       // La boucle rend ce qu'elle avait fait : un tour qui a lu des nœuds et
       // vérifié un brouillon ne repart pas les mains vides, et ce qui a été
       // payé reste visible sous la réponse.
@@ -895,17 +910,17 @@ export class ChatService {
           session,
           userMessage,
           userText,
-          `⚠️ L'appel à l'IA a échoué : ${detail}`,
+          msg('chat.aiCallFailed', { detail }),
           null,
           trace,
           thinking,
         );
       }
       answer = '';
-      failureNote = `⚠️ L'assistant n'a pas rendu de réponse (${detail}), mais la modification qu'il avait vérifiée pendant ce tour est proposée ci-dessous.`;
+      failureNote = msg('chat.aiCallFailedSalvaged', { detail });
     }
 
-    this.progress.step(sessionId, { label: 'Rédaction de la réponse', done: false });
+    this.progress.step(sessionId, { label: msg('chat.progressWriting'), done: false });
     const turn = parseAssistantTurn(answer);
     let reply = failureNote ?? turn.reply;
     let proposalId: string | null = null;
@@ -938,14 +953,17 @@ export class ChatService {
             if (!member) {
               rejected.push({
                 workflow: target.workflow,
-                reason:
-                  `hors du périmètre de cette conversation (périmètre : ` +
-                  `${scope.map((entry) => `« ${entry.name} »`).join(', ')})`,
+                reason: msg('chat.targetOutOfScope', {
+                  scope: scope.map((entry) => msg('chat.quotedName', { name: entry.name })).join(', '),
+                }),
               });
               continue;
             }
             if (member.readOnly) {
-              rejected.push({ workflow: target.workflow, reason: member.readOnlyReason ?? 'non modifiable' });
+              rejected.push({
+                workflow: target.workflow,
+                reason: member.readOnlyReason ?? msg('chat.targetReadOnly'),
+              });
               continue;
             }
             if (member.workflowId === session.workflowId) {
@@ -971,7 +989,7 @@ export class ChatService {
           answer,
           onRound: (attempt) =>
             this.progress.step(sessionId, {
-              label: `Correction de la modification refusée (passe ${attempt})`,
+              label: msg('chat.progressRepair', { attempt }),
               done: false,
             }),
         });
@@ -998,19 +1016,17 @@ export class ChatService {
           // de forme : c'est une moitié du geste qui ne partira pas, et le diff
           // ne la montrera nulle part.
           if (resolved.rejected.length > 0) {
-            reply =
-              `${reply}\n\n> ⚠️ Ces workflows n'ont pas été retenus dans la modification : ` +
-              resolved.rejected.map((entry) => `« ${entry.workflow} » (${entry.reason})`).join(', ') +
-              '.';
+            reply = `${reply}\n\n${msg('chat.replyTargetsRejected', {
+              list: resolved.rejected
+                .map((entry) => msg('chat.rejectedTarget', { name: entry.workflow, reason: entry.reason }))
+                .join(', '),
+            })}`;
           }
           if (resolved.parts.length > 0) {
-            reply =
-              `${reply}\n\n> 🔗 Cette modification touche aussi ${resolved.parts.length} ` +
-              `sous-workflow${resolved.parts.length > 1 ? 's' : ''} : la revue les montre un par un, ` +
-              `et « Appliquer » les écrit tous.`;
+            reply = `${reply}\n\n${msg('chat.replyTouchesParts', { count: resolved.parts.length })}`;
           }
           if (draft.salvaged && !failureNote) {
-            reply = `${reply}\n\n> ℹ️ La réponse ne portait pas la modification : c'est le brouillon vérifié pendant ce tour qui est proposé ci-dessous.`;
+            reply = `${reply}\n\n${msg('chat.replySalvagedDraft')}`;
           }
           if (repaired.outcome !== 'clean') {
             reply = `${reply}\n\n${repairNote(repaired.outcome, repaired.attempts)}`;
@@ -1026,21 +1042,21 @@ export class ChatService {
         const detail =
           error instanceof WorkflowEditError
             ? error.message
-            : ((error as Error).message ?? 'erreur inconnue');
-        this.logger.warn(`Proposition rejetée (${session.workflowId}) : ${detail}`);
+            : ((error as Error).message ?? msg('chat.unknownError'));
+        this.logger.warn(`Proposal rejected (${session.workflowId}): ${detail}`);
         // « refusée » se lisait comme un refus de l'humain, alors que personne
         // n'a rien décidé : c'est la plateforme qui n'a pas su en faire une
         // proposition. Le dire autrement évite d'aller chercher une action qu'on
         // n'a pas faite.
-        reply = `${reply}\n\n> ⚠️ La plateforme n'a pas pu retenir la modification proposée : ${detail}`;
+        reply = `${reply}\n\n${msg('chat.replyProposalNotKept', { detail })}`;
       }
     }
 
     if (turn.malformed && !proposalId) {
       // Une proposition a bien été rédigée, on n'a pas su la relire — et aucun
       // brouillon vérifié ne permettait de la repêcher.
-      this.logger.warn(`Proposition illisible (session ${sessionId})`);
-      reply = `${reply}\n\n> ⚠️ Une modification était proposée mais son format était illisible : rien n'a été retenu. Redemande-la en plusieurs fois, un nœud à la fois.`;
+      this.logger.warn(`Unreadable proposal (session ${sessionId})`);
+      reply = `${reply}\n\n${msg('chat.replyProposalUnreadable')}`;
     }
 
     return this.persistAssistantTurn(session, userMessage, userText, reply, proposalId, trace, thinking);
@@ -1068,7 +1084,7 @@ export class ChatService {
       data: {
         sessionId: session.id,
         role: 'assistant',
-        content: reply.trim() ? reply : EMPTY_REPLY_NOTE,
+        content: reply.trim() ? reply : emptyReplyNote(),
         proposalId,
         ...(trace.length > 0 ? { toolTrace: trace as unknown as object } : {}),
         ...(thinking.length > 0 ? { thinking: thinking as unknown as object } : {}),
@@ -1127,3 +1143,19 @@ function salvageable(
  * elle, une réponse qui a relu trois nœuds et vérifié deux brouillons ressemble
  * à une réponse donnée de mémoire.
  */
+
+/** Une ligne par paquet : ce qu'il sert ici, et quelles docs l'attendent. */
+function renderCommunityPackage(entry: PackageDocAnnounce): string {
+  const docs = entry.docs.map((doc) =>
+    doc.kind === 'manual'
+      ? `team docs (${Math.round(doc.chars / 1000)} KB)`
+      : `README ${doc.source}${doc.version ? ` ${doc.version}` : ''} (${Math.round(doc.chars / 1000)} KB)` +
+        (entry.installedVersion && doc.version && doc.version !== entry.installedVersion
+          ? ` — describes a different version from the installed one (${entry.installedVersion})`
+          : ''),
+  );
+  return (
+    `- ${entry.packageName}${entry.installedVersion ? ` ${entry.installedVersion}` : ''} ` +
+    `(${entry.nodeTypes.join(', ')}): ${docs.length > 0 ? docs.join(' + ') : 'NO docs recorded'}`
+  );
+}

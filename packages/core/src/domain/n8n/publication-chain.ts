@@ -1,3 +1,5 @@
+import { msg } from '../../i18n';
+
 /**
  * « Publier comme la source » : après une promotion, chaque exemplaire écrit sur la
  * cible est publié si son homologue l'est dans l'env source — et laissé en
@@ -98,13 +100,13 @@ export function planPublicationSteps(
         ...base,
         name: source.name,
         state: 'not-applicable' as const,
-        reason: 'aucune contrepartie sur la cible',
+        reason: msg('env.pubNoCounterpart'),
       };
     }
     const step = { ...base, externalId: target.externalId, name: target.name };
     if (!source.published) return { ...step, state: 'kept-draft' as const };
     if (target.archived) {
-      return { ...step, state: 'not-applicable' as const, reason: 'archivé dans n8n' };
+      return { ...step, state: 'not-applicable' as const, reason: msg('env.pubArchived') };
     }
     if (target.published) return { ...step, state: 'already' as const };
     return { ...step, state: 'pending' as const };

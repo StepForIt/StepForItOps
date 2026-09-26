@@ -1,7 +1,8 @@
+import { msg } from '../../i18n';
 import { N8nConnections, N8nNode } from './workflow.types';
 
 /**
- * Ce qu'un changement FAIT, dit en français. Un diff JSON montre quels caractères
+ * Ce qu'un changement FAIT, dit en clair. Un diff JSON montre quels caractères
  * bougent ; il ne dit pas qu'on vient de retirer le samedi du planning. C'est cette
  * phrase-là qu'on lit avant de cliquer « Appliquer ».
  */
@@ -17,30 +18,36 @@ export interface ChangeExplanation {
 const MAX_EXPLANATIONS = 12;
 const MAX_VALUE_LENGTH = 90;
 
-const DAY_NAMES = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+/** Clés de jour du catalogue, dans l'ordre de cron (0 = dimanche). */
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+function dayName(index: number): string | null {
+  const day = DAY_KEYS[index % 7];
+  return day ? msg('edit.cronDay', { day }) : null;
+}
 
 function quote(value: unknown): string {
-  if (value === undefined) return 'vide';
+  if (value === undefined) return msg('edit.valueEmpty');
   const text = typeof value === 'string' ? value : JSON.stringify(value);
-  if (typeof text !== 'string') return 'vide';
+  if (typeof text !== 'string') return msg('edit.valueEmpty');
   return text.length > MAX_VALUE_LENGTH ? `${text.slice(0, MAX_VALUE_LENGTH)}…` : text;
 }
 
 /** Liste de jours en toutes lettres : `1-5` → « du lundi au vendredi », `1,3` → « lundi et mercredi ». */
 function describeWeekdays(field: string): string | null {
-  if (field === '*' || field === '?') return 'tous les jours';
+  if (field === '*' || field === '?') return msg('edit.cronEveryDay');
   const range = /^(\d)-(\d)$/.exec(field);
   if (range) {
-    const start = DAY_NAMES[Number(range[1]) % 7];
-    const end = DAY_NAMES[Number(range[2]) % 7];
-    return start && end ? `du ${start} au ${end}` : null;
+    const start = dayName(Number(range[1]));
+    const end = dayName(Number(range[2]));
+    return start && end ? msg('edit.cronDayRange', { start, end }) : null;
   }
   if (/^\d(,\d)*$/.test(field)) {
-    const days = field.split(',').map((d) => DAY_NAMES[Number(d) % 7]);
+    const days = field.split(',').map((d) => dayName(Number(d)));
     if (days.some((d) => !d)) return null;
     return days.length === 1
-      ? `le ${days[0]}`
-      : `le ${days.slice(0, -1).join(', ')} et ${days[days.length - 1]}`;
+      ? msg('edit.cronOneDay', { day: days[0] })
+      : msg('edit.cronDayList', { first: days.slice(0, -1).join(', '), last: days[days.length - 1] });
   }
   return null;
 }
@@ -66,10 +73,10 @@ export function describeCron(expression: string): string | null {
   if (dayOfMonth !== '*' && dayOfMonth !== '?') {
     if (dayOfWeek !== '*' && dayOfWeek !== '?') return null;
     if (!/^\d+$/.test(dayOfMonth)) return null;
-    return `le ${dayOfMonth} de chaque mois à ${time}`;
+    return msg('edit.cronMonthly', { day: dayOfMonth, time });
   }
   const days = describeWeekdays(dayOfWeek);
-  return days ? `${days} à ${time}` : null;
+  return days ? msg('edit.cronAt', { days, time }) : null;
 }
 
 /** Feuilles scalaires d'un objet, indexées par chemin (`rule.interval[0].expression`). */
@@ -122,8 +129,8 @@ function describeValueChange(path: string, before: unknown, after: unknown): str
 
   const from = typeof before === 'string' ? describeCron(before) : null;
   const to = typeof after === 'string' ? describeCron(after) : null;
-  if (from && to) return `Déclenchement : ${from} → ${to}`;
-  if (to) return `Déclenchement : ${to} (avant : ${quote(before)})`;
+  if (from && to) return msg('edit.triggerChange', { from, to });
+  if (to) return msg('edit.triggerSet', { to, before: quote(before) });
   return null;
 }
 
@@ -143,15 +150,23 @@ export function explainLeafChanges(before: unknown, after: unknown): ChangeExpla
     if (told) {
       out.push({ text: told, path, level: 'info' });
     } else if (!beforeLeaves.has(path)) {
-      out.push({ text: `Nouveau paramètre « ${fieldName(path)} » = ${quote(next)}`, path, level: 'info' });
+      out.push({
+        text: msg('edit.paramAdded', { field: fieldName(path), value: quote(next) }),
+        path,
+        level: 'info',
+      });
     } else if (!afterLeaves.has(path)) {
       out.push({
-        text: `Paramètre « ${fieldName(path)} » retiré (valait ${quote(previous)})`,
+        text: msg('edit.paramRemoved', { field: fieldName(path), value: quote(previous) }),
         path,
         level: 'info',
       });
     } else {
-      out.push({ text: `« ${fieldName(path)} » : ${quote(previous)} → ${quote(next)}`, path, level: 'info' });
+      out.push({
+        text: msg('edit.paramChanged', { field: fieldName(path), from: quote(previous), to: quote(next) }),
+        path,
+        level: 'info',
+      });
     }
   }
   return out;
@@ -159,13 +174,13 @@ export function explainLeafChanges(before: unknown, after: unknown): ChangeExpla
 
 function credentialNames(node: N8nNode): string {
   const entries = Object.values(node.credentials ?? {}).map((c) => c.name ?? c.id ?? '?');
-  return entries.length ? entries.join(', ') : 'aucun';
+  return entries.length ? entries.join(', ') : msg('edit.noCredential');
 }
 
-function capped(out: ChangeExplanation[], what: string): ChangeExplanation[] {
+function capped(out: ChangeExplanation[], what: 'fields' | 'links'): ChangeExplanation[] {
   if (out.length <= MAX_EXPLANATIONS) return out;
   const rest = out.length - MAX_EXPLANATIONS;
-  return [...out.slice(0, MAX_EXPLANATIONS), { text: `… et ${rest} ${what}`, level: 'info' }];
+  return [...out.slice(0, MAX_EXPLANATIONS), { text: msg('edit.cappedMore', { rest, what }), level: 'info' }];
 }
 
 /**
@@ -175,12 +190,12 @@ function capped(out: ChangeExplanation[], what: string): ChangeExplanation[] {
 export function explainNodeChange(before?: N8nNode, after?: N8nNode): ChangeExplanation[] {
   if (!before && !after) return [];
   if (!before && after) {
-    return [{ text: `Nouveau nœud « ${after.name} » (${after.type.split('.').pop()})`, level: 'info' }];
+    return [
+      { text: msg('edit.nodeAdded', { name: after.name, type: after.type.split('.').pop() }), level: 'info' },
+    ];
   }
   if (before && !after) {
-    return [
-      { text: `Nœud « ${before.name} » supprimé : ce qu'il faisait ne sera plus fait`, level: 'warning' },
-    ];
+    return [{ text: msg('edit.nodeRemoved', { name: before.name }), level: 'warning' }];
   }
 
   const from = before as N8nNode;
@@ -189,24 +204,22 @@ export function explainNodeChange(before?: N8nNode, after?: N8nNode): ChangeExpl
 
   if (from.name !== to.name) {
     out.push({
-      text: `Renommé « ${from.name} » → « ${to.name} » : toute expression $('${from.name}') doit viser le nouveau nom`,
+      text: msg('edit.nodeRenamed', { from: from.name, to: to.name }),
       level: 'warning',
     });
   }
   if ((from.disabled ?? false) !== (to.disabled ?? false)) {
     out.push({
-      text: to.disabled
-        ? "Nœud désactivé : il ne s'exécutera plus, le flux passe par-dessus"
-        : "Nœud réactivé : il s'exécutera de nouveau",
+      text: to.disabled ? msg('edit.nodeDisabled') : msg('edit.nodeEnabled'),
       level: 'warning',
     });
   }
   if (from.type !== to.type) {
-    out.push({ text: `Change de type : ${from.type} → ${to.type}`, level: 'warning' });
+    out.push({ text: msg('edit.typeChanged', { from: from.type, to: to.type }), level: 'warning' });
   }
   if (JSON.stringify(from.credentials ?? {}) !== JSON.stringify(to.credentials ?? {})) {
     out.push({
-      text: `Change de credential : ${credentialNames(from)} → ${credentialNames(to)}`,
+      text: msg('edit.credentialChanged', { from: credentialNames(from), to: credentialNames(to) }),
       level: 'warning',
     });
   }
@@ -214,7 +227,7 @@ export function explainNodeChange(before?: N8nNode, after?: N8nNode): ChangeExpl
     (from.onError ?? null) !== (to.onError ?? null) ||
     (from.retryOnFail ?? false) !== (to.retryOnFail ?? false)
   ) {
-    out.push({ text: "Change la gestion d'erreur du nœud (retry / suite en cas d'échec)", level: 'warning' });
+    out.push({ text: msg('edit.errorHandlingChanged'), level: 'warning' });
   }
 
   // Dit AVANT le détail, et en orange : le cap de `capped` reléguait la perte de
@@ -222,7 +235,7 @@ export function explainNodeChange(before?: N8nNode, after?: N8nNode): ChangeExpl
   const lost = lostLeafCount(from.parameters ?? {}, to.parameters ?? {});
   if (lost >= MASS_LEAF_LOSS) {
     out.push({
-      text: `Le nœud perd ${lost} paramètres d'un coup : vérifie qu'un bloc entier n'a pas été réécrit de mémoire (schéma de mapping, liste de champs) au lieu d'être retouché`,
+      text: msg('edit.massLoss', { lost }),
       level: 'warning',
     });
   }
@@ -232,10 +245,10 @@ export function explainNodeChange(before?: N8nNode, after?: N8nNode): ChangeExpl
   // Un déplacement seul mérite d'être dit : sans cette ligne, un diff de `position`
   // laisse croire à un changement de comportement.
   if (!out.length && JSON.stringify(from.position ?? null) !== JSON.stringify(to.position ?? null)) {
-    out.push({ text: "Déplacement sur le canvas, sans effet sur l'exécution", level: 'info' });
+    out.push({ text: msg('edit.moved'), level: 'info' });
   }
 
-  return capped(out, 'autre(s) champ(s) modifié(s)');
+  return capped(out, 'fields');
 }
 
 interface Edge {
@@ -265,7 +278,7 @@ const edgeKey = (edge: Edge) => `${edge.from} ${edge.outputType} ${edge.outputIn
 function outputSuffix(edge: Edge): string {
   const parts: string[] = [];
   if (edge.outputType !== 'main') parts.push(edge.outputType);
-  if (edge.outputIndex > 0) parts.push(`sortie ${edge.outputIndex + 1}`);
+  if (edge.outputIndex > 0) parts.push(msg('edit.outputNumber', { n: edge.outputIndex + 1 }));
   return parts.length ? ` (${parts.join(', ')})` : '';
 }
 
@@ -284,7 +297,7 @@ export function explainConnectionChanges(
   for (const [key, edge] of afterEdges) {
     if (!beforeEdges.has(key)) {
       out.push({
-        text: `« ${edge.from} » alimente désormais « ${edge.to} »${outputSuffix(edge)}`,
+        text: msg('edit.edgeAdded', { from: edge.from, to: edge.to, suffix: outputSuffix(edge) }),
         level: 'warning',
       });
     }
@@ -292,11 +305,11 @@ export function explainConnectionChanges(
   for (const [key, edge] of beforeEdges) {
     if (!afterEdges.has(key)) {
       out.push({
-        text: `« ${edge.from} » n'alimente plus « ${edge.to} »${outputSuffix(edge)}`,
+        text: msg('edit.edgeRemoved', { from: edge.from, to: edge.to, suffix: outputSuffix(edge) }),
         level: 'warning',
       });
     }
   }
 
-  return capped(out, 'autre(s) lien(s) touché(s)');
+  return capped(out, 'links');
 }

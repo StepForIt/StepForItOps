@@ -24,10 +24,10 @@ function emitWithAck<T extends KumaAck>(
   timeoutMs = 10000,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Uptime Kuma : timeout sur "${event}"`)), timeoutMs);
+    const timer = setTimeout(() => reject(new Error(`Uptime Kuma: timeout on "${event}"`)), timeoutMs);
     socket.emit(event, ...args, (response: T) => {
       clearTimeout(timer);
-      if (!response?.ok) reject(new Error(`Uptime Kuma "${event}" : ${response?.msg ?? 'échec'}`));
+      if (!response?.ok) reject(new Error(`Uptime Kuma "${event}": ${response?.msg ?? 'failed'}`));
       else resolve(response);
     });
   });
@@ -52,14 +52,14 @@ export async function withKumaSession<T>(
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Uptime Kuma : connexion impossible')), 10000);
+      const timer = setTimeout(() => reject(new Error('Uptime Kuma: connection failed')), 10000);
       socket.once('connect', () => {
         clearTimeout(timer);
         resolve();
       });
       socket.once('connect_error', (error) => {
         clearTimeout(timer);
-        reject(new Error(`Uptime Kuma : ${error.message}`));
+        reject(new Error(`Uptime Kuma: ${error.message}`));
       });
     });
 
@@ -91,7 +91,7 @@ interface KumaMonitorAck extends KumaAck {
 /** Lit un moniteur complet. Indispensable avant editMonitor : Kuma réécrit tous les champs. */
 export async function getMonitor(socket: Socket, monitorId: number): Promise<Record<string, unknown>> {
   const ack = await emitWithAck<KumaMonitorAck>(socket, 'getMonitor', [monitorId]);
-  if (!ack.monitor) throw new Error(`Uptime Kuma : moniteur #${monitorId} introuvable`);
+  if (!ack.monitor) throw new Error(`Uptime Kuma: monitor #${monitorId} not found`);
   return ack.monitor;
 }
 
@@ -142,7 +142,7 @@ interface KumaTagAck extends KumaAck {
 /** Crée une étiquette dans le référentiel global (elle n'est encore posée sur aucun monitor). */
 export async function addTag(socket: Socket, name: string, color: string): Promise<KumaTag> {
   const ack = await emitWithAck<KumaTagAck>(socket, 'addTag', [{ name, color }]);
-  if (!ack.tag?.id) throw new Error('Uptime Kuma : étiquette créée sans identifiant');
+  if (!ack.tag?.id) throw new Error('Uptime Kuma: tag created without an id');
   return ack.tag;
 }
 
@@ -162,7 +162,7 @@ export function addMonitorTag(socket: Socket, tagId: number, monitorId: number):
  */
 export function collectMonitorList(socket: Socket, timeoutMs = 10000): Promise<KumaMonitorSummary[]> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Uptime Kuma : timeout sur "monitorList"')), timeoutMs);
+    const timer = setTimeout(() => reject(new Error('Uptime Kuma: timeout on "monitorList"')), timeoutMs);
     socket.once('monitorList', (list: Record<string, KumaMonitorSummary>) => {
       clearTimeout(timer);
       resolve(

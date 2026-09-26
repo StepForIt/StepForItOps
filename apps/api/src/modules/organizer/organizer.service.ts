@@ -1,5 +1,14 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
-import { AI_PORT, AiPort, EVENTS, N8N_API_PORT, N8nApiPort, N8nWorkflow } from '@nwm/core';
+import {
+  AI_PORT,
+  AiPort,
+  EVENTS,
+  N8N_API_PORT,
+  N8nApiPort,
+  N8nWorkflow,
+  msg,
+  writeInLanguage,
+} from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 
@@ -18,8 +27,8 @@ export interface OrganizePlanItem {
 }
 
 const DEFAULT_CONVENTION =
-  '[domaine] - [action] (ex: "CRM - Sync contacts Airtable", "Facturation - Relance impayés"). ' +
-  'Tags courts en kebab-case. folder = domaine.';
+  '[domain] - [action] (e.g. "CRM - Sync Airtable contacts", "Billing - Unpaid invoice reminder"). ' +
+  'Short tags in kebab-case. folder = domain.';
 
 @Injectable()
 export class OrganizerService {
@@ -39,7 +48,7 @@ export class OrganizerService {
   /** Propose un plan de rangement pour tous les workflows d'une instance. */
   async plan(instanceId: string, convention?: string): Promise<OrganizePlanItem[]> {
     if (!(await this.ai.isConfigured())) {
-      throw new BadRequestException('Module organizer : ANTHROPIC_API_KEY requis');
+      throw new BadRequestException(msg('analysis.organizerAiRequired'));
     }
     const workflows = await this.prisma.workflow.findMany({
       where: { instanceId, ...(await this.settings.workflowFilter()) },
@@ -59,10 +68,12 @@ export class OrganizerService {
 
     const items = await this.ai.generateJson<OrganizePlanItem[]>({
       system:
-        'Tu organises un catalogue de workflows n8n. Convention de nommage : ' +
+        'You organise a catalog of n8n workflows. Naming convention: ' +
         `${convention ?? DEFAULT_CONVENTION}\n` +
-        'Pour chaque workflow, propose un meilleur nom (garde-le si déjà bon), des tags, un folder. ' +
-        'Réponds en JSON: [{"workflowId": "...", "currentName": "...", "newName": "...", ' +
+        'For each workflow, propose a better name (keep it if already good), tags, a folder. ' +
+        'Keep an "[ARCHIVED]" prefix and an environment suffix (" - DEV", " - PROD"…) exactly as they are. ' +
+        `${writeInLanguage()}\n` +
+        'Answer in JSON: [{"workflowId": "...", "currentName": "...", "newName": "...", ' +
         '"tags": ["..."], "folder": "...", "reason": "..."}]',
       prompt: JSON.stringify(summary),
       maxTokens: 8192,
@@ -100,7 +111,7 @@ export class OrganizerService {
           }
           await this.n8n.setWorkflowTags(config, workflow.externalId, tagIds);
         } catch (error) {
-          this.logger.warn(`Tags KO pour "${workflow.name}" : ${(error as Error).message}`);
+          this.logger.warn(`Tags failed for "${workflow.name}": ${(error as Error).message}`);
         }
       }
 

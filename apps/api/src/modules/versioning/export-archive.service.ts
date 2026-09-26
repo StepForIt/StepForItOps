@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { EVENTS, InstanceSyncedEvent, STORAGE_PORT, StoragePort, VCS_PORT, VcsPort } from '@nwm/core';
+import { EVENTS, InstanceSyncedEvent, STORAGE_PORT, StoragePort, VCS_PORT, VcsPort, msg } from '@nwm/core';
 import { ExportTarget } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ModuleRegistryService } from '../../infra/modules-registry/module-registry.service';
@@ -66,7 +66,7 @@ export class ExportArchiveService {
    */
   async sweep(instanceId?: string): Promise<ArchiveReport> {
     if (this.running) {
-      throw new ConflictException("Un rangement des exports est déjà en cours — attends qu'il se termine");
+      throw new ConflictException(msg('platform.archiveSweepRunning'));
     }
     this.running = true;
     try {
@@ -130,15 +130,15 @@ export class ExportArchiveService {
       } catch (error) {
         failed += 1;
         this.logger.warn(
-          `Rangement de "${workflow.name}" vers ${destination} (${target.name}) KO : ${(error as Error).message}`,
+          `Moving "${workflow.name}" to ${destination} (${target.name}) failed: ${(error as Error).message}`,
         );
       }
     }
 
     if (moved.length > 0 || failed > 0) {
       this.logger.log(
-        `Exports rangés (${instanceId ?? 'toutes instances'}) : ${refs.length} fichier(s) inspecté(s), ` +
-          `${moved.length} déplacé(s), ${failed} échec(s)`,
+        `Exports sorted (${instanceId ?? 'all instances'}): ${refs.length} file(s) inspected, ` +
+          `${moved.length} moved, ${failed} failure(s)`,
       );
     }
     return { moved, failed, inspected: refs.length };
@@ -155,7 +155,7 @@ export class ExportArchiveService {
   ): Promise<string | null> {
     const message = archived
       ? `chore(${platform}): archive ${from} → ${to}`
-      : `chore(${platform}): réactive ${from} → ${to}`;
+      : `chore(${platform}): reactivate ${from} → ${to}`;
 
     if (target.kind === 'github') {
       const config = this.vcsConfig(target);
@@ -165,7 +165,7 @@ export class ExportArchiveService {
       } catch (error) {
         // Le fichier est en sécurité à sa nouvelle place : un ménage raté ne
         // doit pas rejouer l'écriture au prochain passage.
-        this.logger.warn(`GitHub : suppression de ${from} KO : ${(error as Error).message}`);
+        this.logger.warn(`GitHub: deleting ${from} failed: ${(error as Error).message}`);
       }
       return null;
     }
@@ -180,7 +180,7 @@ export class ExportArchiveService {
         mimeType: 'application/json',
       });
       if (!updated.missing) return remoteId;
-      this.logger.warn(`Drive : fichier ${remoteId} introuvable → nouvel upload`);
+      this.logger.warn(`Drive: file ${remoteId} not found → new upload`);
     }
     const created = await this.storage.uploadFile(config, {
       name: to,

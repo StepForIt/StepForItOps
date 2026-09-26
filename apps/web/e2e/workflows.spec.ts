@@ -50,7 +50,8 @@ test.describe('les workflows', () => {
     await expect(family).toContainText('dev');
     await expect(family).toContainText('prod');
 
-    await family.getByRole('button', { name: 'Expand row' }).click();
+    // Libellé d'antd, dans la langue de la console (locale `fr_FR`).
+    await family.getByRole('button', { name: 'Développer la ligne' }).click();
 
     // `.first()` : la ligne dépliée porte le nom dans sa cellule et dans son
     // libellé accessible, deux nœuds pour un même texte.

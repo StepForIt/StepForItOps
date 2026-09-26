@@ -1,0 +1,302 @@
+{
+  "attachments": {
+    "size": {
+      "bytes": "{size} B",
+      "kilobytes": "{size} KB",
+      "megabytes": "{size} MB"
+    },
+    "errors": {
+      "readFailed": "Could not read {name}",
+      "imageFormat": "{name}: unsupported image format (PNG, JPEG, WebP or GIF).",
+      "imageTooLarge": "{name}: {size} MB, 5 MB maximum.",
+      "tooManyImages": "{max} images maximum per message.",
+      "fileTooLarge": "{name}: {size}, {max} maximum.",
+      "emptyFile": "{name}: empty file.",
+      "tooManyFiles": "{max} files maximum per message.",
+      "filesTooHeavy": "Files too large in total: {max} maximum per message.",
+      "unsupported": "{name}: only images and text files are accepted."
+    },
+    "defaultImageName": "screenshot",
+    "defaultFileName": "file.txt",
+    "remove": "Remove",
+    "imagesFull": "{max}/{max} images",
+    "filesFull": "{max}/{max} files",
+    "attachedImageAlt": "attached screenshot"
+  },
+  "checks": {
+    "title": "Checks to run",
+    "scopeAuto": "Scope: decided automatically",
+    "saveFor": "Save for {target}",
+    "checkAll": "Select all",
+    "run": "Run verification ({count})",
+    "inheritedFrom": "Configuration inherited from: {source}",
+    "scopeTooltip": "The most specific scope wins.",
+    "mode": {
+      "simple": "Simple",
+      "advanced": "Advanced"
+    },
+    "costlyTooltip": "Costly check (AI call or reading n8n executions)",
+    "costly": "costly",
+    "saved": {
+      "hide": "Hide saved configurations",
+      "show": "Show saved configurations",
+      "none": "No saved configuration.",
+      "row": "{label} — {count, plural, one {# active check} other {# active checks}}",
+      "removeConfirm": "Remove “{label}”?",
+      "removeDescription": "This scope will fall back to the inherited configuration: the checks unticked here will run again.",
+      "remove": "Remove"
+    },
+    "ask": {
+      "title": "Apply this selection to…",
+      "justOnce": "Just this once",
+      "suggested": "suggested"
+    }
+  },
+  "commonPhrases": {
+    "explain": "Explain what this workflow does, step by step.",
+    "fragility": "What are the weak points (unhandled errors, missing data)?",
+    "annotate": "Add an explanatory note to every node without a clear name.",
+    "retryTimeout": "Add a retry and a timeout to the HTTP calls.",
+    "whyFailing": "Why is this workflow failing in production?",
+    "rename": "Rename the nodes so their role is readable.",
+    "emptyResponse": "What happens if the response is empty?",
+    "errorHandling": "Suggest error handling for this node: "
+  },
+  "diff": {
+    "noRuntimeEffect": "No effect on execution",
+    "noDifference": "No difference.",
+    "unchangedLines": "{count, plural, one {# unchanged line} other {# unchanged lines}}",
+    "change": {
+      "added": "added",
+      "removed": "removed",
+      "modified": "modified",
+      "renamed": "renamed"
+    },
+    "connections": {
+      "tag": "connections",
+      "title": "Workflow wiring"
+    },
+    "settings": {
+      "tag": "settings",
+      "title": "Settings"
+    },
+    "counts": {
+      "first": {
+        "modified": "{count, plural, one {# node modified} other {# nodes modified}}",
+        "added": "{count, plural, one {# node added} other {# nodes added}}",
+        "renamed": "{count, plural, one {# node renamed} other {# nodes renamed}}",
+        "removed": "{count, plural, one {# node removed} other {# nodes removed}}"
+      },
+      "rest": {
+        "modified": "{count} modified",
+        "added": "{count} added",
+        "renamed": "{count} renamed",
+        "removed": "{count} removed"
+      }
+    },
+    "tabs": {
+      "plain": "What it changes",
+      "json": "JSON diff"
+    }
+  },
+  "drawer": {
+    "discard": {
+      "title": "Discard the message in progress?",
+      "content": "The text you typed and any unsent attachments will be lost.",
+      "ok": "Discard",
+      "cancel": "Keep writing"
+    },
+    "titleWithName": "AI assistant — {name}",
+    "title": "AI assistant"
+  },
+  "markdown": {
+    "detailsSummary": "Details"
+  },
+  "memory": {
+    "notStored": "Not stored",
+    "title": "{count, plural, =0 {Memory} other {Memory (#)}}",
+    "forgetConfirm": "Forget this fact?",
+    "forget": "Forget",
+    "forgetTooltip": "Forget this fact",
+    "placeholder": "A constraint, a business rule, a node not to touch…",
+    "remember": "Remember"
+  },
+  "panel": {
+    "stopFailed": "The turn could not be interrupted: it will finish and reply.",
+    "exportFailed": "Export failed: {error}",
+    "unavailable": {
+      "title": "AI assistant unavailable",
+      "description": "The <b>Workflow AI assistant</b> module may be disabled (Modules page), or the AI key is not set. Detail: {detail}"
+    },
+    "sessionBadge": "{count, plural, =0 {} one {} other {# }}{state, select, pending {to review} stale {outdated} applied {applied} discarded {rejected} other {{state}}}",
+    "proposalTag": "change {state, select, pending {to review} stale {outdated} applied {applied} discarded {rejected} other {{state}}}",
+    "proposalHint": {
+      "pending": "Proposed change: nothing is written until the diff is applied.",
+      "stale": "The workflow has changed since: ask for it again.",
+      "applied": "Applied. The diff is still available.",
+      "discarded": "Rejected: nothing was written."
+    },
+    "newSession": "New",
+    "export": {
+      "session": "This conversation",
+      "all": "All conversations for this workflow",
+      "button": "Export"
+    },
+    "deleteSession": "Delete this conversation?",
+    "unanswered": "Sent on {date}, no reply.",
+    "retry": "Retry",
+    "leftovers": {
+      "title": "{count, plural, one {A sub-workflow created here was left empty} other {# sub-workflows created here were left empty}}",
+      "confirmTitle": "Delete this workflow in n8n?",
+      "confirmDescription": "Permanent deletion in n8n.",
+      "delete": "Delete in n8n"
+    },
+    "empty": "Ask a question about this workflow, or request a change.",
+    "suggestions": {
+      "explain": {
+        "label": "Explain the workflow",
+        "prompt": "Explain what this workflow does, step by step."
+      },
+      "fragility": {
+        "label": "Weak points",
+        "prompt": "What are the weak points (unhandled errors, missing data)?"
+      },
+      "annotate": {
+        "label": "Annotate unclear nodes",
+        "prompt": "Add an explanatory note to every node without a clear name."
+      }
+    },
+    "seeDiff": "View diff",
+    "reviewDiff": "Review diff",
+    "placeholder": "Question or change…",
+    "attachTooltip": "Attach screenshots or text files (drag-and-drop and paste work too)",
+    "stopTooltip": "Stop this turn and get my request back (Esc)",
+    "stop": "Stop",
+    "sendTooltip": "Enter: send · Shift+Enter: new line · Tab: complete",
+    "imageOnlyRequest": "Here is a screenshot. What does it show, and what should be done about it?",
+    "fileOnlyRequest": "Here are one or more attached files. What do they contain, and what should be done with them?"
+  },
+  "review": {
+    "gate": {
+      "suffix": " — {where}",
+      "breaches": "This change would break the workflow — it will not be applied{suffix}",
+      "rephrase": "Rephrase the request.",
+      "refusals": "n8n will refuse to save this workflow{suffix}",
+      "askFix": "Ask for the fix in the conversation.",
+      "tryAnyway": "Try anyway",
+      "introducedBlocked": "This change introduces an error — it will not be applied{suffix}",
+      "introduced": "This change introduces issues{suffix}",
+      "applyAnyway": "Apply anyway"
+    },
+    "done": {
+      "applied": "Applied.",
+      "discarded": "Proposal rejected."
+    },
+    "title": "Review the proposed change",
+    "discard": "Reject",
+    "applyTo": "Apply to {platform}",
+    "rootUnchanged": "“{name}” is not modified",
+    "noDifference": {
+      "title": "No difference",
+      "description": "The proposed operations change nothing compared with the current state of the workflow."
+    },
+    "stale": {
+      "title": "Outdated proposal",
+      "description": "The workflow has changed since this proposal was made. Ask again in the chat to start from the current state."
+    },
+    "status": {
+      "applied": "Proposal already applied",
+      "discarded": "Proposal rejected"
+    },
+    "revert": {
+      "done": "Workflow restored to its state before this change.",
+      "losesLaterChanges": "Warning: the workflow has changed in {platform} since this was applied. Reverting would also undo what was done afterwards.",
+      "confirmTitle": "Revert to the previous state?",
+      "confirmDescription": "The workflow will be rewritten in {platform} with the version from {date}. This change will be undone.",
+      "confirmDescriptionJustApplied": "The workflow will be rewritten in {platform} with the version from {date}. The change you just applied will be lost.",
+      "ok": "Restore",
+      "button": "Revert to previous state",
+      "notArchived": "The previous state is not archived: reverting has to be done by hand in {platform}.",
+      "doneAfterApply": "Workflow restored to its state before the change was applied."
+    },
+    "leftovers": {
+      "title": "{count, plural, one {Sub-workflow created by the assistant} other {# sub-workflows created by the assistant}}",
+      "hint": "Empty and not called: delete or keep.",
+      "confirmTitle": "Delete this workflow in n8n?",
+      "confirmDescription": "“{name}” will be deleted in n8n. It is empty and nothing calls it; this cannot be undone.",
+      "delete": "Delete in n8n"
+    },
+    "active": {
+      "title": "This workflow is ACTIVE on {platform}",
+      "description": "The change goes to production on the next trigger."
+    },
+    "locked": {
+      "title": "Workflow locked",
+      "description": "Applying will require overriding the lock, with a reason."
+    },
+    "draftWrite": "The change will be saved as a draft",
+    "rename": "Workflow renamed: “{before}” → “{after}”",
+    "operations": "Requested operations ({count})",
+    "parts": {
+      "summary": "{count, plural, one {+ # sub-workflow: {names}} other {+ # sub-workflows: {names}}}",
+      "active": "active",
+      "written": "already written",
+      "stale": {
+        "title": "This sub-workflow has changed in n8n since the proposal",
+        "description": "Applying would overwrite that change. Ask again in the conversation to start from the current state."
+      },
+      "where": "“{name}”"
+    },
+    "noRestorePoint": "No restore point: applying cannot be undone.",
+    "publish": {
+      "notPublished": "Not published.",
+      "done": "Workflow published: the applied version is the one running.",
+      "button": "Publish now"
+    }
+  },
+  "scan": {
+    "unmapped": "not mapped",
+    "mappingCreated": "Mapping “{name}” created ({env})",
+    "envPlaceholder": "Env of the values",
+    "title": "Discover from a workflow",
+    "mode": {
+      "workflow": "Workflow",
+      "group": "Group"
+    },
+    "instancePlaceholder": "n8n instance",
+    "workflowPlaceholder": "Workflow",
+    "noGroups": "No group on this instance",
+    "groupPlaceholder": "Group",
+    "groupOption": "{name} ({count} wf)",
+    "scan": "Scan",
+    "intro": "The scan lists the bases, tables and credentials referenced by the workflow or group (local snapshots, no n8n call), shows which are already covered by a mapping, and creates the missing mappings pre-filled with the values found — for a single env: that of the scanned workflows.",
+    "detectedEnv": "Env detected from existing mappings: <env></env>— values will be stored in <select></select>",
+    "noDetectedEnv": "None of this workflow's ids is known to the mappings — choose the env its values belong to: <select></select>",
+    "workflowCount": "{count, plural, one {# workflow scanned.} other {# workflows scanned.}}",
+    "resources": "Resources ({count})",
+    "noResources": "No external resource detected",
+    "createMapping": "Create mapping",
+    "workflows": "Workflows: {list}",
+    "nodes": "Nodes: {list}",
+    "credentials": "Credentials ({count})",
+    "noCredentials": "No credential detected"
+  },
+  "switchedResources": {
+    "replaced": "{count, plural, one {# base/table replaced} other {# bases/tables replaced}}",
+    "switched": "{count} resources switched",
+    "hide": "hide",
+    "which": "which ones?",
+    "row": "{node}: {from} → <strong>{to}</strong>"
+  },
+  "toolTrace": {
+    "thinking": "reasoning",
+    "tools": "{count, plural, one {# tool} other {# tools}}",
+    "failures": "{count} failed",
+    "round": "round {round}",
+    "truncated": "[…] result truncated for display"
+  },
+  "turnProgress": {
+    "analysing": "The assistant is analysing the workflow…",
+    "showPrevious": "{count, plural, one {Show the previous step} other {Show the # previous steps}}"
+  }
+}

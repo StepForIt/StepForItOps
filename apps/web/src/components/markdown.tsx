@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { BRAND } from '../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 /**
  * Rendu Markdown minimal sans dépendance, couvrant ce que produit l'IA. Volontairement strict :
@@ -36,7 +38,7 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
       push(
         <code
           key={key}
-          style={{ background: '#f0f0f0', borderRadius: 4, padding: '0 4px', fontSize: '0.92em' }}
+          style={{ background: BRAND.craie, borderRadius: 4, padding: '0 4px', fontSize: '0.92em' }}
         >
           {code}
         </code>,
@@ -143,16 +145,17 @@ function renderList(items: ListItem[], keyPrefix: string): React.ReactNode {
 }
 
 /** Bloc replié : le résumé reste lisible, le détail ne s'ouvre que si on le demande. */
-function Details({ summary, body }: { summary: string; body: string }) {
+function Details({ summary, body, fallback }: { summary: string; body: string; fallback: string }) {
   return (
     <details style={{ margin: '6px 0', border: '1px solid #f0f0f0', borderRadius: 6, padding: '4px 8px' }}>
-      <summary style={{ cursor: 'pointer', color: '#595959' }}>{renderInline(summary, 'summary')}</summary>
-      <div style={{ marginTop: 6 }}>{parseBlocks(body)}</div>
+      <summary style={{ cursor: 'pointer', color: BRAND.slate }}>{renderInline(summary, 'summary')}</summary>
+      <div style={{ marginTop: 6 }}>{parseBlocks(body, fallback)}</div>
     </details>
   );
 }
 
-function parseBlocks(source: string): React.ReactNode[] {
+/** `fallback` : résumé affiché d'un repli qui n'en porte pas (déjà traduit). */
+function parseBlocks(source: string, fallback: string): React.ReactNode[] {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   const blocks: React.ReactNode[] = [];
   let cursor = 0;
@@ -176,7 +179,9 @@ function parseBlocks(source: string): React.ReactNode[] {
         cursor += 1;
       }
       cursor += 1; // marqueur fermant (ou fin de texte)
-      blocks.push(<Details key={nextKey()} summary={summary || 'Détail'} body={body.join('\n')} />);
+      blocks.push(
+        <Details key={nextKey()} summary={summary || fallback} body={body.join('\n')} fallback={fallback} />,
+      );
       continue;
     }
 
@@ -199,7 +204,7 @@ function parseBlocks(source: string): React.ReactNode[] {
         <pre
           key={nextKey()}
           style={{
-            background: '#f6f6f6',
+            background: BRAND.papier,
             padding: 8,
             borderRadius: 6,
             overflowX: 'auto',
@@ -255,7 +260,7 @@ function parseBlocks(source: string): React.ReactNode[] {
             margin: '6px 0',
             padding: '2px 0 2px 10px',
             borderLeft: '3px solid #d9d9d9',
-            color: '#595959',
+            color: BRAND.slate,
           }}
         >
           {renderParagraphText(quoted, key)}
@@ -284,7 +289,7 @@ function parseBlocks(source: string): React.ReactNode[] {
             <thead>
               <tr>
                 {header.map((cell, i) => (
-                  <th key={i} style={{ ...cellStyle, background: '#fafafa' }}>
+                  <th key={i} style={{ ...cellStyle, background: BRAND.papier }}>
                     {renderInline(cell, `${key}-h${i}`)}
                   </th>
                 ))}
@@ -362,6 +367,8 @@ function parseBlocks(source: string): React.ReactNode[] {
 }
 
 export function Markdown({ content, style }: { content: string; style?: React.CSSProperties }) {
-  const blocks = React.useMemo(() => parseBlocks(content), [content]);
+  const t = useTranslations('chat.markdown');
+  const fallback = t('detailsSummary');
+  const blocks = React.useMemo(() => parseBlocks(content, fallback), [content, fallback]);
   return <div style={{ wordBreak: 'break-word', ...style }}>{blocks}</div>;
 }

@@ -9,6 +9,7 @@ import { CopyOutlined } from '@ant-design/icons';
 import { Table } from '../../components/resizable-table';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { GroupDuplicateModal } from '../../components/group-duplicate-modal';
+import { useTranslations } from 'next-intl';
 
 interface GroupRow {
   id: string;
@@ -19,6 +20,8 @@ interface GroupRow {
 }
 
 export default function WorkflowGroupsList() {
+  const t = useTranslations('settings.workflowGroups');
+  const tc = useTranslations('common');
   const { scope } = useInstanceScope();
   const [duplicating, setDuplicating] = useState<GroupRow | null>(null);
   const { tableProps, sorters } = useTable<GroupRow>({
@@ -34,23 +37,23 @@ export default function WorkflowGroupsList() {
       <Table {...tableProps} rowKey="id">
         <Table.Column
           dataIndex="name"
-          title="Groupe"
+          title={t('group')}
           sorter
           defaultSortOrder={getDefaultSortOrder('name', sorters)}
         />
         <Table.Column
           dataIndex="instanceName"
-          title="Instance"
+          title={tc('columns.instance')}
           sorter
           defaultSortOrder={getDefaultSortOrder('instanceName', sorters)}
           render={(name: string) => <Tag>{name}</Tag>}
         />
         <Table.Column<GroupRow>
           dataIndex="workflows"
-          title="Workflows"
+          title={t('workflows')}
           render={(workflows: GroupRow['workflows']) =>
             workflows.length === 0 ? (
-              <Typography.Text type="secondary">aucun</Typography.Text>
+              <Typography.Text type="secondary">{t('none')}</Typography.Text>
             ) : (
               <Space size={4} wrap>
                 {workflows.slice(0, 6).map((w) => (
@@ -64,11 +67,11 @@ export default function WorkflowGroupsList() {
           }
         />
         <Table.Column<GroupRow>
-          title="Actions"
+          title={tc('columns.actions')}
           className="row-actions"
           render={(_, record) => (
             <Space>
-              <Tooltip title="Dupliquer tous les workflows du groupe vers un env">
+              <Tooltip title={t('duplicateTooltip')}>
                 <Button
                   size="small"
                   icon={<CopyOutlined />}

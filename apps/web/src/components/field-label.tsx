@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BRAND } from '../lib/brand/colors';
 
 /**
  * Libellé de champ pour les formulaires NATIFS (login, setup) qui n'utilisent pas
@@ -19,7 +20,7 @@ export function FieldLabel({
   return (
     <label htmlFor={htmlFor} style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>
       {required && (
-        <span aria-hidden="true" style={{ color: '#ff4d4f', marginRight: 4 }}>
+        <span aria-hidden="true" style={{ color: BRAND.danger, marginRight: 4 }}>
           *
         </span>
       )}

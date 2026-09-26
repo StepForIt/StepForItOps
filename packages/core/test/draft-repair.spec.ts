@@ -47,7 +47,7 @@ describe('repairRequest', () => {
       }),
     );
     expect(request).toContain('Plus de déclencheur.');
-    expect(request).toContain('non contournable');
+    expect(request).toContain('cannot be overridden');
   });
 
   it('demande de corriger un refus hérité dans le même brouillon', () => {
@@ -57,13 +57,13 @@ describe('repairRequest', () => {
         refusals: [finding({ code: 'node-unknown-collection-key', message: 'sous-clé « values »' })],
       }),
     );
-    expect(request).toContain('même brouillon');
+    expect(request).toContain('same draft');
     expect(request).toContain('sous-clé « values »');
   });
 
   it('exige les opérations complètes, ou l’abandon explicite', () => {
     const request = repairRequest(verdict({ introduced: [finding()] })) ?? '';
-    expect(request).toContain('COMPLÈTES');
+    expect(request).toContain('COMPLETE');
     expect(request).toContain('proposal: null');
   });
 });

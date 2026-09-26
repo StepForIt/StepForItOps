@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import { gestureOptions, MACRO_GESTURES, MacroAction, stepLabel } from './release-macro';
 
 /**
@@ -28,11 +29,10 @@ export function reorderSteps(current: string[], order: string[], frozen = 0): Re
     new Set(order).size !== order.length ||
     order.some((id) => !known.has(id))
   ) {
-    return { ok: false, reason: "L'ordre doit reprendre exactement les étapes de la procédure" };
+    return { ok: false, reason: msg('release.reorderMismatch') };
   }
   for (let index = 0; index < frozen; index++) {
-    if (order[index] !== current[index])
-      return { ok: false, reason: 'Les étapes déjà jouées ne bougent plus' };
+    if (order[index] !== current[index]) return { ok: false, reason: msg('release.frozenSteps') };
   }
   return { ok: true, order };
 }
@@ -75,20 +75,21 @@ const refuse = (reason: string): GestureResult => ({ ok: false, reason });
  */
 export function manualGesture(input: GestureInput, envIds: string[]): GestureResult {
   const action = input.action as MacroAction;
-  if (!Object.prototype.hasOwnProperty.call(MACRO_GESTURES, action)) return refuse('Geste inconnu');
+  if (!Object.prototype.hasOwnProperty.call(MACRO_GESTURES, action))
+    return refuse(msg('release.unknownGesture'));
   const familyKey = input.familyKey?.trim();
   const familyName = input.familyName?.trim();
-  if (!familyKey || !familyName) return refuse('Choisis un workflow');
+  if (!familyKey || !familyName) return refuse(msg('release.pickWorkflow'));
 
   const sourceEnv = input.sourceEnv || null;
   const targetEnv = MACRO_GESTURES[action].needsEnv ? input.targetEnv || null : null;
   const undeclared = [sourceEnv, targetEnv].find((env) => env && !envIds.includes(env));
-  if (undeclared) return refuse(`Env ${undeclared.toUpperCase()} non déclaré`);
-  if (MACRO_GESTURES[action].needsEnv && !targetEnv) return refuse('Choisis un env cible');
-  if (action !== 'mark' && !sourceEnv) return refuse('Choisis un env de départ');
+  if (undeclared) return refuse(msg('release.envNotDeclared', { env: undeclared.toUpperCase() }));
+  if (MACRO_GESTURES[action].needsEnv && !targetEnv) return refuse(msg('release.pickTargetEnv'));
+  if (action !== 'mark' && !sourceEnv) return refuse(msg('release.pickSourceEnv'));
   // Rebrancher un exemplaire sur les données de son propre env est le cas courant (la copie qu'on vient de faire).
   if (action !== 'mark' && action !== 'switch' && sourceEnv === targetEnv) {
-    return refuse('Choisis deux envs différents');
+    return refuse(msg('release.pickTwoEnvs'));
   }
 
   return {

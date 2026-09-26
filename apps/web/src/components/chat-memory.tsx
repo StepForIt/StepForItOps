@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button, Collapse, Input, Popconfirm, Space, Tooltip, Typography, message } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 
 interface MemoryFact {
@@ -20,6 +21,8 @@ interface MemoryFact {
  * Repliée par défaut — on l'ouvre quand une réponse surprend.
  */
 export function ChatMemory({ workflowId }: { workflowId: string }) {
+  const t = useTranslations('chat.memory');
+  const tCommon = useTranslations('common');
   const [facts, setFacts] = React.useState<MemoryFact[]>([]);
   const [draft, setDraft] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -46,7 +49,7 @@ export function ChatMemory({ workflowId }: { workflowId: string }) {
         `/workflow-chat/workflows/${workflowId}/memory`,
         { content },
       );
-      if (!result.stored) message.warning(result.reason ?? 'Non retenu');
+      if (!result.stored) message.warning(result.reason ?? t('notStored'));
       else setDraft('');
       await reload();
     } catch (error) {
@@ -75,23 +78,19 @@ export function ChatMemory({ workflowId }: { workflowId: string }) {
       items={[
         {
           key: 'memory',
-          label: (
-            <Typography.Text type="secondary">
-              Mémoire{facts.length > 0 ? ` (${facts.length})` : ''}
-            </Typography.Text>
-          ),
+          label: <Typography.Text type="secondary">{t('title', { count: facts.length })}</Typography.Text>,
           children: (
             <Space direction="vertical" size={6} style={{ width: '100%' }}>
               {facts.map((fact) => (
                 <Space key={fact.id} align="start" style={{ width: '100%' }}>
                   <Popconfirm
-                    title="Oublier ce fait ?"
-                    okText="Oublier"
+                    title={t('forgetConfirm')}
+                    okText={t('forget')}
                     okButtonProps={{ danger: true }}
-                    cancelText="Annuler"
+                    cancelText={tCommon('cancel')}
                     onConfirm={() => remove(fact.id)}
                   >
-                    <Tooltip title="Oublier ce fait">
+                    <Tooltip title={t('forgetTooltip')}>
                       <Button size="small" type="text" danger icon={<DeleteOutlined />} />
                     </Tooltip>
                   </Popconfirm>
@@ -101,13 +100,13 @@ export function ChatMemory({ workflowId }: { workflowId: string }) {
               <Space.Compact style={{ width: '100%' }}>
                 <Input
                   size="small"
-                  placeholder="Une contrainte, une règle métier, un nœud à ne pas toucher…"
+                  placeholder={t('placeholder')}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onPressEnter={add}
                 />
                 <Button size="small" icon={<PlusOutlined />} loading={busy} onClick={add}>
-                  Retenir
+                  {t('remember')}
                 </Button>
               </Space.Compact>
             </Space>

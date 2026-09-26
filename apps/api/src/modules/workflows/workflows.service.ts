@@ -13,6 +13,7 @@ import {
   makeScenarioUrl,
   workflowActions,
   n8nWorkflowUrl,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
@@ -185,7 +186,7 @@ export class WorkflowsService {
 
   async get(id: string): Promise<WorkflowWithEnv> {
     const workflow = await this.prisma.workflow.findUnique({ where: { id }, include: includeInstance });
-    if (!workflow) throw new NotFoundException(`Workflow ${id} introuvable`);
+    if (!workflow) throw new NotFoundException(msg('platform.workflowNotFound', { id }));
     return withEnv(workflow, await this.settings.declaredEnvIds());
   }
 
@@ -210,7 +211,10 @@ export class WorkflowsService {
     const workflow = await this.get(id);
     if (workflow.platform !== 'n8n') {
       throw new BadRequestException(
-        `« ${workflow.name} » est servi par ${workflow.platform === 'make' ? 'Make' : workflow.platform} : cette fonction ne gère que les workflows n8n.`,
+        msg('platform.workflowNotN8n', {
+          name: workflow.name,
+          platform: workflow.platform === 'make' ? 'Make' : workflow.platform,
+        }),
       );
     }
     return { workflow, raw: workflow.raw as unknown as N8nWorkflow };

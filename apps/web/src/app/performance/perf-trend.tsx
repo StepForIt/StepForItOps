@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Empty, Space, Spin, Tooltip, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
 import { PerfTrend, formatMs } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 const WIDTH = 680;
 const HEIGHT = 170;
@@ -15,9 +17,11 @@ const MAX_BAR_WIDTH = 28;
 const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 
-/** "2026-08-20" → "20/08" */
-function dayLabel(date: string): string {
-  return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+/** "2026-08-20" → "20/08" (fr) ou "08/20" (en) */
+function dayLabel(date: string, locale: string): string {
+  return locale.startsWith('fr')
+    ? `${date.slice(8, 10)}/${date.slice(5, 7)}`
+    : `${date.slice(5, 7)}/${date.slice(8, 10)}`;
 }
 
 /**
@@ -35,6 +39,8 @@ export function PerfTrendChart({
   days: number;
 }) {
   const [trend, setTrend] = useState<PerfTrend | null>(null);
+  const t = useTranslations('health.performance.trend');
+  const locale = useLocale();
 
   useEffect(() => {
     setTrend(null);
@@ -45,7 +51,7 @@ export function PerfTrendChart({
 
   if (!trend) return <Spin size="small" />;
   if (trend.buckets.length === 0) {
-    return <Empty description="Pas encore d'historique" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    return <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   const max = Math.max(...trend.buckets.map((b) => b.p50Ms ?? 0), 1);
@@ -56,13 +62,13 @@ export function PerfTrendChart({
 
   return (
     <Space direction="vertical" size={4} style={{ width: '100%', maxWidth: WIDTH }}>
-      <Typography.Text type="secondary">Médiane par jour · rouge = échecs</Typography.Text>
+      <Typography.Text type="secondary">{t('legend')}</Typography.Text>
       {/* viewBox + largeur fluide : le graphe suit la place disponible au lieu de déborder. */}
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         style={{ width: '100%', maxWidth: WIDTH, height: 'auto', display: 'block' }}
         role="img"
-        aria-label="Tendance de durée"
+        aria-label={t('ariaLabel')}
       >
         {/* Ordonnée : durées, avec lignes de repère */}
         {yTicks.map((tick) => {
@@ -78,7 +84,7 @@ export function PerfTrendChart({
                 strokeDasharray={tick === 0 ? undefined : '3 3'}
               />
               <text x={MARGIN.left - 8} y={y + 4} textAnchor="end" fontSize={11} fill="#888">
-                {formatMs(tick * max)}
+                {formatMs(tick * max, locale)}
               </text>
             </g>
           );
@@ -91,7 +97,13 @@ export function PerfTrendChart({
           return (
             <g key={bucket.date}>
               <Tooltip
-                title={`${bucket.date} — ${bucket.executions} exéc., ${bucket.errors} échec(s), P50 ${formatMs(bucket.p50Ms)}, P95 ${formatMs(bucket.p95Ms)}`}
+                title={t('barTitle', {
+                  date: bucket.date,
+                  executions: bucket.executions,
+                  errors: bucket.errors,
+                  p50: formatMs(bucket.p50Ms, locale),
+                  p95: formatMs(bucket.p95Ms, locale),
+                })}
               >
                 <rect
                   x={x}
@@ -99,13 +111,13 @@ export function PerfTrendChart({
                   width={barWidth}
                   height={height}
                   rx={2}
-                  fill={bucket.errors > 0 ? '#ff4d4f' : '#1677ff'}
+                  fill={bucket.errors > 0 ? BRAND.danger : BRAND.primary}
                   opacity={0.85}
                 />
               </Tooltip>
               {showLabel && (
                 <text x={x + barWidth / 2} y={HEIGHT - 6} textAnchor="middle" fontSize={10} fill="#888">
-                  {dayLabel(bucket.date)}
+                  {dayLabel(bucket.date, locale)}
                 </text>
               )}
             </g>

@@ -7,6 +7,7 @@
  * premier changement de l'une. Les modules s'apparient par id, stable au
  * renommage : un module renommé ne se lit jamais « supprimé ici, ajouté là ».
  */
+import { msg } from '../../i18n';
 import { ChangeExplanation, explainLeafChanges } from '../n8n/change-impact';
 import { NodeDiff, WorkflowDiff, diffJson } from '../n8n/workflow-diff';
 import { MakeBlueprint, MakeModule, flattenModules, isMakeBlueprint, moduleLabel } from './blueprint';
@@ -28,7 +29,7 @@ export function diffBlueprintsForReview(before: unknown, after: unknown): Workfl
         change: 'added',
         fields: [],
         lines: diffJson(undefined, own(module)),
-        explanations: [{ text: 'Module ajouté.', level: 'info' }],
+        explanations: [{ text: msg('edit.makeModuleAdded'), level: 'info' }],
       });
       continue;
     }
@@ -53,12 +54,7 @@ export function diffBlueprintsForReview(before: unknown, after: unknown): Workfl
       change: 'removed',
       fields: [],
       lines: diffJson(own(module), undefined),
-      explanations: [
-        {
-          text: 'Module supprimé : ce qui lisait sa sortie ne recevra plus rien.',
-          level: 'warning',
-        },
-      ],
+      explanations: [{ text: msg('edit.makeModuleRemoved'), level: 'warning' }],
     });
   }
 
@@ -78,9 +74,7 @@ export function diffBlueprintsForReview(before: unknown, after: unknown): Workfl
     connections: {
       changed: structureChanged,
       lines: structureChanged ? diffJson(edgesBefore, edgesAfter) : [],
-      explanations: structureChanged
-        ? [{ text: "L'enchaînement des modules a changé.", level: 'warning' }]
-        : [],
+      explanations: structureChanged ? [{ text: msg('edit.makeChainChanged'), level: 'warning' }] : [],
     },
     settings: {
       changed: settingsChanged,
@@ -126,16 +120,13 @@ function changedFields(before: MakeModule, after: MakeModule): string[] {
 function explainModule(before: MakeModule, after: MakeModule): ChangeExplanation[] {
   const out: ChangeExplanation[] = [];
   if (moduleLabel(before) !== moduleLabel(after)) {
-    out.push({ text: `Renommé en « ${moduleLabel(after)} ».`, level: 'info' });
+    out.push({ text: msg('edit.makeRenamed', { name: moduleLabel(after) }), level: 'info' });
   }
   if (JSON.stringify(before.filter ?? null) !== JSON.stringify(after.filter ?? null)) {
     out.push(
       after.filter
-        ? {
-            text: 'Le filtre du module a changé : il ne laissera plus passer les mêmes bundles.',
-            level: 'warning',
-          }
-        : { text: 'Filtre retiré : le module traitera tous les bundles.', level: 'warning' },
+        ? { text: msg('edit.makeFilterChanged'), level: 'warning' }
+        : { text: msg('edit.makeFilterDropped'), level: 'warning' },
     );
   }
   out.push(...explainLeafChanges(before.mapper, after.mapper).map((e) => prefixed(e, 'mapper')));

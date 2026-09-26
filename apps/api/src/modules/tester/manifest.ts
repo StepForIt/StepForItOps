@@ -1,7 +1,12 @@
-import { ModuleManifest } from '@nwm/core';
+import { ModuleManifest, msg } from '@nwm/core';
 
+/** Nom et description lus à chaque demande : ils suivent la langue de l'appelant. */
 export const TESTER_MANIFEST: ModuleManifest = {
   id: 'tester',
-  name: 'Tests',
-  description: 'Tests de workflows et copies bouchonnées',
+  get name() {
+    return msg('platform.moduleTesterName');
+  },
+  get description() {
+    return msg('platform.moduleTesterDescription');
+  },
 };

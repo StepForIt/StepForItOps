@@ -11,6 +11,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { msg } from '@nwm/core';
 import { NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ModuleId } from '../../infra/modules-registry/module-id.decorator';
@@ -82,8 +83,8 @@ export class NotificationChannelsController {
   @Post()
   async create(@Body() body: ChannelBody): Promise<ChannelView> {
     const { name, type, url } = body;
-    if (!name?.trim()) throw new BadRequestException('name requis');
-    if (!type || !CHANNEL_TYPES.has(type)) throw new BadRequestException('type : slack ou webhook');
+    if (!name?.trim()) throw new BadRequestException(msg('ops.channelNameRequired'));
+    if (!type || !CHANNEL_TYPES.has(type)) throw new BadRequestException(msg('ops.channelTypeInvalid'));
     validateUrl(url);
     const row = await this.prisma.notificationChannel.create({
       data: {
@@ -105,7 +106,7 @@ export class NotificationChannelsController {
   @Patch(':id')
   async update(@Param('id') id: string, @Body() body: ChannelBody): Promise<ChannelView> {
     if (body.type !== undefined && !CHANNEL_TYPES.has(body.type)) {
-      throw new BadRequestException('type : slack ou webhook');
+      throw new BadRequestException(msg('ops.channelTypeInvalid'));
     }
     // URL vide ou absente = on garde le secret en place (l'UI ne l'a jamais reçue).
     if (body.url) validateUrl(body.url);
@@ -141,12 +142,12 @@ export class NotificationChannelsController {
 }
 
 function validateUrl(url: string | undefined): void {
-  if (!url) throw new BadRequestException('url requise');
+  if (!url) throw new BadRequestException(msg('ops.channelUrlRequired'));
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error();
   } catch {
-    throw new BadRequestException('url invalide (http/https attendu)');
+    throw new BadRequestException(msg('ops.channelUrlInvalid'));
   }
 }
 

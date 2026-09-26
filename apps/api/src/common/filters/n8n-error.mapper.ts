@@ -1,5 +1,5 @@
 import { BadGatewayException, HttpException, UnprocessableEntityException } from '@nestjs/common';
-import { N8nApiError, describePublishRefusal, parsePublishRefusal } from '@nwm/core';
+import { N8nApiError, describePublishRefusal, msg, parsePublishRefusal } from '@nwm/core';
 
 /**
  * n8n qui refuse la clé API ou le compte de l'instance. C'est un réglage à
@@ -13,12 +13,11 @@ export function isN8nAuthRefusal(error: N8nApiError): boolean {
 }
 
 export function n8nAuthRefused(error: N8nApiError): N8nAuthRefusedException {
-  const what =
-    error.status === 401
-      ? 'refuse la clé API ou le compte de cette instance (401) : révoqué ou régénéré côté n8n'
-      : "n'autorise pas cette opération à la clé API ou au compte de cette instance (403)";
+  const detail = error.message.slice(0, 300);
   return new N8nAuthRefusedException(
-    `n8n ${what}. À mettre à jour dans la fiche de l'instance. Détail : ${error.message.slice(0, 300)}`,
+    error.status === 401
+      ? msg('common.n8nAuthRefused401', { detail })
+      : msg('common.n8nAuthRefused403', { detail }),
   );
 }
 

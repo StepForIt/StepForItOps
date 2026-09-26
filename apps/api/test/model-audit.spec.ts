@@ -6,6 +6,7 @@ import { ModelAuditSettingsService } from '../src/modules/model-audit/model-audi
 import { NodeUsageService } from '../src/modules/model-audit/node-usage.service';
 import { ModelCatalogService } from '../src/infra/model-catalog/model-catalog.service';
 import { resetDb, testPrisma } from './helpers/db';
+import { PlatformLocale } from '../src/infra/i18n/platform-locale';
 
 /**
  * L'audit des modèles contre une vraie base.
@@ -72,6 +73,7 @@ function makeService(): { service: ModelAuditService; catalog: ModelCatalogServi
     tasks as never,
     ignores as never,
     new ModelAuditSettingsService(prisma),
+    { run: (fn: () => unknown) => fn() } as unknown as PlatformLocale,
   );
   return { service, catalog };
 }

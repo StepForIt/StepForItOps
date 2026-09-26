@@ -7,6 +7,7 @@ import {
   isGroupFullyDisabled,
   isNoisyAiFinding,
   locateQuote,
+  writeInLanguage,
 } from '@nwm/core';
 import { Finding } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -14,6 +15,7 @@ import { EventBusService } from '../../infra/events/event-bus.service';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { FindingIgnoreService, IgnoredRuleHint } from '../workflows/finding-ignore.service';
 import { CheckProfilesService } from '../../infra/check-profiles/check-profiles.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { extractCodeNodes } from './code-node-extractor';
 import { analyzeCodeNode } from './js-static-analysis';
 
@@ -43,10 +45,20 @@ export class JsCheckerService {
     private readonly ignores: FindingIgnoreService,
     private readonly profiles: CheckProfilesService,
     @Inject(AI_PORT) private readonly ai: AiPort,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /** `disabledChecks` : sélection de l'écran de lancement, prioritaire sur le profil enregistré. */
-  async check(workflowId: string, withAi: boolean, disabledChecks?: string[]): Promise<Finding[]> {
+  check(workflowId: string, withAi: boolean, disabledChecks?: string[]): Promise<Finding[]> {
+    // Les findings sont stockés pour tous : dans la langue de la plateforme, pas celle du lanceur.
+    return this.platformLocale.run(() => this.runChecks(workflowId, withAi, disabledChecks));
+  }
+
+  private async runChecks(
+    workflowId: string,
+    withAi: boolean,
+    disabledChecks?: string[],
+  ): Promise<Finding[]> {
     const { raw } = await this.workflows.getRaw(workflowId);
     const codeNodes = extractCodeNodes(raw);
     const disabled = await this.profiles.effective(workflowId, disabledChecks);
@@ -109,21 +121,22 @@ export class JsCheckerService {
   ): Promise<CheckFinding[]> {
     const alreadyNormal =
       ignored.length > 0
-        ? `\n\nRemarques DÉJÀ déclarées normales sur ce nœud — ne les resignale pas, ni sous une autre formulation :\n${ignored
-            .map((rule) => `- ${rule.message}${rule.reason ? ` (raison : ${rule.reason})` : ''}`)
+        ? `\n\nRemarks ALREADY declared normal on this node — do not report them again, not even reworded:\n${ignored
+            .map((rule) => `- ${rule.message}${rule.reason ? ` (reason: ${rule.reason})` : ''}`)
             .join('\n')}`
         : '';
     try {
       const issues = await this.ai.generateJson<AiJsIssue[]>({
         system:
-          "Tu es un expert du nœud Code n8n. On te donne le JS d'un nœud et son mode d'exécution. " +
-          "Détecte les cas où ce code peut CASSER à l'exécution (données absentes, accès indexé sans garde, " +
-          "async mal géré, mutation d'items). " +
-          "Ne signale JAMAIS : la forme du retour (n8n enveloppe lui-même un objet ou un tableau d'objets), " +
-          "un console.log, ni une valeur d'aspect gabarit ([productId], {{ x }}, <id>, TODO) présentée comme « codée en dur ». " +
-          'Chaque remarque doit être actionnable : recopie dans "quote" la ligne de code visée, telle quelle, ' +
-          'et donne dans "suggestion" le correctif concret. Si tu n\'as rien de solide, réponds []. ' +
-          `Réponds en JSON: [{"message": "...", "severity": "info"|"warning"|"error", "quote": "...", "suggestion": "..."}] (max ${MAX_AI_ISSUES_PER_NODE} items).`,
+          "You are an expert in the n8n Code node. You are given a node's JS and its execution mode. " +
+          'Detect the cases where this code can BREAK at runtime (missing data, unguarded indexed access, ' +
+          'badly handled async, mutation of items). ' +
+          'NEVER report: the shape of the return value (n8n itself wraps an object or an array of objects), ' +
+          'a console.log, or a template-looking value ([productId], {{ x }}, <id>, TODO) presented as "hardcoded". ' +
+          'Every remark must be actionable: copy into "quote" the targeted line of code, verbatim, ' +
+          'and give in "suggestion" the concrete fix. If you have nothing solid, answer []. ' +
+          `${writeInLanguage()} ` +
+          `Answer in JSON: [{"message": "...", "severity": "info"|"warning"|"error", "quote": "...", "suggestion": "..."}] (max ${MAX_AI_ISSUES_PER_NODE} items).`,
         prompt: `mode: ${mode}\n\n${code}${alreadyNormal}`,
         // Le budget couvre aussi le raisonnement du modèle (cf. ai-logic-review).
         maxTokens: 4096,
@@ -144,7 +157,7 @@ export class JsCheckerService {
           },
         }));
     } catch (error) {
-      this.logger.warn(`Revue IA du nœud "${nodeName}" KO : ${(error as Error).message}`);
+      this.logger.warn(`AI review of node "${nodeName}" failed: ${(error as Error).message}`);
       return [];
     }
   }

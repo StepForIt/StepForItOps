@@ -8,6 +8,7 @@ import {
   ModelPricingPort,
   asModelStatus,
   asTier,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { ModelCatalogService } from './model-catalog.service';
@@ -81,7 +82,12 @@ export class ModelCatalogRefreshService {
       for (const entry of upstream) {
         const row = byPattern.get(entry.pattern.toLowerCase());
         if (!row) continue; // On ne propose PAS d'ajouter huit cents modèles inconnus du parc.
-        proposed += await this.proposeDiff(row, entry, 'litellm', `révision ${revision.slice(0, 7)}`);
+        proposed += await this.proposeDiff(
+          row,
+          entry,
+          'litellm',
+          msg('analysis.proposalRevision', { revision: revision.slice(0, 7) }),
+        );
       }
       await this.touchAll();
       await this.prisma.modelCatalogSync.create({ data: { source: 'litellm', revision, proposed } });
@@ -116,15 +122,15 @@ export class ModelCatalogRefreshService {
         effort: 'low',
         maxTokens: 4000,
         system:
-          "Tu renseignes un catalogue de modèles LLM. Tu réponds UNIQUEMENT ce dont tu es sûr : un champ que tu ignores vaut null, jamais une valeur plausible. Un tarif n'est JAMAIS demandé ici.",
+          'You fill in a catalog of LLM models. You answer ONLY what you are sure of: a field you do not know is null, never a plausible value. A price is NEVER asked here.',
         prompt: [
-          'Pour chacun de ces modèles, donne son statut chez son provider, la date de retrait annoncée si elle existe, le modèle qui le remplace, et son niveau.',
-          'niveau : "light" (petit modèle rapide), "standard" (modèle généraliste), "reasoning" (modèle de raisonnement).',
-          'statut : "active", "preview", "deprecated" ou "retired".',
+          'For each of these models, give its status at its provider, the announced retirement date if there is one, the model that replaces it, and its tier.',
+          'tier: "light" (small fast model), "standard" (general-purpose model), "reasoning" (reasoning model).',
+          'status: "active", "preview", "deprecated" or "retired".',
           '',
           JSON.stringify(rows.map((row) => ({ pattern: row.pattern, provider: row.provider }))),
           '',
-          'Réponds en JSON : {"models":[{"pattern":"…","status":"…"|null,"retiresAt":"YYYY-MM-DD"|null,"replacedByPattern":"…"|null,"tier":"…"|null}]}',
+          'Answer in JSON: {"models":[{"pattern":"…","status":"…"|null,"retiresAt":"YYYY-MM-DD"|null,"replacedByPattern":"…"|null,"tier":"…"|null}]}',
         ].join('\n'),
       });
       const parsed = parseModels(answer);
@@ -132,14 +138,19 @@ export class ModelCatalogRefreshService {
       for (const item of parsed) {
         const row = rows.find((candidate) => candidate.pattern.toLowerCase() === item.pattern?.toLowerCase());
         if (!row) continue;
-        proposed += await this.proposeDiff(row, sparseEntry(row, item), 'ai', 'complément du modèle actif');
+        proposed += await this.proposeDiff(
+          row,
+          sparseEntry(row, item),
+          'ai',
+          msg('analysis.proposalAiComplement'),
+        );
       }
       await this.prisma.modelCatalogSync.create({ data: { source: 'ai', proposed } });
       return { source: 'ai', skipped: false, proposed };
     } catch (error) {
       const message = (error as Error).message;
       await this.prisma.modelCatalogSync.create({ data: { source: 'ai', error: message } });
-      this.logger.warn(`Complément IA du catalogue KO : ${message}`);
+      this.logger.warn(`AI catalog complement failed: ${message}`);
       return { source: 'ai', skipped: true, proposed: 0 };
     }
   }

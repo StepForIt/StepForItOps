@@ -15,6 +15,7 @@ import {
   Typography,
   message,
 } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
@@ -43,28 +44,21 @@ interface Correction {
 }
 
 /** D'où vient une leçon, et donc ce qu'elle vaut : c'est la première chose à lire. */
-const ORIGINS: Record<Lesson['origin'], { label: string; color: string; help: string }> = {
-  'human-answer': {
-    label: 'Réponse humaine',
-    color: 'green',
-    help: "Quelqu'un a expliqué une correction qu'il avait faite à la main. Le signal le plus fiable.",
-  },
-  'human-correction': {
-    label: 'Correction à la main',
-    color: 'blue',
-    help: "Déduite d'un écart de FORME entre ce que l'assistant a écrit et ce qui a été laissé.",
-  },
-  'gate-refusal': {
-    label: 'Refus de porte',
-    color: 'geekblue',
-    help: 'Un contrôle déterministe a refusé un brouillon, que l’assistant a ensuite corrigé.',
-  },
+// Libellé et aide : `misc.assistantLessons.origins.<clé>`.
+const ORIGINS: Record<
+  Lesson['origin'],
+  { key: 'humanAnswer' | 'humanCorrection' | 'gateRefusal'; color: string }
+> = {
+  'human-answer': { key: 'humanAnswer', color: 'green' },
+  'human-correction': { key: 'humanCorrection', color: 'blue' },
+  'gate-refusal': { key: 'gateRefusal', color: 'blue' },
 };
 
-const STATUSES: Record<Lesson['status'], { label: string; color: string }> = {
-  active: { label: 'Servie', color: 'green' },
-  candidate: { label: 'En attente', color: 'orange' },
-  retired: { label: 'Retirée', color: 'default' },
+// Libellé : `misc.assistantLessons.statuses.<statut>`.
+const STATUSES: Record<Lesson['status'], { color: string }> = {
+  active: { color: 'green' },
+  candidate: { color: 'orange' },
+  retired: { color: 'default' },
 };
 
 /**
@@ -76,6 +70,8 @@ const STATUSES: Record<Lesson['status'], { label: string; color: string }> = {
  * façon de la corriger serait le SQL.
  */
 export default function AssistantLessons() {
+  const t = useTranslations('misc.assistantLessons');
+  const tc = useTranslations('common');
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,7 +106,7 @@ export default function AssistantLessons() {
   const setStatus = async (lesson: Lesson, status: Lesson['status']) => {
     try {
       await apiPatch(`/assistant-learning/lessons/${lesson.id}`, { status });
-      message.success(status === 'active' ? 'Leçon activée — elle sera servie' : 'Leçon retirée');
+      message.success(status === 'active' ? t('toast.activated') : t('toast.retired'));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -125,7 +121,7 @@ export default function AssistantLessons() {
     }
     try {
       await apiPatch(`/assistant-learning/lessons/${lesson.id}`, { content });
-      message.success('Formulation corrigée');
+      message.success(t('toast.reworded'));
       setEditing((previous) => ({ ...previous, [lesson.id]: '' }));
       load();
     } catch (error) {
@@ -136,7 +132,7 @@ export default function AssistantLessons() {
   const remove = async (id: string) => {
     try {
       await apiDelete(`/assistant-learning/lessons/${id}`);
-      message.success('Leçon supprimée');
+      message.success(t('toast.deleted'));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -152,7 +148,7 @@ export default function AssistantLessons() {
         { answer: text },
       );
       message.success(
-        result.learned ? `Règle apprise : ${result.learned}` : 'Réponse enregistrée — rien à généraliser',
+        result.learned ? t('toast.learned', { rule: result.learned }) : t('toast.nothingToLearn'),
       );
       setAnswers((previous) => ({ ...previous, [correction.id]: '' }));
       load();
@@ -189,18 +185,16 @@ export default function AssistantLessons() {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       {pending.length > 0 && (
-        <Card title={`Corrections inexpliquées (${pending.length})`}>
+        <Card title={t('pending.title', { count: pending.length })}>
           <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
-            Une modification a été reprise à la main après une proposition de l’assistant, et rien ne dit s’il
-            s’était trompé ou si l’intention a changé. Les deux ont exactement la même forme dans le JSON —
-            seule une réponse les distingue.
+            {t('pending.intro')}
           </Typography.Paragraph>
           <Space direction="vertical" style={{ width: '100%' }}>
             {pending.map((correction) => (
               <Card key={correction.id} size="small" type="inner" title={correction.question}>
                 <Space.Compact style={{ width: '100%' }}>
                   <Input
-                    placeholder="Ce qui n’allait pas, en une phrase — ou « rien, j’ai changé d’avis »"
+                    placeholder={t('pending.placeholder')}
                     value={answers[correction.id] ?? ''}
                     onChange={(event) =>
                       setAnswers((previous) => ({ ...previous, [correction.id]: event.target.value }))
@@ -208,9 +202,9 @@ export default function AssistantLessons() {
                     onPressEnter={() => answer(correction)}
                   />
                   <Button type="primary" onClick={() => answer(correction)}>
-                    Répondre
+                    {t('pending.answer')}
                   </Button>
-                  <Button onClick={() => dismiss(correction)}>Passer</Button>
+                  <Button onClick={() => dismiss(correction)}>{t('pending.skip')}</Button>
                 </Space.Compact>
               </Card>
             ))}
@@ -218,40 +212,32 @@ export default function AssistantLessons() {
         </Card>
       )}
 
-      <Card title="Ce que l’assistant a appris" extra={<Button onClick={load}>Rafraîchir</Button>}>
+      <Card title={t('learned.title')} extra={<Button onClick={load}>{tc('refresh')}</Button>}>
         {failed && (
           <Alert
             type="warning"
             showIcon
             style={{ marginBottom: 16 }}
-            message="Leçons illisibles"
-            description={
-              `${failed} — le module « Assistant auto-apprenant » est peut-être désactivé (page Modules). ` +
-              'Ce n’est pas un corpus vide : rien ne peut être affiché tant que cet appel échoue.'
-            }
+            message={t('failed.title')}
+            description={t('failed.body', { error: failed })}
           />
         )}
         <Alert
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="Six règles au plus atteignent le prompt à chaque tour"
-          description={
-            `${counts.active} règle(s) servie(s), ${counts.candidate} en attente. Une règle « en attente » ` +
-            'vient d’un seul incident et n’est jamais servie : elle s’active à la deuxième occurrence, ' +
-            'ou d’un clic ici. Le nombre de règles peut grossir sans coût — c’est le nombre SERVI qui est borné, ' +
-            'et il est choisi par type de nœud du workflow puis par les mots de la question.'
-          }
+          message={t('budget.title')}
+          description={t('budget.body', { active: counts.active, candidate: counts.candidate })}
         />
         <Space style={{ marginBottom: 16 }}>
           <Segmented
             value={statusFilter}
             onChange={(value) => setStatusFilter(String(value))}
             options={[
-              { label: 'Toutes', value: 'all' },
-              { label: 'Servies', value: 'active' },
-              { label: 'En attente', value: 'candidate' },
-              { label: 'Retirées', value: 'retired' },
+              { label: t('filter.all'), value: 'all' },
+              { label: t('filter.active'), value: 'active' },
+              { label: t('filter.candidate'), value: 'candidate' },
+              { label: t('filter.retired'), value: 'retired' },
             ]}
           />
         </Space>
@@ -260,20 +246,12 @@ export default function AssistantLessons() {
           rowKey="id"
           loading={loading}
           locale={{
-            emptyText: (
-              <Empty
-                description={
-                  failed
-                    ? 'Rien ne peut être affiché : voir l’avertissement ci-dessus.'
-                    : 'Rien encore appris — les règles apparaissent quand une proposition de l’assistant est corrigée à la main, ou refusée puis corrigée.'
-                }
-              />
-            ),
+            emptyText: <Empty description={failed ? t('empty.failed') : t('empty.none')} />,
           }}
         >
           <Table.Column<Lesson>
             dataIndex="content"
-            title="Règle"
+            title={t('columns.rule')}
             render={(content: string, lesson) =>
               editing[lesson.id] !== undefined && editing[lesson.id] !== '' ? (
                 <Space.Compact style={{ width: '100%' }}>
@@ -285,7 +263,7 @@ export default function AssistantLessons() {
                     }
                   />
                   <Button type="primary" onClick={() => saveContent(lesson)}>
-                    Enregistrer
+                    {tc('save')}
                   </Button>
                 </Space.Compact>
               ) : (
@@ -300,12 +278,12 @@ export default function AssistantLessons() {
           />
           <Table.Column<Lesson>
             dataIndex="nodeTypes"
-            title="Portée"
+            title={t('columns.scope')}
             width={220}
             render={(types: string[]) =>
               types.length === 0 ? (
-                <Tooltip title="Règle générale : ne remonte que par les mots de la question.">
-                  <Tag>générale</Tag>
+                <Tooltip title={t('generalHelp')}>
+                  <Tag>{t('general')}</Tag>
                 </Tooltip>
               ) : (
                 <Space size={[0, 4]} wrap>
@@ -318,46 +296,46 @@ export default function AssistantLessons() {
           />
           <Table.Column<Lesson>
             dataIndex="origin"
-            title="Source"
+            title={t('columns.source')}
             width={170}
             render={(origin: Lesson['origin']) => (
-              <Tooltip title={ORIGINS[origin].help}>
-                <Tag color={ORIGINS[origin].color}>{ORIGINS[origin].label}</Tag>
+              <Tooltip title={t(`origins.${ORIGINS[origin].key}.help`)}>
+                <Tag color={ORIGINS[origin].color}>{t(`origins.${ORIGINS[origin].key}.label`)}</Tag>
               </Tooltip>
             )}
           />
           <Table.Column<Lesson>
             dataIndex="status"
-            title="État"
+            title={t('columns.status')}
             width={130}
             render={(status: Lesson['status'], lesson) => (
-              <Tooltip title={`Vue ${lesson.occurrences} fois, servie ${lesson.recalls} fois`}>
-                <Tag color={STATUSES[status].color}>{STATUSES[status].label}</Tag>
+              <Tooltip title={t('seen', { occurrences: lesson.occurrences, recalls: lesson.recalls })}>
+                <Tag color={STATUSES[status].color}>{t(`statuses.${status}`)}</Tag>
               </Tooltip>
             )}
           />
           <Table.Column<Lesson>
-            title="Actions"
+            title={tc('columns.actions')}
             width={200}
             render={(_, lesson) => (
               <Space>
                 {lesson.status !== 'active' && (
                   <Button size="small" onClick={() => setStatus(lesson, 'active')}>
-                    Activer
+                    {t('activate')}
                   </Button>
                 )}
                 {lesson.status === 'active' && (
                   <Button size="small" onClick={() => setStatus(lesson, 'retired')}>
-                    Retirer
+                    {t('retire')}
                   </Button>
                 )}
                 <Popconfirm
-                  title="Supprimer cette règle ?"
-                  description="Elle pourra être réapprise si le cas se reproduit."
+                  title={t('deleteConfirm.title')}
+                  description={t('deleteConfirm.body')}
                   onConfirm={() => remove(lesson.id)}
                 >
                   <Button size="small" danger>
-                    Supprimer
+                    {tc('delete')}
                   </Button>
                 </Popconfirm>
               </Space>

@@ -12,6 +12,7 @@ import {
   isBenchWorkflow,
   planNodeBench,
   readBenchOutcome,
+  msg,
 } from '@nwm/core';
 import { TestRun } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -158,7 +159,7 @@ export class NodeBenchService {
     // Garde-fou : cette route supprime, et rien ne garantit que l'id vienne bien
     // de `list()` — un id recopié à la main viserait un workflow de production.
     if (!isBenchWorkflow(workflow)) {
-      throw new BadRequestException(`« ${workflow.name} » n'est pas un banc d'essai`);
+      throw new BadRequestException(msg('platform.benchNotABench', { name: workflow.name }));
     }
     await this.n8n.activateWorkflow(config, externalId, false).catch(() => undefined);
     await this.n8n.deleteWorkflow(config, externalId);
@@ -191,7 +192,7 @@ export class NodeBenchService {
   }
 
   private async callWithRetry(config: N8nInstanceConfig, path: string): Promise<void> {
-    let lastError: Error = new Error('Banc injoignable');
+    let lastError: Error = new Error(msg('platform.benchUnreachable'));
     for (let attempt = 0; attempt < CALL_ATTEMPTS; attempt++) {
       if (attempt > 0) await sleep(CALL_DELAY_MS);
       try {
@@ -217,7 +218,7 @@ export class NodeBenchService {
     const [last] = await this.n8n.listExecutions(config, benchN8nId, 1, { includeData: true });
     if (!last) {
       return {
-        outcome: { status: 'unknown', items: [], error: 'Aucune exécution du banc trouvée dans n8n.' },
+        outcome: { status: 'unknown', items: [], error: msg('platform.benchNoExecution') },
       };
     }
     const detailed =

@@ -195,7 +195,7 @@ export class EnvDuplicatorService {
     // 5. Tags : ceux d'origine (hors env:*) + env:<cible>
     if (newN8nId) {
       await ensureEnvTags(this.n8n, config, newN8nId, workflow.tags, targetEnv).catch((error) =>
-        this.logger.warn(`Tags KO sur la copie "${newName}" : ${(error as Error).message}`),
+        this.logger.warn(`Tags failed on the copy "${newName}": ${(error as Error).message}`),
       );
     }
 
@@ -212,15 +212,15 @@ export class EnvDuplicatorService {
     }
 
     if (pinsLost.length > 0) {
-      this.logger.warn(`Copie "${newName}" : n8n n'a pas épinglé ${pinsLost.join(', ')}`);
+      this.logger.warn(`Copy "${newName}": n8n did not pin ${pinsLost.join(', ')}`);
     }
 
     const remapped = subWorkflows.filter((sub) => sub.status === 'mapped').length;
     this.logger.log(
-      `"${workflow.name}" dupliqué vers ${targetEnv} : "${newName}" (${applied} remplacements` +
-        `${remapped > 0 ? `, ${remapped} sous-workflow(s) remappé(s)` : ''}` +
-        `${cascaded.length > 0 ? `, ${cascaded.length} copie(s) en cascade` : ''}` +
-        `${webhooks.changes.length > 0 ? `, ${webhooks.changes.length} webhook(s) repathé(s)` : ''})`,
+      `"${workflow.name}" duplicated to ${targetEnv}: "${newName}" (${applied} replacements` +
+        `${remapped > 0 ? `, ${remapped} sub-workflow(s) remapped` : ''}` +
+        `${cascaded.length > 0 ? `, ${cascaded.length} cascaded copies` : ''}` +
+        `${webhooks.changes.length > 0 ? `, ${webhooks.changes.length} webhook(s) re-pathed` : ''})`,
     );
     return {
       newN8nId,

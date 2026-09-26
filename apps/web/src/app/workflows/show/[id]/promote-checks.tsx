@@ -10,6 +10,8 @@ import {
   MinusCircleOutlined,
   RightOutlined,
 } from '@ant-design/icons';
+import { BRAND } from '../../../../lib/brand/colors';
+import { useTranslations } from 'next-intl';
 
 export type CheckStatus = 'error' | 'warning' | 'ok' | 'neutral';
 
@@ -22,13 +24,14 @@ export interface PromoteCheck {
 }
 
 const ICON: Record<CheckStatus, React.ReactNode> = {
-  error: <CloseCircleOutlined style={{ color: '#cf1322' }} />,
-  warning: <ExclamationCircleOutlined style={{ color: '#d46b08' }} />,
-  ok: <CheckCircleOutlined style={{ color: '#389e0d' }} />,
+  error: <CloseCircleOutlined style={{ color: BRAND.danger }} />,
+  warning: <ExclamationCircleOutlined style={{ color: BRAND.warning }} />,
+  ok: <CheckCircleOutlined style={{ color: BRAND.success }} />,
   neutral: <MinusCircleOutlined style={{ color: '#999' }} />,
 };
 
 function CheckRow({ check }: { check: PromoteCheck }) {
+  const t = useTranslations('workflowShow.promoteChecks');
   const [open, setOpen] = useState(false);
   return (
     <div style={{ padding: '6px 0', borderTop: '1px solid #f0f0f0' }}>
@@ -46,7 +49,7 @@ function CheckRow({ check }: { check: PromoteCheck }) {
               icon={open ? <DownOutlined /> : <RightOutlined />}
               onClick={() => setOpen(!open)}
             >
-              détail
+              {t('detail')}
             </Button>
           )}
           {open && check.detail && <div style={{ marginTop: 6 }}>{check.detail}</div>}
@@ -58,13 +61,14 @@ function CheckRow({ check }: { check: PromoteCheck }) {
 
 /** Seul ce qui demande une action s'affiche ; le reste se déplie. */
 export function PromoteChecks({ checks }: { checks: PromoteCheck[] }) {
+  const t = useTranslations('workflowShow.promoteChecks');
   const [showAll, setShowAll] = useState(false);
   const failing = checks.filter((check) => check.status === 'error' || check.status === 'warning');
   const passing = checks.filter((check) => check.status === 'ok' || check.status === 'neutral');
   return (
     <div>
       <Typography.Title level={5} style={{ marginBottom: 4 }}>
-        Contrôles
+        {t('title')}
       </Typography.Title>
       {failing.map((check) => (
         <CheckRow key={check.key} check={check} />
@@ -78,7 +82,7 @@ export function PromoteChecks({ checks }: { checks: PromoteCheck[] }) {
             icon={showAll ? <DownOutlined /> : <RightOutlined />}
             onClick={() => setShowAll(!showAll)}
           >
-            {failing.length === 0 ? 'Aucun problème' : `${passing.length} autre(s) contrôle(s) sans problème`}
+            {failing.length === 0 ? t('noProblem') : t('othersOk', { count: passing.length })}
           </Button>
           {!showAll && (
             <Space size={4} wrap>

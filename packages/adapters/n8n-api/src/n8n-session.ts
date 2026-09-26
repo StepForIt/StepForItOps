@@ -1,4 +1,4 @@
-import { N8nApiError, N8nInstanceConfig } from '@nwm/core';
+import { N8nApiError, N8nInstanceConfig, msg } from '@nwm/core';
 
 /**
  * Session navigateur n8n, pour ce que l'API publique ne sert pas.
@@ -62,12 +62,7 @@ function readAuthCookie(response: Response): string | undefined {
 async function login(instance: N8nInstanceConfig): Promise<string> {
   const credentials = instance.login;
   if (!credentials?.email || !credentials.password) {
-    throw new N8nApiError(
-      `L'instance « ${instance.baseUrl} » n'a pas de compte n8n enregistré. ` +
-        `La description des types de nœuds n'est pas servie par l'API publique : ` +
-        `renseigne un compte dans la fiche de l'instance, ou reste sur le catalogue mutualisé.`,
-      401,
-    );
+    throw new N8nApiError(msg('platform.n8nNoAccount', { baseUrl: instance.baseUrl }), 401);
   }
 
   const response = await fetch(`${base(instance)}/rest/login`, {
@@ -82,20 +77,20 @@ async function login(instance: N8nInstanceConfig): Promise<string> {
     const text = await response.text().catch(() => '');
     // 401 : mauvais compte. 429 : on a cogné trop vite — le dire tel quel, sinon
     // l'utilisateur corrige un mot de passe qui n'a jamais été en cause.
-    const hint = response.status === 429 ? ' (n8n limite les connexions à 5 par minute et par compte)' : '';
     throw new N8nApiError(
-      `Connexion n8n refusée pour « ${credentials.email} » → ${response.status}${hint}: ${text.slice(0, 300)}`,
+      msg('platform.n8nLoginRefused', {
+        email: credentials.email,
+        status: response.status,
+        rateLimited: response.status === 429,
+        detail: text.slice(0, 300),
+      }),
       response.status,
     );
   }
 
   const cookie = readAuthCookie(response);
   if (!cookie) {
-    throw new N8nApiError(
-      `Connexion n8n acceptée mais aucun cookie ${AUTH_COOKIE} reçu : ` +
-        `un MFA est probablement exigé sur ce compte, et la plateforme ne sait pas le franchir.`,
-      401,
-    );
+    throw new N8nApiError(msg('platform.n8nNoCookie', { cookie: AUTH_COOKIE }), 401);
   }
   sessions.set(sessionKey(instance), { cookie, at: Date.now() });
   return cookie;
@@ -144,7 +139,7 @@ async function n8nSessionRequest<T>(
       response.status,
     );
   }
-  throw new N8nApiError(`n8n ${init.method} ${path} : session impossible à établir`, 401);
+  throw new N8nApiError(msg('platform.n8nSessionFailed', { method: init.method, path }), 401);
 }
 
 export async function n8nSessionGet<T>(instance: N8nInstanceConfig, path: string): Promise<T> {

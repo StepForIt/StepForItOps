@@ -1,4 +1,4 @@
-import { NotificationMessage, NotificationPort } from '@nwm/core';
+import { NotificationMessage, NotificationPort, msg } from '@nwm/core';
 
 const TIMEOUT_MS = 10_000;
 
@@ -13,7 +13,7 @@ export class NotificationAdapter implements NotificationPort {
     const text = [
       `*${message.title}*`,
       message.body,
-      ...(message.url ? [`<${message.url}|Ouvrir dans la plateforme>`] : []),
+      ...(message.url ? [`<${message.url}|${msg('ops.openInPlatform')}>`] : []),
     ].join('\n');
     await post(webhookUrl, { text }, 'Slack');
   }

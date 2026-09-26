@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { EnvDivergenceStatus, N8nWorkflow, WorkflowDiff, deployDiff } from '@nwm/core';
+import { EnvDivergenceStatus, N8nWorkflow, WorkflowDiff, deployDiff, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WorkflowWithEnv, WorkflowsService } from './workflows.service';
 import { WorkflowDivergenceService } from './workflow-divergence.service';
@@ -49,17 +49,13 @@ export class WorkflowDivergenceDetailService {
     const workflow = await this.workflows.get(id);
     const divergence = (await this.divergence.statuses()).get(id);
     if (!divergence) {
-      throw new NotFoundException(
-        'Rien à comparer : cet exemplaire est lui-même la référence (prod), ou son environnement est indéterminé.',
-      );
+      throw new NotFoundException(msg('platform.divergenceNothingToCompare'));
     }
     if (divergence.status === 'not-deployed') {
-      throw new NotFoundException('Aucun exemplaire en prod pour ce workflow métier.');
+      throw new NotFoundException(msg('platform.divergenceNoProd'));
     }
     if (divergence.status === 'unknown' || workflow.platform !== 'n8n') {
-      throw new BadRequestException(
-        'Contenu non comparable : cette plateforme n’a pas d’empreinte de déploiement.',
-      );
+      throw new BadRequestException(msg('platform.divergenceNotComparable'));
     }
 
     const references = await Promise.all(divergence.referenceIds.map((refId) => this.workflows.get(refId)));

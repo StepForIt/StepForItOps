@@ -1,0 +1,275 @@
+{
+  "page": {
+    "toDeploy": "{env} à déployer",
+    "diverged": "Différents de la prod",
+    "behind": "Prod modifiée depuis",
+    "searchPlaceholder": "Rechercher par nom ({count} caractères)…",
+    "create": "Créer un workflow"
+  },
+  "shared": {
+    "columns": {
+      "divergence": "Écart prod",
+      "active": "Actif",
+      "group": "Groupe",
+      "tags": "Tags",
+      "monitoring": "Monitoring",
+      "upstreamUpdated": "Modifié (n8n)",
+      "synced": "Synchronisé",
+      "copies": "Copies",
+      "instances": "Instances",
+      "envs": "Environnements"
+    },
+    "active": "actif",
+    "inactive": "inactif",
+    "probes": "{count, plural, one {# sonde} other {# sondes}}",
+    "missingCount": "{count} absent(s) de n8n",
+    "archivedCount": "{count} archivé(s)"
+  },
+  "nameCell": {
+    "archivedUpstreamTooltip": "Archivé dans n8n : l'API publique ne le renvoie plus dans la liste, la plateforme le retrouve à l'unité à chaque synchro",
+    "archivedUpstream": "archivé dans n8n",
+    "archived": "archivé",
+    "missingTooltip": "n8n ne connaît plus ce workflow depuis le {date} — supprimé côté n8n. Rien n'a été effacé ici : versions et historique restent consultables.",
+    "missing": "absent de n8n"
+  },
+  "familyEnvTags": {
+    "declareTooltip": "Déclarable depuis le bouton Environnements",
+    "noEnv": "{count} sans env"
+  },
+  "divergence": {
+    "labels": {
+      "inSync": "= prod",
+      "ahead": "à déployer",
+      "behind": "prod modifiée",
+      "notDeployed": "jamais déployé",
+      "unknown": "?"
+    },
+    "why": {
+      "clickToSee": "Cliquer pour voir l’écart",
+      "behind": "Correctif en prod, à reporter",
+      "notDeployed": "Aucun exemplaire en prod",
+      "unknown": "Non comparable sur cette plateforme"
+    },
+    "family": {
+      "inSync": "à jour",
+      "neverDeployed": "Jamais déployé en prod",
+      "toDeploy": "{env} à déployer"
+    }
+  },
+  "divergenceModal": {
+    "unknownDate": "date inconnue",
+    "method": "Ce que la promotion bascule d’elle-même (ressources mappées, sous-workflows, paths de webhook, noms et positions) est neutralisé. Le sens vient des dates de modification dans n8n.",
+    "thisCopy": "cet exemplaire",
+    "sameContent": "Même contenu que la prod.",
+    "behindTitle": "Prod modifiée après {own}",
+    "behindDescription": "Promouvoir écraserait ce correctif (lignes rouges). À reporter d’abord.",
+    "aheadTitle": "{own} plus récent que la prod",
+    "localCopy": "Copie locale du {date}",
+    "modifiedInN8n": "{instance} · modifié dans n8n le {date}",
+    "openPage": "Ouvrir la page",
+    "promoteTo": "Promouvoir vers {env}",
+    "promote": "Promouvoir",
+    "confirmTitle": "Promouvoir malgré l’écart ?",
+    "confirmDescription": "Le correctif fait en prod sera perdu quand ce contenu y arrivera, s’il n’a pas été reporté ici.",
+    "confirmOk": "Ouvrir la promotion",
+    "promoteAnyway": "Promouvoir quand même",
+    "seeFix": "Voir le correctif en prod",
+    "title": "Écart avec la prod",
+    "titleWithName": "Écart avec la prod — {name}",
+    "compareTo": "Comparer à :",
+    "copy": "Exemplaire",
+    "prod": "Prod",
+    "beforeAfter": "Avant = prod · Après = après promotion",
+    "methodLabel": "Comment l’écart est calculé"
+  },
+  "actions": {
+    "archivedToast": "« {name} » archivé",
+    "unarchivedToast": "« {name} » désarchivé",
+    "viewTooltip": "Vue du workflow + assistant IA",
+    "view": "Vue",
+    "archivedUpstreamTooltip": "Archivé dans n8n : à désarchiver depuis n8n",
+    "unarchive": "Désarchiver",
+    "unarchiveTooltip": "Retire le tag et le préfixe [ARCHIVED]",
+    "archiveConfirmTitle": "Archiver ce workflow ?",
+    "archiveConfirmDescription": "Tag + préfixe [ARCHIVED], rien n'est supprimé",
+    "archive": "Archiver",
+    "missingTooltip": "Ce workflow n'existe plus dans n8n"
+  },
+  "createModal": {
+    "ok": "Créer et décrire",
+    "title": "Nouveau workflow",
+    "intro": "Créé vide et inactif. L'assistant prend le relais.",
+    "instance": "Instance",
+    "instancePlaceholder": "Instance n8n",
+    "name": "Nom",
+    "namePlaceholder": "Ex. Relance devis sans réponse - DEV",
+    "error": "Création refusée"
+  },
+  "filters": {
+    "instance": "Instance",
+    "env": "Env",
+    "divergence": "Écart avec la prod",
+    "group": "Groupe",
+    "status": "Statut",
+    "active": "actifs",
+    "inactive": "inactifs",
+    "archivedDefault": "Archivés : par défaut",
+    "archivedHidden": "Archivés : masqués",
+    "archivedShown": "Archivés : affichés",
+    "archivedOnly": "Archivés seulement",
+    "pathsTooltip": "Copies d’env qui partagent le path de leur original",
+    "paths": "Points d’entrée partagés…",
+    "viewFlat": "Un par workflow n8n",
+    "viewGrouped": "Groupés par env"
+  },
+  "webhookPaths": {
+    "title": "Points d’entrée partagés",
+    "fix": "Corriger {count} path(s)",
+    "fixed": "{count} path(s) corrigé(s)",
+    "failed": "« {name} » : {error}",
+    "intro": "Une copie qui partage le path de son original ne reçoit rien. La prod garde son URL.",
+    "chooseInstance": "Choisir une instance",
+    "analyse": "Analyser",
+    "analyseError": "Analyse impossible",
+    "none": "Aucun path partagé sur cette instance.",
+    "columns": {
+      "copy": "Copie",
+      "path": "Path",
+      "keeper": "Garde l’URL"
+    },
+    "conflicts": "{count} conflit(s) à régler à la main"
+  },
+  "bulkActions": {
+    "selected": "{count, plural, one {# workflow sélectionné} other {# workflows sélectionnés}}",
+    "running": "{label}… {done}/{total}",
+    "confirmTitle": "{label} {count, plural, one {# workflow} other {# workflows}} ?",
+    "ignored": "{count, plural, one {# ignoré} other {# ignorés}} ({reason})",
+    "noTarget": "Aucune ligne concernée ({reason})",
+    "emptySelection": "sélection vide",
+    "clearAll": "Tout décocher",
+    "analyseFailed": "analyse en échec",
+    "resync": {
+      "label": "Resynchroniser",
+      "success": "{count, plural, one {# workflow resynchronisé} other {# workflows resynchronisés}}",
+      "partial": "{ok}/{total} resynchronisés — {failed, plural, one {# échec} other {# échecs}} : {first}"
+    },
+    "analyse": {
+      "label": "Analyser",
+      "description": "Structure, JS, naming, champs — IA incluse (lent)",
+      "skipped": "absents de n8n",
+      "success": "{count, plural, one {# workflow analysé} other {# workflows analysés}}",
+      "partial": "{ok}/{total} analysés — {failed, plural, one {# échec} other {# échecs}} : {first}"
+    },
+    "archive": {
+      "label": "Archiver",
+      "description": "Tag + préfixe [ARCHIVED], rien n’est supprimé",
+      "skipped": "déjà archivés ou absents",
+      "success": "{count, plural, one {# workflow archivé} other {# workflows archivés}}",
+      "partial": "{ok}/{total} archivés — {failed, plural, one {# échec} other {# échecs}} : {first}"
+    },
+    "unarchive": {
+      "label": "Désarchiver",
+      "description": "Retire le tag et le préfixe [ARCHIVED]",
+      "skipped": "non archivés par la plateforme",
+      "success": "{count, plural, one {# workflow désarchivé} other {# workflows désarchivés}}",
+      "partial": "{ok}/{total} désarchivés — {failed, plural, one {# échec} other {# échecs}} : {first}"
+    }
+  },
+  "bulkEnv": {
+    "actions": {
+      "promote": "Promouvoir",
+      "duplicate": "Dupliquer vers un env",
+      "mark": "Déclarer l’env"
+    },
+    "hints": {
+      "promote": "Vers l’env suivant, aperçu par workflow",
+      "duplicate": "Copie dans un autre env, même instance",
+      "mark": "Tag env:x, aucune donnée touchée"
+    },
+    "selected": "{count, plural, one {# workflow métier sélectionné} other {# workflows métier sélectionnés}}",
+    "clearAll": "Tout décocher",
+    "modal": {
+      "title": "{action} — {count, plural, one {# workflow métier} other {# workflows métier}}",
+      "prepare": "Préparer le lot",
+      "changeSettings": "Changer les réglages",
+      "validateDiffs": "Valider {count, plural, one {# diff} other {# diffs}}",
+      "applyReady": "Appliquer {count, plural, one {# ligne prête} other {# lignes prêtes}}",
+      "tally": {
+        "ready": "{count, plural, one {# prête} other {# prêtes}}",
+        "decide": "{count} à décider",
+        "blocked": "{count, plural, one {# bloquée} other {# bloquées}}",
+        "skipped": "{count, plural, one {# ignorée} other {# ignorées}}",
+        "done": "{count, plural, one {# appliquée} other {# appliquées}}",
+        "failed": "{count} en échec"
+      }
+    },
+    "settings": {
+      "from": "Depuis l’env",
+      "markAs": "Déclarer en",
+      "to": "Vers l’env",
+      "fallbackInstance": "Instance (si l’env n’existe pas)",
+      "fallbackTooltip": "Une famille qui a déjà l’env cible est promue là où il vit.",
+      "sameInstance": "Même instance",
+      "options": "Options",
+      "throughChain": "Via envs intermédiaires",
+      "cascade": "Créer les sous-workflows manquants",
+      "checkRemote": "Vérifier les tables distantes",
+      "publishLikeSource": "Publier comme la source",
+      "rename": "Suffixer le nom"
+    },
+    "review": {
+      "columns": {
+        "target": "Cible",
+        "todo": "À faire",
+        "result": "Résultat"
+      },
+      "validated": "validée",
+      "status": {
+        "ready": "prête",
+        "decide": "à décider",
+        "blocked": "bloquée",
+        "skipped": "ignorée",
+        "error": "aperçu en échec",
+        "loading": "aperçu…"
+      },
+      "overwrites": "écrase",
+      "creates": "crée"
+    },
+    "detail": {
+      "previewFailed": "L’aperçu a échoué",
+      "retryPreview": "Relancer l’aperçu",
+      "previewLoading": "Aperçu en cours…",
+      "blocked": "Bloquée : {reasons}",
+      "duplicate": "Copie « {name} »",
+      "force": "Forcer malgré les gates au rouge",
+      "confirmSkip": "Sauter l’étape quand même",
+      "unvalidate": "Revenir sur la validation",
+      "firstDo": "D’abord : {list}",
+      "validate": "Valider cette ligne",
+      "missing": {
+        "force": "forcer les gates au rouge",
+        "confirmSkip": "confirmer le saut d’étape"
+      },
+      "promoteUpdate": "Écrase « {name} » sur {instance}",
+      "promoteCreate": "Crée « {name} » sur {instance}",
+      "targetActive": "cible active",
+      "cascade": "Créés d’abord : {names}"
+    },
+    "requests": {
+      "suffixed": "« {name} » suffixé par {env}",
+      "pausedOn": "publication en pause sur « {name} » : {reason}",
+      "n8nRefusal": "refus de n8n",
+      "publicationPending": "publication à faire : {error}",
+      "overwritten": "écrasé",
+      "created": "créé",
+      "quotedName": "« {name} »",
+      "through": "passé par {envs}",
+      "subWorkflowsCreated": "sous-workflows créés : {names}",
+      "renameFailed": "nom n8n non mis à jour : {errors}",
+      "replacements": "{count} base(s)/table(s) remplacée(s)",
+      "alsoCopied": "copiés aussi : {names}",
+      "copy": "copie « {name} »",
+      "renamed": ", renommé « {name} »"
+    }
+  }
+}

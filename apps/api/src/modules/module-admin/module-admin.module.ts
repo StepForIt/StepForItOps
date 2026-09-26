@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { ModuleAdminController } from './module-admin.controller';
 import { AiSettingsController } from './ai-settings.controller';
 import { PlatformSettingsController } from './platform-settings.controller';
@@ -11,8 +12,12 @@ import { manifestProvider } from '../../infra/modules-registry/manifest.provider
     AiSettingsService,
     manifestProvider({
       id: 'module-admin',
-      name: 'Administration des modules',
-      description: 'Activation / désactivation des modules',
+      get name() {
+        return msg('platform.moduleModuleAdminName');
+      },
+      get description() {
+        return msg('platform.moduleModuleAdminDescription');
+      },
       core: true,
     }),
   ],

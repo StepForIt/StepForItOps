@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 
@@ -140,7 +141,7 @@ export class DashboardService {
         clients.get(key) ??
         ({
           clientId: instance.clientId,
-          clientName: instance.client?.name ?? 'Sans client',
+          clientName: instance.client?.name ?? msg('ops.noClient'),
           instances: 0,
           executions: 0,
           errors: 0,

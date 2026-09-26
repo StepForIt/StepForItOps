@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Empty, Popconfirm, Select, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { apiDelete, apiGet } from '../../lib/api';
-import { ruleLabel } from '../../lib/finding-rules';
+import { useRuleLabel } from '../../lib/finding-rules';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
 
@@ -25,6 +26,9 @@ interface IgnoreRule {
 
 /** Règles « ce finding est normal » : consultation et réactivation. */
 export default function FindingIgnores() {
+  const t = useTranslations('inventory.findingIgnores');
+  const locale = useLocale();
+  const ruleLabel = useRuleLabel();
   const { scope } = useInstanceScope();
   const [rows, setRows] = useState<IgnoreRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +47,7 @@ export default function FindingIgnores() {
   const remove = async (id: string) => {
     try {
       await apiDelete(`/finding-ignores/${id}`);
-      message.success('Règle supprimée — relance une analyse pour revoir le finding');
+      message.success(t('removed'));
       load();
     } catch (error) {
       message.error((error as Error).message);
@@ -56,11 +60,11 @@ export default function FindingIgnores() {
   const filtered = moduleFilter ? rows.filter((r) => r.module === moduleFilter) : rows;
 
   return (
-    <Card title="Findings ignorés" extra={<Button onClick={load}>Rafraîchir</Button>}>
+    <Card title={t('title')} extra={<Button onClick={load}>{t('refresh')}</Button>}>
       <Space style={{ marginBottom: 16 }}>
         <Select
           allowClear
-          placeholder="Module"
+          placeholder={t('module')}
           style={{ minWidth: 200 }}
           value={moduleFilter}
           onChange={setModuleFilter}
@@ -72,39 +76,43 @@ export default function FindingIgnores() {
         rowKey="id"
         loading={loading}
         locale={{
-          emptyText: <Empty description="Aucune règle" />,
+          emptyText: <Empty description={t('empty')} />,
         }}
       >
-        <Table.Column<IgnoreRule> dataIndex="module" title="Module" render={(m: string) => <Tag>{m}</Tag>} />
+        <Table.Column<IgnoreRule>
+          dataIndex="module"
+          title={t('columns.module')}
+          render={(m: string) => <Tag>{m}</Tag>}
+        />
         <Table.Column<IgnoreRule>
           dataIndex="code"
-          title="Règle"
+          title={t('columns.rule')}
           render={(code: string) => <Tooltip title={code}>{ruleLabel(code)}</Tooltip>}
         />
         <Table.Column<IgnoreRule>
           dataIndex="message"
-          title="Remarque"
+          title={t('columns.message')}
           ellipsis
           render={(msg: string | null) => msg ?? <span style={{ color: '#999' }}>—</span>}
         />
         <Table.Column<IgnoreRule>
           dataIndex="workflowId"
-          title="Portée"
+          title={t('columns.scope')}
           render={(_, record) => {
             if (record.workflowId) return record.workflow?.name ?? record.workflowId;
             if (record.familyKey) {
               return (
-                <Tooltip title="Le même workflow métier dans tous ses environnements déclarés">
-                  <Tag color="blue">{record.familyKey} — tous env.</Tag>
+                <Tooltip title={t('familyHint')}>
+                  <Tag color="blue">{t('family', { family: record.familyKey })}</Tag>
                 </Tooltip>
               );
             }
-            return <Tag color="volcano">tous les workflows</Tag>;
+            return <Tag color="volcano">{t('global')}</Tag>;
           }}
         />
         <Table.Column<IgnoreRule>
           dataIndex="nodeName"
-          title="Nœud"
+          title={t('columns.node')}
           render={(nodeName: string | null) =>
             nodeName ? (
               <Tag color="purple">{nodeName}</Tag>
@@ -115,25 +123,25 @@ export default function FindingIgnores() {
         />
         <Table.Column<IgnoreRule>
           dataIndex="reason"
-          title="Raison"
+          title={t('columns.reason')}
           render={(reason: string | null) => reason ?? <span style={{ color: '#999' }}>—</span>}
         />
         <Table.Column<IgnoreRule>
           dataIndex="createdAt"
-          title="Depuis"
-          render={(d: string) => new Date(d).toLocaleString('fr-FR')}
+          title={t('columns.since')}
+          render={(d: string) => new Date(d).toLocaleString(locale)}
         />
         <Table.Column<IgnoreRule>
           title=""
           render={(_, record) => (
             <Popconfirm
-              title="Ne plus ignorer ?"
-              description="Le finding réapparaîtra à la prochaine analyse du workflow."
-              okText="Réactiver"
-              cancelText="Annuler"
+              title={t('confirmTitle')}
+              description={t('confirmDescription')}
+              okText={t('reactivate')}
+              cancelText={t('cancel')}
               onConfirm={() => remove(record.id)}
             >
-              <Button size="small">Ne plus ignorer</Button>
+              <Button size="small">{t('stopIgnoring')}</Button>
             </Popconfirm>
           )}
         />

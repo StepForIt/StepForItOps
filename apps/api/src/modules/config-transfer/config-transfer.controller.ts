@@ -1,4 +1,5 @@
 import { Body, Controller, ForbiddenException, Get, Post, Query } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { ModuleId } from '../../infra/modules-registry/module-id.decorator';
 import { ConfigExportService } from './config-export.service';
 import { ConfigImportService } from './config-import.service';
@@ -23,10 +24,7 @@ export class ConfigTransferController {
   @Get('export')
   export(@Query('includeSecrets') includeSecrets?: string): Promise<ConfigBundle> {
     if (!isConfigExportEnabled()) {
-      throw new ForbiddenException(
-        `Export de configuration désactivé sur cette installation (${CONFIG_EXPORT_ENV} non posé). ` +
-          "Il ne s'ouvre qu'en local, où le fichier ne quitte pas la machine.",
-      );
+      throw new ForbiddenException(msg('platform.configExportDisabled', { envVar: CONFIG_EXPORT_ENV }));
     }
     return this.exporter.buildBundle(includeSecrets !== 'false');
   }

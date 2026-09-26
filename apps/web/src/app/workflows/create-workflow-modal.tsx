@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Alert, Form, Input, Modal, Select, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 
@@ -24,6 +25,8 @@ export function CreateWorkflowModal({
   onClose: () => void;
   onCreated: (workflow: CreatedWorkflow) => void;
 }) {
+  const t = useTranslations('workflowsList.createModal');
+  const tCommon = useTranslations('common');
   const { scope, instances } = useInstanceScope();
   const [name, setName] = React.useState('');
   const [instanceId, setInstanceId] = React.useState<string | null>(null);
@@ -62,38 +65,36 @@ export function CreateWorkflowModal({
       open={open}
       onCancel={onClose}
       onOk={create}
-      okText="Créer et décrire"
-      cancelText="Annuler"
+      okText={t('ok')}
+      cancelText={tCommon('cancel')}
       okButtonProps={{ disabled: !target || !name.trim(), loading: creating }}
-      title="Nouveau workflow"
+      title={t('title')}
     >
-      <Typography.Paragraph type="secondary">
-        Créé vide et inactif. L&apos;assistant prend le relais.
-      </Typography.Paragraph>
+      <Typography.Paragraph type="secondary">{t('intro')}</Typography.Paragraph>
       <Form layout="vertical">
         {!scope && (
           // Champs pilotés par l'état React (pas liés à antd) : `required` sert le
           // marqueur visuel, le bouton « Créer » reste désactivé tant que c'est vide.
-          <Form.Item label="Instance" required>
+          <Form.Item label={t('instance')} required>
             <Select
-              placeholder="Instance n8n"
+              placeholder={t('instancePlaceholder')}
               value={target}
               onChange={setInstanceId}
               options={instances.map((instance) => ({ value: instance.id, label: instance.name }))}
             />
           </Form.Item>
         )}
-        <Form.Item label="Nom" required>
+        <Form.Item label={t('name')} required>
           <Input
             autoFocus
             value={name}
             onChange={(event) => setName(event.target.value)}
             onPressEnter={create}
-            placeholder="Ex. Relance devis sans réponse - DEV"
+            placeholder={t('namePlaceholder')}
           />
         </Form.Item>
       </Form>
-      {error && <Alert type="error" showIcon message="Création refusée" description={error} />}
+      {error && <Alert type="error" showIcon message={t('error')} description={error} />}
     </Modal>
   );
 }

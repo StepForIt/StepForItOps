@@ -1,4 +1,4 @@
-import { CheckFinding, N8nWorkflow, isStickyNote } from '@nwm/core';
+import { CheckFinding, N8nWorkflow, isStickyNote, msg } from '@nwm/core';
 
 /** Nom par défaut n8n : type du nœud éventuellement suffixé d'un chiffre. */
 const DEFAULT_NAME_PATTERN =
@@ -12,7 +12,7 @@ export function findNamingIssues(workflow: N8nWorkflow): CheckFinding[] {
       findings.push({
         severity: 'warning',
         code: 'default-name',
-        message: `"${node.name}" a un nom par défaut : renomme-le d'après ce qu'il fait`,
+        message: msg('analysis.namingDefault', { name: node.name }),
         nodeName: node.name,
       });
     }
@@ -32,7 +32,7 @@ export function findNamingIssues(workflow: N8nWorkflow): CheckFinding[] {
       findings.push({
         severity: 'info',
         code: 'duplicate-nodes',
-        message: `Nœuds identiques (type + paramètres) : ${names.join(', ')} — factorisables ?`,
+        message: msg('analysis.namingDuplicates', { names: names.join(', ') }),
         data: { names },
       });
     }

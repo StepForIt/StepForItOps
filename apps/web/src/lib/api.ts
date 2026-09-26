@@ -1,8 +1,27 @@
+import { createTranslator } from 'next-intl';
 import { LockedWorkflow, lockedFromRefusal, overrideHeaders } from './workflow-lock/lock-override';
+import { isLocale } from '../i18n/locale';
+import frShell from '../../messages/fr/shell.json';
+import enShell from '../../messages/en/shell.json';
 
 // Par défaut : proxy Next (/backend → API via le réseau interne, cf. next.config.js).
 // NEXT_PUBLIC_API_URL permet de pointer directement une API distante si besoin.
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || '/backend';
+
+/**
+ * Hors React, pas de `useTranslations` : la langue est celle que le layout pose sur
+ * `<html lang>`, et seuls les messages de cet espace sont embarqués ici.
+ */
+function apiT() {
+  const lang = typeof document === 'undefined' ? undefined : document.documentElement.lang;
+  const locale = isLocale(lang) ? lang : 'fr';
+  return createTranslator({
+    locale,
+    // Seul `shell` est embarqué ; `namespace` borne les clés lues à `shell.api`.
+    messages: { shell: locale === 'en' ? enShell : frShell } as unknown as IntlMessages,
+    namespace: 'shell.api',
+  });
+}
 
 /**
  * Message d'erreur exploitable : JSON Nest → son `message` (stack en console si DEBUG_ERRORS=1) ;
@@ -21,7 +40,7 @@ function errorFromBody(path: string, status: number, text: string): Error {
     // corps non JSON : on retombe sur le texte brut
   }
   if (status >= 500 && !text.trim().startsWith('{')) {
-    return new Error(`${path} → API injoignable (${status}) — elle redémarre peut-être, réessaie.`);
+    return new Error(apiT()('unreachableStatus', { path, status }));
   }
   return new Error(`${path} → ${status}: ${text.slice(0, 300)}`);
 }
@@ -84,7 +103,7 @@ async function apiRequest<T>(method: string, path: string, body?: unknown, signa
       signal,
     }).catch((error: unknown) => {
       if (isAbortError(error)) throw error;
-      throw new Error(`${path} → API injoignable (réseau) — elle redémarre peut-être, réessaie.`);
+      throw new Error(apiT()('unreachableNetwork', { path }));
     });
     if (!response.ok) {
       const text = await response.text().catch(() => '');
@@ -93,7 +112,11 @@ async function apiRequest<T>(method: string, path: string, body?: unknown, signa
       if (locked && fresh.length > 0 && askLockOverride) {
         const answer = await askLockOverride(locked);
         if (answer === null) {
-          throw new Error(`Écriture annulée : ${locked.map((w) => `« ${w.name} »`).join(', ')} verrouillé.`);
+          throw new Error(
+            apiT()('writeCancelled', {
+              names: locked.map((w) => apiT()('quotedName', { name: w.name })).join(', '),
+            }),
+          );
         }
         lifted = [...new Set([...lifted, ...locked.map((workflow) => workflow.id)])];
         reason = answer;

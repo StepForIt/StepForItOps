@@ -1,5 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { AI_PORT, AiPort, EVENTS, N8N_API_PORT, N8nApiPort, buildStickyZones } from '@nwm/core';
+import {
+  AI_PORT,
+  AiPort,
+  EVENTS,
+  N8N_API_PORT,
+  N8nApiPort,
+  buildStickyZones,
+  writeInLanguage,
+} from '@nwm/core';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { WorkflowSyncService } from '../workflows/workflow-sync.service';
@@ -64,14 +72,15 @@ export class StickySuggestionsService {
     try {
       const suggestions = await this.ai.generateJson<StickySuggestion[]>({
         system:
-          'Tu documentes un workflow n8n avec des sticky notes (zones visuelles). ' +
-          'Pour chaque sticky listée dans "stickiesToFill", propose un contenu ({"action":"update","stickyName":"..."}). ' +
-          'Regroupe les nœuds de "uncoveredNodes" en zones cohérentes par rôle et par proximité (position), ' +
-          'et propose une création par zone ({"action":"create","nodeNames":["..."]}). ' +
-          'Contenu : markdown court EN FRANÇAIS commençant par un titre "## ", 1-3 phrases décrivant le rôle de la zone. ' +
-          'Couleur : optionnelle, entier 1-7, différente de la zone parente le cas échéant. ' +
-          'Ne propose JAMAIS de position ni de taille (calculées côté serveur). ' +
-          'Réponds en JSON: [{"action":"create"|"update","stickyName":"...","content":"...","color":1,"nodeNames":["..."],"reason":"..."}]',
+          'You document an n8n workflow with sticky notes (visual zones). ' +
+          'For each sticky listed in "stickiesToFill", propose a content ({"action":"update","stickyName":"..."}). ' +
+          'Group the nodes of "uncoveredNodes" into coherent zones by role and by proximity (position), ' +
+          'and propose one creation per zone ({"action":"create","nodeNames":["..."]}). ' +
+          'Content: short markdown starting with a "## " title, 1-3 sentences describing the role of the zone. ' +
+          'Colour: optional, integer 1-7, different from the parent zone where relevant. ' +
+          'NEVER propose a position or a size (computed server-side). ' +
+          `${writeInLanguage()} ` +
+          'Answer in JSON: [{"action":"create"|"update","stickyName":"...","content":"...","color":1,"nodeNames":["..."],"reason":"..."}]',
         prompt: JSON.stringify(payload),
         maxTokens: 4096,
       });
@@ -84,7 +93,7 @@ export class StickySuggestionsService {
         return false;
       });
     } catch (error) {
-      this.logger.warn(`Suggestions sticky IA KO : ${(error as Error).message}`);
+      this.logger.warn(`AI sticky suggestions failed: ${(error as Error).message}`);
       return [];
     }
   }

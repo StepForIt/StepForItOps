@@ -1,5 +1,5 @@
 import * as acorn from 'acorn';
-import { CheckFinding, locateIndex } from '@nwm/core';
+import { CheckFinding, locateIndex, msg } from '@nwm/core';
 import { CodeNode } from './code-node-extractor';
 
 /**
@@ -32,11 +32,11 @@ export function analyzeCodeNode(node: CodeNode): CheckFinding[] {
     findings.push({
       severity: 'error',
       code: 'js-syntax-error',
-      message: `Erreur de syntaxe : ${(error as Error).message}`,
+      message: msg('analysis.jsSyntaxError', { error: (error as Error).message }),
       nodeName: node.nodeName,
       data: {
         ...(line ? locateLine(code, line) : {}),
-        suggestion: 'Le nœud ne peut pas s’exécuter : corrige la syntaxe avant tout le reste.',
+        suggestion: msg('analysis.jsSyntaxErrorFix'),
       },
     });
     return findings; // inutile d'aller plus loin
@@ -48,13 +48,13 @@ export function analyzeCodeNode(node: CodeNode): CheckFinding[] {
     findings.push({
       severity: 'warning',
       code: 'js-no-return',
-      message: 'Aucun return : le nœud Code doit retourner des items',
+      message: msg('analysis.jsNoReturn'),
       nodeName: node.nodeName,
       data: {
         suggestion:
           node.mode === 'runOnceForEachItem'
-            ? 'Termine par `return { json: … }` (un item).'
-            : 'Termine par `return [{ json: … }]` (un tableau d’items).',
+            ? msg('analysis.jsNoReturnFixEach', { snippet: '`return { json: … }`' })
+            : msg('analysis.jsNoReturnFixAll', { snippet: '`return [{ json: … }]`' }),
       },
     });
   }
@@ -63,13 +63,13 @@ export function analyzeCodeNode(node: CodeNode): CheckFinding[] {
     findings.push({
       severity: 'warning',
       code: 'js-json-in-all-items',
-      message:
-        '$json utilisé en mode "Run Once for All Items" : seul le premier item sera lu ($input.all() attendu ?)',
+      message: msg('analysis.jsJsonInAllItems'),
       nodeName: node.nodeName,
       data: {
         ...at(/\$json\b/),
-        suggestion:
-          'Boucle sur les items : `for (const item of $input.all()) { … item.json … }` — ou repasse le nœud en "Run Once for Each Item" si un seul item est attendu.',
+        suggestion: msg('analysis.jsJsonInAllItemsFix', {
+          snippet: '`for (const item of $input.all()) { … item.json … }`',
+        }),
       },
     });
   }
@@ -78,12 +78,11 @@ export function analyzeCodeNode(node: CodeNode): CheckFinding[] {
     findings.push({
       severity: 'warning',
       code: 'js-all-in-each-item',
-      message: '$input.all() en mode "Run Once for Each Item" est indisponible',
+      message: msg('analysis.jsAllInEachItem'),
       nodeName: node.nodeName,
       data: {
         ...at(/\$input\.all\(\)/),
-        suggestion:
-          'En mode "each item", utilise `$json` (l’item courant) — ou repasse le nœud en "Run Once for All Items" si tu as besoin de tous les items.',
+        suggestion: msg('analysis.jsAllInEachItemFix'),
       },
     });
   }
@@ -92,13 +91,11 @@ export function analyzeCodeNode(node: CodeNode): CheckFinding[] {
     findings.push({
       severity: 'info',
       code: 'js-require',
-      message:
-        "require() : dépend de NODE_FUNCTION_ALLOW_EXTERNAL/BUILTIN sur l'instance — peut échouer en prod",
+      message: msg('analysis.jsRequire'),
       nodeName: node.nodeName,
       data: {
         ...at(/\brequire\s*\(/),
-        suggestion:
-          'Vérifie que le module est autorisé sur l’instance cible, ou remplace-le par un nœud dédié (HTTP Request, Crypto…).',
+        suggestion: msg('analysis.jsRequireFix'),
       },
     });
   }

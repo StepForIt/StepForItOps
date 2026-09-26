@@ -3,6 +3,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Drawer, FloatButton, Grid } from 'antd';
 import { OrderedListOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut, onApiWrite } from '../../lib/api';
 import { useEnabledModules } from '../../lib/enabled-modules';
 import { RecorderPanel } from './recorder-panel';
@@ -63,6 +64,13 @@ export function ReleaseRecorderProvider({ children }: { children: React.ReactNod
   const { enabled } = useEnabledModules();
   const available = !enabled || enabled.includes('release-procedures');
   const { message } = App.useApp();
+  const t = useTranslations('reviewTools.recorder');
+  const tReplay = useTranslations('reviewTools.recorder.replay');
+  const tReplayRef = useRef(tReplay);
+  tReplayRef.current = tReplay;
+  const tRequests = useTranslations('workflowsList.bulkEnv.requests');
+  const tRequestsRef = useRef(tRequests);
+  tRequestsRef.current = tRequests;
   const [mode, setMode] = useState<Mode>('idle');
   const [procedure, setProcedure] = useState<Procedure | null>(null);
   const [hop, setHop] = useState<EnvHop | null>(null);
@@ -144,7 +152,12 @@ export function ReleaseRecorderProvider({ children }: { children: React.ReactNod
           break;
         }
         setRun(step.id, { state: 'running' });
-        const result = await playAutoStep(step, shiftRef.current).catch((error: Error): StepRun => ({
+        const result = await playAutoStep(
+          step,
+          shiftRef.current,
+          tReplayRef.current,
+          tRequestsRef.current,
+        ).catch((error: Error): StepRun => ({
           state: 'failed',
           error: error.message,
         }));
@@ -199,7 +212,7 @@ export function ReleaseRecorderProvider({ children }: { children: React.ReactNod
         const stopped = await apiPost<Procedure>(`/release-procedures/${procedure.id}/stop`);
         setProcedure(stopped);
         setMode('viewing');
-        message.success(`Procédure enregistrée · ${stopped.steps.length} étapes`);
+        message.success(t('saved', { count: stopped.steps.length }));
       },
       open: async (procedureId, nextHop) => {
         if (mode === 'recording' || busy) return;
@@ -306,6 +319,7 @@ export function ReleaseRecorderProvider({ children }: { children: React.ReactNod
       validate,
       setRun,
       message,
+      t,
     ],
   );
 
@@ -318,6 +332,7 @@ export function ReleaseRecorderProvider({ children }: { children: React.ReactNod
 
 /** Colonne à droite sur grand écran, tiroir sur mobile ; contour d'écran pendant l'enregistrement et le rejeu. */
 function RecorderLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('reviewTools.recorder');
   const { mode, procedure, runs } = useReleaseRecorder();
   const screens = Grid.useBreakpoint();
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -339,7 +354,7 @@ function RecorderLayout({ children }: { children: React.ReactNode }) {
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
           <aside
-            aria-label="Procédure"
+            aria-label={t('panelLabel')}
             style={{
               width: PANEL_WIDTH,
               flex: 'none',
@@ -376,7 +391,7 @@ function RecorderLayout({ children }: { children: React.ReactNode }) {
               type="primary"
               badge={{ count: procedure.steps.length, color: mode === 'recording' ? 'red' : 'blue' }}
               onClick={() => setDrawerOpen(true)}
-              aria-label="Afficher la procédure"
+              aria-label={t('showPanel')}
             />
           )}
         </>

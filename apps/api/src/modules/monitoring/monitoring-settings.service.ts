@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { MONITOR_ADMIN_PORT, MonitorAdminPort } from '@nwm/core';
+import { MONITOR_ADMIN_PORT, MonitorAdminPort, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { KUMA_SETTINGS_ID } from '../../infra/adapters/kuma-credentials.provider';
 
@@ -43,10 +43,10 @@ export class MonitoringSettingsService {
     const url = input.url?.trim();
     const username = input.username?.trim();
     const password = input.password?.trim() || undefined;
-    if (!url || !username) throw new BadRequestException('URL et utilisateur Kuma requis');
+    if (!url || !username) throw new BadRequestException(msg('ops.kumaUrlUserRequired'));
 
     const existing = await this.prisma.monitoringSettings.findUnique({ where: { id: KUMA_SETTINGS_ID } });
-    if (!password && !existing?.kumaPassword) throw new BadRequestException('Mot de passe Kuma requis');
+    if (!password && !existing?.kumaPassword) throw new BadRequestException(msg('ops.kumaPasswordRequired'));
 
     await this.prisma.monitoringSettings.upsert({
       where: { id: KUMA_SETTINGS_ID },
@@ -75,14 +75,14 @@ export class MonitoringSettingsService {
           input?.password?.trim() ||
           (await this.prisma.monitoringSettings.findUnique({ where: { id: KUMA_SETTINGS_ID } }))
             ?.kumaPassword;
-        if (!password) throw new BadRequestException('Mot de passe Kuma requis pour tester');
+        if (!password) throw new BadRequestException(msg('ops.kumaPasswordRequiredForTest'));
         await this.kumaAdmin.testConnection({ url, username, password });
       } else {
         await this.kumaAdmin.testConnection();
       }
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
-      throw new BadRequestException(`Connexion Uptime Kuma KO : ${(error as Error).message}`);
+      throw new BadRequestException(msg('ops.kumaConnectionFailed', { detail: (error as Error).message }));
     }
     return { ok: true };
   }

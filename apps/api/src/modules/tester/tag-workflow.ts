@@ -21,6 +21,6 @@ export async function tagWorkflow(
     const tag = tags.find((t) => t.name === name) ?? (await n8n.createTag(config, name));
     await n8n.setWorkflowTags(config, externalId, [tag.id]);
   } catch (error) {
-    logger.warn(`Tag ${name} non posé sur ${externalId} : ${(error as Error).message}`);
+    logger.warn(`Tag ${name} not set on ${externalId}: ${(error as Error).message}`);
   }
 }

@@ -8,7 +8,9 @@ import {
   InfoCircleOutlined,
   MinusCircleTwoTone,
 } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { apiGet, apiPatch, apiPost } from '../../lib/api';
+import { BRAND } from '../../lib/brand/colors';
 
 interface ChecklistStep {
   key: string;
@@ -26,12 +28,12 @@ interface InstanceChecklist {
   steps: ChecklistStep[];
 }
 
-const ACTION_LABELS: Record<NonNullable<ChecklistStep['action']>, string> = {
-  'create-monitor': 'Créer le monitor',
-  'enable-monitor': 'Activer',
-  'provision-kuma': 'Créer la sonde Kuma',
-  'run-check': 'Lancer un check',
-};
+const ACTION_LABELS = {
+  'create-monitor': 'createMonitor',
+  'enable-monitor': 'enableMonitor',
+  'provision-kuma': 'provisionKuma',
+  'run-check': 'runCheck',
+} as const satisfies Record<NonNullable<ChecklistStep['action']>, string>;
 
 /** Checklist de migration monitoring d'une instance (étapes faites / à faire + actions). */
 export function MonitoringChecklistModal({
@@ -43,6 +45,8 @@ export function MonitoringChecklistModal({
   instanceName?: string;
   onClose: () => void;
 }) {
+  const t = useTranslations('settings.monitoringChecklist');
+  const tc = useTranslations('common');
   const [checklist, setChecklist] = useState<InstanceChecklist | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyStep, setBusyStep] = useState<string | null>(null);
@@ -66,7 +70,7 @@ export function MonitoringChecklistModal({
     try {
       if (step.action === 'create-monitor') {
         await apiPost('/monitors', {
-          name: `${checklist.instanceName} — erreurs d'exécution`,
+          name: t('monitorName', { name: checklist.instanceName }),
           kind: 'error-watch',
           enabled: true,
           config: { instanceId: checklist.instanceId, intervalSeconds: 120 },
@@ -77,9 +81,9 @@ export function MonitoringChecklistModal({
         await apiPost(`/monitors/${checklist.monitorId}/provision`);
       } else if (step.action === 'run-check') {
         const result = await apiPost<{ status: string }>(`/monitors/${checklist.monitorId}/check`);
-        message.info(`Check : ${result.status}`);
+        message.info(t('checkResult', { status: result.status }));
       }
-      message.success('Fait');
+      message.success(t('done'));
       load();
     } catch (e) {
       message.error((e as Error).message);
@@ -90,13 +94,13 @@ export function MonitoringChecklistModal({
 
   return (
     <Modal
-      title={`Monitoring — ${checklist?.instanceName ?? instanceName ?? ''}`}
+      title={t('title', { name: checklist?.instanceName ?? instanceName ?? '' })}
       open={instanceId !== null}
       onCancel={onClose}
-      footer={<Button onClick={onClose}>Fermer</Button>}
+      footer={<Button onClick={onClose}>{tc('close')}</Button>}
       width={720}
     >
-      {error && <Alert type="error" showIcon message="Checklist indisponible" description={error} />}
+      {error && <Alert type="error" showIcon message={t('unavailable')} description={error} />}
       {!error && !checklist && <Spin />}
       {checklist && (
         <List
@@ -113,7 +117,7 @@ export function MonitoringChecklistModal({
                         loading={busyStep === step.key}
                         onClick={() => runAction(step)}
                       >
-                        {ACTION_LABELS[step.action]}
+                        {t(`actions.${ACTION_LABELS[step.action]}`)}
                       </Button>,
                     ]
                   : undefined
@@ -122,11 +126,11 @@ export function MonitoringChecklistModal({
               <List.Item.Meta
                 avatar={
                   step.done === true ? (
-                    <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: 20 }} />
+                    <CheckCircleTwoTone twoToneColor={BRAND.success} style={{ fontSize: 20 }} />
                   ) : step.done === false ? (
-                    <CloseCircleTwoTone twoToneColor="#ff4d4f" style={{ fontSize: 20 }} />
+                    <CloseCircleTwoTone twoToneColor={BRAND.danger} style={{ fontSize: 20 }} />
                   ) : (
-                    <MinusCircleTwoTone twoToneColor="#bfbfbf" style={{ fontSize: 20 }} />
+                    <MinusCircleTwoTone twoToneColor={BRAND.slateLight} style={{ fontSize: 20 }} />
                   )
                 }
                 title={
@@ -139,12 +143,12 @@ export function MonitoringChecklistModal({
                         overlayInnerStyle={{ fontSize: 12, lineHeight: 1.6, padding: 12 }}
                       >
                         <InfoCircleOutlined
-                          style={{ color: '#1677ff', cursor: 'help' }}
-                          aria-label={`À quoi sert : ${step.label}`}
+                          style={{ color: BRAND.primary, cursor: 'help' }}
+                          aria-label={t('helpLabel', { label: step.label })}
                         />
                       </Tooltip>
                     )}{' '}
-                    {step.done === null && <Tag>manuel</Tag>}
+                    {step.done === null && <Tag>{t('manual')}</Tag>}
                   </>
                 }
                 description={

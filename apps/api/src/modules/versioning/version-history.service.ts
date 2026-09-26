@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EnvName, N8nWorkflow, WorkflowDiff, detectWorkflowEnv, diffWorkflows } from '@nwm/core';
+import { EnvName, N8nWorkflow, WorkflowDiff, detectWorkflowEnv, diffWorkflows, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 import { PrismaListArgs } from '../../common/crud/paginate';
@@ -112,7 +112,7 @@ export class VersionHistoryService {
       where: { id: versionId },
       include: { workflow: { select: { id: true, name: true } } },
     });
-    if (!version) throw new NotFoundException(`Version ${versionId} introuvable`);
+    if (!version) throw new NotFoundException(msg('platform.versionNotFound', { id: versionId }));
 
     const previous = await this.prisma.workflowVersion.findFirst({
       where: { workflowId: version.workflowId, createdAt: { lt: version.createdAt } },

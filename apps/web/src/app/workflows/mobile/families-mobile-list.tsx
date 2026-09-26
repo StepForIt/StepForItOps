@@ -3,6 +3,7 @@
 import React from 'react';
 import { CrudFilters } from '@refinedev/core';
 import { Descriptions, List, Space, Tag, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEnabledModules } from '../../../lib/enabled-modules';
 import { useWorkflowList } from '../use-workflow-list';
 import { FamilyDivergence } from '../family-divergence';
@@ -102,6 +103,8 @@ function FamilyDetail({
   selecting: boolean;
   onChange: () => void;
 }) {
+  const t = useTranslations('workflowsList.shared');
+  const locale = useLocale();
   const { enabled } = useEnabledModules();
   const showGroups = !enabled || enabled.includes('workflow-groups');
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -118,9 +121,13 @@ function FamilyDetail({
   const copies =
     family.missingCount > 0 || family.archivedCount > 0 ? (
       <Space size={4} wrap>
-        {family.missingCount > 0 && <Tag color="volcano">{family.missingCount} absent(s) de n8n</Tag>}
+        {family.missingCount > 0 && (
+          <Tag color="volcano">{t('missingCount', { count: family.missingCount })}</Tag>
+        )}
         {family.archivedCount > 0 && (
-          <Typography.Text type="secondary">{family.archivedCount} archivé(s)</Typography.Text>
+          <Typography.Text type="secondary">
+            {t('archivedCount', { count: family.archivedCount })}
+          </Typography.Text>
         )}
       </Space>
     ) : null;
@@ -132,23 +139,31 @@ function FamilyDetail({
         column={1}
         style={{ marginBottom: 8 }}
         items={[
-          { key: 'divergence', label: 'Écart prod', children: <FamilyDivergence family={family} /> },
-          ...(copies ? [{ key: 'copies', label: 'Copies', children: copies }] : []),
+          {
+            key: 'divergence',
+            label: t('columns.divergence'),
+            children: <FamilyDivergence family={family} />,
+          },
+          ...(copies ? [{ key: 'copies', label: t('columns.copies'), children: copies }] : []),
           {
             key: 'instances',
-            label: 'Instances',
+            label: t('columns.instances'),
             children: (
               <Space size={4} wrap>
                 {family.instanceIds.map((id) => (
-                  <Tag key={id} color="geekblue">
+                  <Tag key={id} color="blue">
                     {instanceName(id)}
                   </Tag>
                 ))}
               </Space>
             ),
           },
-          { key: 'upstream', label: 'Modifié (n8n)', children: formatDate(family.upstreamUpdatedAt) },
-          { key: 'synced', label: 'Synchronisé', children: formatDate(family.updatedAt) },
+          {
+            key: 'upstream',
+            label: t('columns.upstreamUpdated'),
+            children: formatDate(family.upstreamUpdatedAt, locale),
+          },
+          { key: 'synced', label: t('columns.synced'), children: formatDate(family.updatedAt, locale) },
         ]}
       />
       <List<WorkflowRow>

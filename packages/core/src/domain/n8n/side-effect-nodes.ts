@@ -4,6 +4,7 @@
  * réel pendant un essai ne se rattrape pas, alors qu'un bouchon oublié se voit
  * tout de suite dans le résultat.
  */
+import { msg } from '../../i18n';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 import { activeParameters } from './inert-params';
 import { paramString } from './n8n-params';
@@ -61,21 +62,23 @@ function classify(node: N8nNode): { kind: SideEffectKind; reason: string } | nul
   // "executeworkflow" dans son type, sans être un appel.
   if (type.endsWith('trigger')) return null;
 
-  if (match(type, EMAIL)) return { kind: 'email', reason: 'envoie un e-mail' };
-  if (match(type, MESSAGE)) return { kind: 'message', reason: 'poste un message' };
+  if (match(type, EMAIL)) return { kind: 'email', reason: msg('platform.sideEffectEmail') };
+  if (match(type, MESSAGE)) return { kind: 'message', reason: msg('platform.sideEffectMessage') };
   if (type.includes('executeworkflow') || type.includes('toolworkflow')) {
-    return { kind: 'sub-workflow', reason: 'exécute un autre workflow' };
+    return { kind: 'sub-workflow', reason: msg('platform.sideEffectSubWorkflow') };
   }
 
   const parameters = activeParameters(node);
   if (type.includes('httprequest')) {
     const method = (paramString(parameters['method']) ?? 'GET').toUpperCase();
-    return WRITING_METHODS.includes(method) ? { kind: 'http-write', reason: `appel HTTP ${method}` } : null;
+    return WRITING_METHODS.includes(method)
+      ? { kind: 'http-write', reason: msg('platform.sideEffectHttp', { method }) }
+      : null;
   }
 
   const operation = paramString(parameters['operation'])?.toLowerCase();
   if (operation && WRITE_OPERATIONS.includes(operation)) {
-    return { kind: 'data-write', reason: `écrit des données (${operation})` };
+    return { kind: 'data-write', reason: msg('platform.sideEffectDataWrite', { operation }) };
   }
   return null;
 }

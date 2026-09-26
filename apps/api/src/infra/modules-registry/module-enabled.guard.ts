@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable, NotFoundException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { msg } from '@nwm/core';
 import { MODULE_ID_KEY } from './module-id.decorator';
 import { ModuleRegistryService } from './module-registry.service';
 
@@ -18,6 +19,6 @@ export class ModuleEnabledGuard implements CanActivate {
     ]);
     if (!moduleId) return true; // route hors module désactivable
     if (await this.registry.isEnabled(moduleId)) return true;
-    throw new NotFoundException(`Module "${moduleId}" désactivé`);
+    throw new NotFoundException(msg('ops.moduleDisabled', { id: moduleId }));
   }
 }

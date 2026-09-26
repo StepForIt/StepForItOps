@@ -19,7 +19,7 @@ export class WorkflowRefreshService {
     try {
       await this.sync.syncWorkflow(workflowId);
     } catch (error) {
-      this.logger.warn(`Resynchro avant test impossible (${workflowId}) : ${(error as Error).message}`);
+      this.logger.warn(`Resync before test failed (${workflowId}): ${(error as Error).message}`);
     }
   }
 }

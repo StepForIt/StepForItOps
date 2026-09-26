@@ -13,6 +13,7 @@
  * (`{{2.email}}`), et deux modules sans nom d'un même type portent le même
  * libellé.
  */
+import { msg } from '../../i18n';
 import { MakeBlueprint, MakeFilter, MakeModule, flattenModules, isMakeBlueprint } from './blueprint';
 
 export type MakeEditOperation =
@@ -42,7 +43,10 @@ export class BlueprintEditError extends Error {}
  */
 const ACCOUNT_KEY = /^__IMT[A-Z]+__$/;
 
-/** Ce que `redactSecrets` pose à la place d'un secret : le recopier écrirait le masque dans Make. */
+/**
+ * Ce que `redactSecrets` pose à la place d'un secret : le recopier écrirait le masque dans Make.
+ * Marqueur figé, jamais traduit — c'est une comparaison de texte.
+ */
 const SECRET_MASK = '[secret masqué';
 
 /**
@@ -54,12 +58,10 @@ export function applyBlueprintEdits(
   operations: unknown[],
 ): { blueprint: MakeBlueprint; warnings: string[] } {
   if (!isMakeBlueprint(blueprint)) {
-    throw new BlueprintEditError(
-      "Contenu illisible comme blueprint Make (aucun 'flow') : rien n'est modifié.",
-    );
+    throw new BlueprintEditError(msg('edit.makeUnreadable'));
   }
   if (!Array.isArray(operations) || operations.length === 0) {
-    throw new BlueprintEditError('Aucune opération à appliquer.');
+    throw new BlueprintEditError(msg('edit.makeNoOperations'));
   }
   const copy = structuredClone(blueprint);
   const warnings: string[] = [];
@@ -78,61 +80,57 @@ export function summarizeMakeOperations(operations: MakeEditOperation[]): string
   const parts = [
     [
       modules(['set-module-mapper', 'set-module-parameters', 'remove-module-field', 'set-module-filter']),
-      'modifié',
+      'edit.makeSummaryModified',
     ],
-    [modules(['rename-module']), 'renommé'],
-    [modules(['remove-module']), 'supprimé'],
+    [modules(['rename-module']), 'edit.makeSummaryRenamed'],
+    [modules(['remove-module']), 'edit.makeSummaryRemoved'],
   ] as const;
-  const said = parts
-    .filter(([count]) => count > 0)
-    .map(([count, verb]) => `${count} module${count > 1 ? 's' : ''} ${verb}${count > 1 ? 's' : ''}`);
-  return said.length > 0 ? `Scénario : ${said.join(', ')}` : 'Modification proposée';
+  const said = parts.filter(([count]) => count > 0).map(([count, id]) => msg(id, { count }));
+  return said.length > 0 ? msg('edit.makeSummary', { parts: said.join(', ') }) : msg('edit.summaryDefault');
 }
 
 function readOperation(raw: unknown, index: number): MakeEditOperation {
   const op = raw as Partial<MakeEditOperation> & Record<string, unknown>;
-  const where = `opération ${index + 1}`;
+  const where = msg('edit.makeOpWhere', { index: index + 1 });
+  const whereType = () => msg('edit.makeOpWhereType', { index: index + 1, type: String(op.type) });
   if (!op || typeof op !== 'object' || typeof op.type !== 'string') {
-    throw new BlueprintEditError(`${where} : sans « type ».`);
+    throw new BlueprintEditError(msg('edit.makeOpNoType', { where }));
   }
   if (!MAKE_EDIT_OPERATION_TYPES.includes(op.type as MakeEditOperation['type'])) {
     throw new BlueprintEditError(
-      `${where} : « ${op.type} » n'existe pas sur un scénario Make. Opérations possibles : ` +
-        `${MAKE_EDIT_OPERATION_TYPES.join(', ')}. Ajouter un module ou une route n'est pas possible ici.`,
+      msg('edit.makeOpUnknownType', { where, type: op.type, types: MAKE_EDIT_OPERATION_TYPES.join(', ') }),
     );
   }
   if (typeof op.moduleId !== 'number' || !Number.isInteger(op.moduleId)) {
-    throw new BlueprintEditError(`${where} (${op.type}) : « moduleId » doit être l'id entier du module.`);
+    throw new BlueprintEditError(msg('edit.makeOpModuleId', { where: whereType() }));
   }
   switch (op.type) {
     case 'set-module-mapper':
-      assertPatch(op.mapper, `${where} (${op.type}) : « mapper »`);
+      assertPatch(op.mapper, msg('edit.makeOpField', { where: whereType(), field: 'mapper' }));
       break;
     case 'set-module-parameters':
-      assertPatch(op.parameters, `${where} (${op.type}) : « parameters »`);
+      assertPatch(op.parameters, msg('edit.makeOpField', { where: whereType(), field: 'parameters' }));
       break;
     case 'remove-module-field':
       if (op.section !== 'mapper' && op.section !== 'parameters') {
-        throw new BlueprintEditError(`${where} (${op.type}) : « section » vaut "mapper" ou "parameters".`);
+        throw new BlueprintEditError(msg('edit.makeOpSection', { where: whereType() }));
       }
       if (typeof op.path !== 'string' || !op.path.trim()) {
-        throw new BlueprintEditError(`${where} (${op.type}) : « path » manquant (ex. "headers.0.value").`);
+        throw new BlueprintEditError(msg('edit.makeOpPath', { where: whereType() }));
       }
       if (op.path.split('.').some((segment) => ACCOUNT_KEY.test(segment))) {
-        throw new BlueprintEditError(accountKeyRefusal(`${where} (${op.type})`));
+        throw new BlueprintEditError(accountKeyRefusal(whereType()));
       }
       break;
     case 'set-module-filter':
       if (op.filter !== null && (typeof op.filter !== 'object' || Array.isArray(op.filter))) {
-        throw new BlueprintEditError(
-          `${where} (${op.type}) : « filter » est un objet, ou null pour le retirer.`,
-        );
+        throw new BlueprintEditError(msg('edit.makeOpFilter', { where: whereType() }));
       }
-      if (op.filter) assertNoMask(op.filter, `${where} (${op.type})`);
+      if (op.filter) assertNoMask(op.filter, whereType());
       break;
     case 'rename-module':
       if (typeof op.name !== 'string' || !op.name.trim()) {
-        throw new BlueprintEditError(`${where} (${op.type}) : « name » vide.`);
+        throw new BlueprintEditError(msg('edit.makeOpName', { where: whereType() }));
       }
       break;
   }
@@ -155,7 +153,7 @@ function applyOne(blueprint: MakeBlueprint, op: MakeEditOperation): string | nul
     case 'set-module-filter':
       if (op.filter === null) {
         delete module.filter;
-        return `Le filtre du module #${op.moduleId} est retiré : il laissera passer tous les bundles.`;
+        return msg('edit.makeFilterRemoved', { id: op.moduleId });
       }
       module.filter = op.filter;
       return null;
@@ -170,7 +168,7 @@ function applyOne(blueprint: MakeBlueprint, op: MakeEditOperation): string | nul
 
 function findModule(blueprint: MakeBlueprint, moduleId: number): MakeModule {
   const found = flattenModules(blueprint).find((flat) => flat.module.id === moduleId);
-  if (!found) throw new BlueprintEditError(`Module #${moduleId} introuvable dans ce scénario.`);
+  if (!found) throw new BlueprintEditError(msg('edit.makeModuleNotFound', { id: moduleId }));
   return found.module;
 }
 
@@ -184,9 +182,7 @@ function removeModule(blueprint: MakeBlueprint, moduleId: number): string | null
     if (index >= 0) {
       const [removed] = flow.splice(index, 1);
       const carried = nested(removed);
-      return carried > 0
-        ? `Supprimer le module #${moduleId} retire aussi les ${carried} module(s) qu'il porte (routes, branches, gestionnaires).`
-        : null;
+      return carried > 0 ? msg('edit.makeRemoveCarries', { id: moduleId, count: carried }) : null;
     }
     for (const module of flow) {
       for (const child of [
@@ -202,7 +198,7 @@ function removeModule(blueprint: MakeBlueprint, moduleId: number): string | null
   };
 
   const result = visit(blueprint.flow);
-  if (result === undefined) throw new BlueprintEditError(`Module #${moduleId} introuvable dans ce scénario.`);
+  if (result === undefined) throw new BlueprintEditError(msg('edit.makeModuleNotFound', { id: moduleId }));
   return result;
 }
 
@@ -221,7 +217,7 @@ function removeField(module: MakeModule, section: 'mapper' | 'parameters', path:
     delete (cursor as Record<string, unknown>)[last];
     return null;
   }
-  return `« ${section}.${path} » était déjà absent du module #${module.id}.`;
+  return msg('edit.makeFieldAbsent', { path: `${section}.${path}`, id: module.id });
 }
 
 /** Fusion en profondeur : un objet se complète, un tableau ou une valeur se remplace. */
@@ -236,7 +232,7 @@ function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>
 
 function assertPatch(value: unknown, label: string): asserts value is Record<string, unknown> {
   if (!isPlainObject(value) || Object.keys(value).length === 0) {
-    throw new BlueprintEditError(`${label} doit être un objet non vide — seules les clés données changent.`);
+    throw new BlueprintEditError(msg('edit.makePatchInvalid', { label }));
   }
   if (hasAccountKey(value)) throw new BlueprintEditError(accountKeyRefusal(label));
   assertNoMask(value, label);
@@ -244,10 +240,7 @@ function assertPatch(value: unknown, label: string): asserts value is Record<str
 
 function assertNoMask(value: unknown, label: string): void {
   if (JSON.stringify(value).includes(SECRET_MASK)) {
-    throw new BlueprintEditError(
-      `${label} : une valeur masquée (« [secret masqué …] ») a été recopiée. Le vrai secret n'est jamais ` +
-        `montré : ne réécris pas ce champ, laisse-le tel quel en ne le mettant pas dans l'opération.`,
-    );
+    throw new BlueprintEditError(msg('edit.makeMaskCopied', { label, mask: `${SECRET_MASK} …]` }));
   }
 }
 
@@ -258,10 +251,7 @@ function hasAccountKey(value: unknown): boolean {
 }
 
 function accountKeyRefusal(label: string): string {
-  return (
-    `${label} : les clés « __IMT…__ » (connexion, webhook, clé du compte) ne se modifient pas ici — ` +
-    `leur valeur est un id propre au compte Make. Dis à l'utilisateur de la choisir dans Make.`
-  );
+  return msg('edit.makeAccountKey', { label });
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

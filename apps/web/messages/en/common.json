@@ -1,0 +1,31 @@
+{
+  "cancel": "Cancel",
+  "save": "Save",
+  "close": "Close",
+  "delete": "Delete",
+  "edit": "Edit",
+  "refresh": "Refresh",
+  "add": "Add",
+  "create": "Create",
+  "apply": "Apply",
+  "back": "Back",
+  "see": "View",
+  "download": "Download",
+  "all": "All",
+  "none": "None",
+  "yes": "Yes",
+  "no": "No",
+  "search": "Search…",
+  "openInN8n": "Open in n8n",
+  "columns": {
+    "actions": "Actions",
+    "name": "Name",
+    "instance": "Instance",
+    "workflow": "Workflow",
+    "type": "Type",
+    "node": "Node",
+    "env": "Env",
+    "status": "Status",
+    "message": "Message"
+  }
+}

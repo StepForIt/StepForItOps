@@ -7,9 +7,11 @@ import {
   NODE_CATALOG_PORT,
   NodeCatalogPort,
   NodeProperty,
+  msg,
 } from '@nwm/core';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CommunityPackagesService } from './community-packages.service';
 
 /**
  * Alimentation du catalogue. C'est le SEUL endroit qui parle à l'amont.
@@ -38,6 +40,7 @@ export class NodeCatalogSyncService {
     private readonly prisma: PrismaService,
     @Inject(NODE_CATALOG_PORT) private readonly catalog: NodeCatalogPort,
     @Inject(N8N_API_PORT) private readonly n8n: N8nApiPort,
+    private readonly communityPackages: CommunityPackagesService,
   ) {}
 
   /**
@@ -52,7 +55,7 @@ export class NodeCatalogSyncService {
     removed: number;
   }> {
     if (this.running) {
-      throw new Error('Une synchronisation du catalogue est déjà en cours.');
+      throw new Error(msg('analysis.catalogSyncRunning'));
     }
     this.running = true;
     try {
@@ -70,9 +73,7 @@ export class NodeCatalogSyncService {
       if (types.length === 0) {
         // Un amont qui rend zéro nœud est un amont cassé, pas un catalogue vide :
         // écraser ce qu'on a par ce néant, c'est perdre le seul exemplaire.
-        throw new Error(
-          "L'amont n'a rendu aucun type de nœud : import abandonné, le catalogue en base est conservé.",
-        );
+        throw new Error(msg('analysis.catalogUpstreamEmpty'));
       }
 
       const known = new Set(
@@ -128,7 +129,7 @@ export class NodeCatalogSyncService {
         },
       });
       this.logger.log(
-        `Catalogue ${this.catalog.sourceName} : ${added} ajoutés, ${updated} mis à jour, ${removed} retirés.`,
+        `Catalog ${this.catalog.sourceName}: ${added} added, ${updated} updated, ${removed} removed.`,
       );
       return { skipped: false, revision: revision.revision, added, updated, removed };
     } catch (error) {
@@ -149,13 +150,9 @@ export class NodeCatalogSyncService {
     instanceId: string,
   ): Promise<{ imported: number; removed: number; versions: number; versionsError?: string }> {
     const instance = await this.prisma.instance.findUnique({ where: { id: instanceId } });
-    if (!instance) throw new Error('Instance introuvable');
+    if (!instance) throw new Error(msg('analysis.instanceNotFound'));
     if (!instance.n8nEmail || !instance.n8nPassword) {
-      throw new Error(
-        `L'instance « ${instance.name} » n'a pas de compte n8n enregistré. ` +
-          `Les types de nœuds ne sont pas servis par l'API publique : renseigne un compte ` +
-          `dans la fiche de l'instance, ou reste sur le catalogue mutualisé.`,
-      );
+      throw new Error(msg('analysis.instanceNoN8nAccount', { name: instance.name }));
     }
 
     const config = {
@@ -224,14 +221,20 @@ export class NodeCatalogSyncService {
         versions = await this.syncInstanceVersions(instanceId, config);
       } catch (error) {
         versionsError = (error as Error).message.slice(0, 300);
-        this.logger.warn(`Instance « ${instance.name} » : schémas par version non lus — ${versionsError}`);
+        this.logger.warn(`Instance "${instance.name}": per-version schemas not read — ${versionsError}`);
       }
+
+      // Les paquets communautaires installés et leur version : c'est elle qui
+      // choisit le README servi à l'assistant. Faillible comme la passe d'avant.
+      await this.communityPackages.recordInstance(instanceId, config).catch((error: Error) => {
+        this.logger.warn(`Instance "${instance.name}": community packages not recorded — ${error.message}`);
+      });
 
       await this.prisma.nodeCatalogSync.create({
         data: { source: `instance:${instanceId}`, added: imported, updated: versions, removed: stale.length },
       });
       this.logger.log(
-        `Instance « ${instance.name} » : ${imported} types de nœuds importés, ${versions} schémas datés.`,
+        `Instance "${instance.name}": ${imported} node types imported, ${versions} dated schemas.`,
       );
       return { imported, removed: stale.length, versions, versionsError };
     } catch (error) {

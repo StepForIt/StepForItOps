@@ -43,7 +43,7 @@ export class ActiveCheckService {
     let message = '';
     const started = Date.now();
     try {
-      if (!config.url) throw new Error('config.url manquant');
+      if (!config.url) throw new Error('config.url missing');
       const response = await fetch(config.url, { method: config.method ?? 'GET' });
       const expected = config.expectedStatus ?? 200;
       status = response.status === expected || (expected === 200 && response.ok) ? 'up' : 'down';
@@ -61,7 +61,7 @@ export class ActiveCheckService {
       try {
         await this.monitorPort.push(kumaPushUrl, status, message, pingMs);
       } catch (error) {
-        this.logger.warn(`Push Kuma KO : ${(error as Error).message}`);
+        this.logger.warn(`Kuma push failed: ${(error as Error).message}`);
       }
     }
     return status;

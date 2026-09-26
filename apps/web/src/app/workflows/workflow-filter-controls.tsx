@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button, Segmented, Select, Tooltip } from 'antd';
 import type { SelectProps } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Filters } from './workflow-filters';
 
 type Options = SelectProps['options'];
@@ -38,6 +39,7 @@ export function WorkflowFilterControls({
   onOpenPaths: () => void;
   block?: boolean;
 }) {
+  const t = useTranslations('workflowsList.filters');
   const set = (field: keyof Filters) => (value?: string) =>
     setFilters((current) => ({ ...current, [field]: value || undefined }));
   const width = (desktop: number) => (block ? '100%' : desktop);
@@ -46,7 +48,7 @@ export function WorkflowFilterControls({
     <>
       {!scoped && (
         <Select
-          placeholder="Instance"
+          placeholder={t('instance')}
           allowClear
           style={{ width: width(200) }}
           options={instanceOptions}
@@ -55,7 +57,7 @@ export function WorkflowFilterControls({
         />
       )}
       <Select
-        placeholder="Env"
+        placeholder={t('env')}
         allowClear
         style={{ width: width(130) }}
         options={envOptions}
@@ -63,7 +65,7 @@ export function WorkflowFilterControls({
         onChange={set('env')}
       />
       <Select
-        placeholder="Écart avec la prod"
+        placeholder={t('divergence')}
         allowClear
         style={{ width: width(210) }}
         options={divergenceOptions}
@@ -72,7 +74,7 @@ export function WorkflowFilterControls({
       />
       {groupOptions && groupOptions.length > 0 && (
         <Select
-          placeholder="Groupe"
+          placeholder={t('group')}
           allowClear
           showSearch
           optionFilterProp="label"
@@ -83,12 +85,12 @@ export function WorkflowFilterControls({
         />
       )}
       <Select
-        placeholder="Statut"
+        placeholder={t('status')}
         allowClear
         style={{ width: width(130) }}
         options={[
-          { value: 'true', label: 'actifs' },
-          { value: 'false', label: 'inactifs' },
+          { value: 'true', label: t('active') },
+          { value: 'false', label: t('inactive') },
         ]}
         value={filters.active}
         onChange={set('active')}
@@ -98,15 +100,15 @@ export function WorkflowFilterControls({
         value={filters.archived}
         onChange={(value) => setFilters((current) => ({ ...current, archived: value }))}
         options={[
-          { value: 'default', label: 'Archivés : par défaut' },
-          { value: 'false', label: 'Archivés : masqués' },
-          { value: 'all', label: 'Archivés : affichés' },
-          { value: 'true', label: 'Archivés seulement' },
+          { value: 'default', label: t('archivedDefault') },
+          { value: 'false', label: t('archivedHidden') },
+          { value: 'all', label: t('archivedShown') },
+          { value: 'true', label: t('archivedOnly') },
         ]}
       />
-      <Tooltip title="Copies d’env qui partagent le path de leur original">
+      <Tooltip title={t('pathsTooltip')}>
         <Button block={block} onClick={onOpenPaths}>
-          Points d’entrée partagés…
+          {t('paths')}
         </Button>
       </Tooltip>
       {/* Empilée dans le tiroir : côte à côte, « Un par workflow n8n » est tronqué sur 360 px. */}
@@ -116,8 +118,8 @@ export function WorkflowFilterControls({
         value={grouped ? 'grouped' : 'flat'}
         onChange={(value) => onGroupedChange(value === 'grouped')}
         options={[
-          { value: 'flat', label: 'Un par workflow n8n' },
-          { value: 'grouped', label: 'Groupés par env' },
+          { value: 'flat', label: t('viewFlat') },
+          { value: 'grouped', label: t('viewGrouped') },
         ]}
       />
     </>

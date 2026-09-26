@@ -16,6 +16,7 @@
 
 import { GateVerdict } from './proposal-gate';
 import { CheckFinding } from './structural-checks';
+import { msg } from '../../i18n';
 
 /**
  * Passes de correction accordées à un tour. Deux : la première rattrape la faute
@@ -29,7 +30,7 @@ function renderFindings(findings: CheckFinding[]): string {
   return findings
     .map(
       (finding) =>
-        `- [${finding.severity}] ${finding.code}${finding.nodeName ? ` (${finding.nodeName})` : ''} : ${finding.message}`,
+        `- [${finding.severity}] ${finding.code}${finding.nodeName ? ` (${finding.nodeName})` : ''}: ${finding.message}`,
     )
     .join('\n');
 }
@@ -42,56 +43,42 @@ export function repairRequest(verdict: GateVerdict): string | null {
   if (!verdict.blocked) return null;
 
   const parts = [
-    'STOP — ta proposition a été appliquée à une copie du workflow et la plateforme REFUSE de ' +
-      "l'écrire dans n8n. Elle ne sera pas montrée à l'utilisateur en l'état.",
+    'STOP — your proposal was applied to a copy of the workflow and the platform REFUSES to ' +
+      'write it to n8n. It will not be shown to the user as it stands.',
     verdict.reason ?? '',
   ];
 
   if (verdict.breaches.length > 0) {
     parts.push(
-      `Le workflow ne tournerait plus (refus non contournable) :\n` +
+      `The workflow would no longer run (refusal that cannot be overridden):\n` +
         verdict.breaches.map((breach) => `- ${breach.message}`).join('\n'),
     );
   }
   if (verdict.refusals.length > 0) {
     parts.push(
-      `n8n refusera d'enregistrer le FICHIER entier, même si ce n'est pas ta modification qui l'a ` +
-        `posé — corrige-le dans le même brouillon :\n${renderFindings(verdict.refusals)}`,
+      `n8n will refuse to save the ENTIRE FILE, even if your change is not what introduced it ` +
+        `— fix it in the same draft:\n${renderFindings(verdict.refusals)}`,
     );
   }
   const errors = verdict.introduced.filter((finding) => finding.severity === 'error');
   if (errors.length > 0) {
-    parts.push(`Erreurs introduites par tes opérations :\n${renderFindings(errors)}`);
+    parts.push(`Errors introduced by your operations:\n${renderFindings(errors)}`);
   }
 
   parts.push(
-    'Corrige, puis renvoie une réponse au format habituel avec les opérations COMPLÈTES et ' +
-      'corrigées dans `proposal` — pas un extrait, pas un commentaire : le champ est repris tel ' +
-      'quel. Vérifie-les avec `check_workflow` avant de répondre, et lis les nœuds concernés avec ' +
-      '`read_node` ou `describe_node_type` plutôt que de deviner ce qui manque. ' +
-      "Si tu ne sais pas corriger, renvoie `proposal: null` et dis en une ligne ce qu'il te manque : " +
-      'une proposition inapplicable ne vaut rien.',
+    'Fix them, then send back a reply in the usual format with the COMPLETE, corrected ' +
+      'operations in `proposal` — not an excerpt, not a comment: the field is taken as is. ' +
+      'Check them with `check_workflow` before replying, and read the nodes involved with ' +
+      '`read_node` or `describe_node_type` rather than guessing what is missing. ' +
+      'If you cannot fix it, return `proposal: null` and say in one line what you are missing: ' +
+      'a proposal that cannot be applied is worthless.',
   );
   return parts.filter(Boolean).join('\n\n');
 }
 
 /** Ce qu'on dit à l'humain sous la réponse, selon ce que la correction a donné. */
 export function repairNote(outcome: 'repaired' | 'gave-up' | 'abandoned', attempts: number): string {
-  if (outcome === 'repaired') {
-    return (
-      `> 🔁 La première version de cette modification était refusée par les contrôles ; ` +
-      `elle a été corrigée et revérifiée avant de t'être proposée ` +
-      `(${attempts} passe${attempts > 1 ? 's' : ''}).`
-    );
-  }
-  if (outcome === 'abandoned') {
-    return (
-      `> 🔁 La modification proposée était refusée par les contrôles et la correction n'a rien ` +
-      `donné : la demande a été abandonnée plutôt que de te faire relire un diff inapplicable.`
-    );
-  }
-  return (
-    `> 🔁 Cette modification a été reprise ${attempts} fois et reste refusée par les contrôles. ` +
-    `Elle est affichée telle quelle pour que tu voies ce qui bloque — reformule la demande.`
-  );
+  if (outcome === 'repaired') return msg('chat.repairNoteRepaired', { attempts });
+  if (outcome === 'abandoned') return msg('chat.repairNoteAbandoned');
+  return msg('chat.repairNoteGaveUp', { attempts });
 }

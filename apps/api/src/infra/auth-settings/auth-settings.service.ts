@@ -1,4 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { msg } from '@nwm/core';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -49,7 +50,7 @@ export class AuthSettingsService {
   /** Crée LE compte — refuse si déjà configuré : changer de mot de passe passera par une autre voie. */
   async bootstrap(username: string, password: string): Promise<AuthBootstrapView> {
     const existing = await this.prisma.authSettings.findUnique({ where: { id: ROW_ID } });
-    if (existing?.passwordHash) throw new ConflictException('La plateforme est déjà configurée.');
+    if (existing?.passwordHash) throw new ConflictException(msg('platform.alreadyConfigured'));
 
     const salt = randomBytes(16).toString('hex');
     const hash = scryptSync(password, salt, KEY_LENGTH).toString('hex');

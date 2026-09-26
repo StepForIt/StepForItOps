@@ -1,5 +1,7 @@
 const path = require('path');
 const { withSentryConfig } = require('@sentry/nextjs');
+// Traductions : pas de préfixe de langue dans l'URL, la config de requête lit le cookie (src/i18n/request.ts).
+const withNextIntl = require('next-intl/plugin')('./src/i18n/request.ts');
 
 // Identifiant de build, injecté dans le client pour versionner le cache du
 // service worker. Sans lui, un navigateur qui a installé la console garde les
@@ -59,7 +61,7 @@ const nextConfig = {
 // L'enveloppe reste posée même sans DSN : elle ne fait alors rien de plus qu'un
 // build ordinaire, et la retirer conditionnellement ferait diverger le build de
 // dev de celui de prod.
-module.exports = withSentryConfig(nextConfig, {
+module.exports = withSentryConfig(withNextIntl(nextConfig), {
   // Pas de télémétrie vers Sentry, et pas de bannière à chaque compilation.
   telemetry: false,
   silent: true,

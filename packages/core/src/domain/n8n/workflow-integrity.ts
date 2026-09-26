@@ -13,6 +13,7 @@
  * modification, y compris celle qui vient le réparer.
  */
 
+import { msg } from '../../i18n';
 import { hasTrigger } from './workflow-graph';
 import { N8nWorkflow } from './workflow.types';
 
@@ -41,7 +42,8 @@ function danglingNames(workflow: N8nWorkflow): Set<string> {
 function untypedNames(workflow: N8nWorkflow): Set<string> {
   const untyped = new Set<string>();
   for (const node of workflow.nodes ?? []) {
-    if (!node?.name?.trim() || !node?.type?.trim()) untyped.add(node?.name?.trim() || '(nœud sans nom)');
+    if (!node?.name?.trim() || !node?.type?.trim())
+      untyped.add(node?.name?.trim() || msg('edit.unnamedNode'));
   }
   return untyped;
 }
@@ -52,14 +54,14 @@ export function checkWorkflowIntegrity(before: N8nWorkflow, after: N8nWorkflow):
   if ((before.nodes ?? []).length > 0 && (after.nodes ?? []).length === 0) {
     breaches.push({
       code: 'no-nodes',
-      message: 'La modification vide le workflow : il ne resterait aucun nœud.',
+      message: msg('edit.breachNoNodes'),
     });
   }
 
   if (hasTrigger(before) && !hasTrigger(after)) {
     breaches.push({
       code: 'trigger-lost',
-      message: 'La modification retire le dernier nœud déclencheur : le workflow ne pourrait plus démarrer.',
+      message: msg('edit.breachTriggerLost'),
     });
   }
 
@@ -67,7 +69,7 @@ export function checkWorkflowIntegrity(before: N8nWorkflow, after: N8nWorkflow):
   if (untyped.length > 0) {
     breaches.push({
       code: 'node-untyped',
-      message: `Nœud(s) sans nom ou sans type, que n8n ne saura pas exécuter : ${untyped.join(', ')}.`,
+      message: msg('edit.breachUntyped', { names: untyped.join(', ') }),
     });
   }
 
@@ -76,7 +78,7 @@ export function checkWorkflowIntegrity(before: N8nWorkflow, after: N8nWorkflow):
   if (introduced.length > 0) {
     breaches.push({
       code: 'dangling-connection',
-      message: `Connexion(s) vers un nœud absent du workflow : ${introduced.join(', ')}.`,
+      message: msg('edit.breachDangling', { names: introduced.join(', ') }),
     });
   }
 

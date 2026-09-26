@@ -6,9 +6,10 @@ import { getDefaultSortOrder } from '@refinedev/antd';
 import { useTable } from '../../lib/list-memory/use-list-memory';
 import { CrudFilters } from '@refinedev/core';
 import { Space, Tag, Tooltip, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { useEnvColor } from '../../lib/envs';
-import { VersionActions, VersionHandlers, frDate } from './version-actions';
+import { VersionActions, VersionHandlers, formatDateTime } from './version-actions';
 import { VersionHistoryTable } from './history-table';
 
 /** Dernière version d'un exemplaire (un env) du workflow métier. */
@@ -61,6 +62,9 @@ export function VersionFamiliesTable({
   handlers: VersionHandlers;
 }) {
   const envColor = useEnvColor();
+  const c = useTranslations('inventory.versions.columns');
+  const tt = useTranslations('inventory.versions.table');
+  const locale = useLocale();
   const { tableProps, sorters } = useTable<VersionFamily>({
     resource: 'versions/families',
     filters: { permanent: filters },
@@ -85,41 +89,55 @@ export function VersionFamiliesTable({
     >
       <Table.Column<LatestVersion>
         dataIndex="env"
-        title="Env"
+        title={c('env')}
         render={(env: LatestVersion['env']) => (env ? <Tag color={envColor(env)}>{env}</Tag> : <Tag>?</Tag>)}
       />
       <Table.Column<LatestVersion>
         dataIndex={['workflow', 'name']}
-        title="Workflow"
+        title={c('workflow')}
         render={(name: string, record) => (
           <Link href={`/workflows/show/${record.workflowId}`}>{name ?? record.workflowId}</Link>
         )}
       />
       {!scope && (
         <Table.Column<LatestVersion>
-          title="Instance"
-          render={(_, record) => <Tag color="geekblue">{instanceName(record.workflow?.instanceId)}</Tag>}
+          title={c('instance')}
+          render={(_, record) => <Tag color="blue">{instanceName(record.workflow?.instanceId)}</Tag>}
         />
       )}
-      <Table.Column dataIndex="hash" title="Hash" render={(h: string) => <code>{h.slice(0, 10)}</code>} />
-      <Table.Column dataIndex="origin" title="Origine" render={(o: string) => <Tag>{o}</Tag>} />
-      <Table.Column dataIndex="createdAt" title="Dernière version" render={(d: string) => frDate(d)} />
+      <Table.Column
+        dataIndex="hash"
+        title={c('hash')}
+        render={(h: string) => <code>{h.slice(0, 10)}</code>}
+      />
+      <Table.Column dataIndex="origin" title={c('origin')} render={(o: string) => <Tag>{o}</Tag>} />
+      <Table.Column
+        dataIndex="createdAt"
+        title={c('lastVersion')}
+        render={(d: string) => formatDateTime(d, locale)}
+      />
       <Table.Column<LatestVersion>
         dataIndex="versionCount"
-        title="Versions"
+        title={c('versions')}
         render={(count: number, record) => (
-          <Tooltip title={record.previousAt ? `Précédente : ${frDate(record.previousAt)}` : undefined}>
+          <Tooltip
+            title={
+              record.previousAt
+                ? tt('previous', { date: formatDateTime(record.previousAt, locale) })
+                : undefined
+            }
+          >
             <Typography.Text>{count}</Typography.Text>
           </Tooltip>
         )}
       />
       <Table.Column<LatestVersion>
         dataIndex="exportedAt"
-        title="Exporté"
+        title={c('exported')}
         render={(d: string | null, record) =>
           d ? (
             <Tooltip title={record.exportedTo?.join(', ')}>
-              <Typography.Text>{frDate(d)}</Typography.Text>
+              <Typography.Text>{formatDateTime(d, locale)}</Typography.Text>
             </Tooltip>
           ) : (
             <Typography.Text type="secondary">—</Typography.Text>
@@ -127,7 +145,7 @@ export function VersionFamiliesTable({
         }
       />
       <Table.Column<LatestVersion>
-        title="Actions"
+        title={c('actions')}
         className="row-actions"
         render={(_, record) => <VersionActions versionId={record.id} handlers={handlers} />}
       />
@@ -143,14 +161,14 @@ export function VersionFamiliesTable({
     >
       <Table.Column<VersionFamily>
         dataIndex="name"
-        title="Workflow"
+        title={c('workflow')}
         sorter
         defaultSortOrder={getDefaultSortOrder('name', sorters)}
         render={(name: string) => <Typography.Text strong>{name}</Typography.Text>}
       />
       <Table.Column<VersionFamily>
         dataIndex="envs"
-        title="Environnements"
+        title={c('envs')}
         render={(envs: VersionFamily['envs'], record) => (
           <Space size={4}>
             {envs.map((env) => (
@@ -159,8 +177,8 @@ export function VersionFamiliesTable({
               </Tag>
             ))}
             {record.unknownEnvCount > 0 && (
-              <Tooltip title="Déclarable depuis le bouton Environnements">
-                <Tag>{record.unknownEnvCount} sans env</Tag>
+              <Tooltip title={tt('declarable')}>
+                <Tag>{tt('noEnv', { count: record.unknownEnvCount })}</Tag>
               </Tooltip>
             )}
           </Space>
@@ -168,26 +186,24 @@ export function VersionFamiliesTable({
       />
       <Table.Column<VersionFamily>
         dataIndex="createdAt"
-        title="Dernière version"
+        title={c('lastVersion')}
         sorter
         defaultSortOrder={getDefaultSortOrder('createdAt', sorters)}
-        render={(d: string) => frDate(d)}
+        render={(d: string) => formatDateTime(d, locale)}
       />
       <Table.Column<VersionFamily>
         dataIndex="versionCount"
-        title="Versions"
+        title={c('versions')}
         sorter
         defaultSortOrder={getDefaultSortOrder('versionCount', sorters)}
         render={(count: number) => <Typography.Text>{count}</Typography.Text>}
       />
       <Table.Column<VersionFamily>
         dataIndex="notExportedCount"
-        title="Exporté"
+        title={c('exported')}
         render={(notExported: number, record) =>
           notExported === 0 ? null : (
-            <Tag color="orange">
-              {notExported}/{record.memberCount} jamais exporté
-            </Tag>
+            <Tag color="orange">{tt('neverExported', { notExported, total: record.memberCount })}</Tag>
           )
         }
       />

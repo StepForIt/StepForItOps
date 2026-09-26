@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { N8nWorkflow } from '../src/domain/n8n/workflow.types';
 import {
-  BENCH_INPUT_NAME,
+  benchInputName,
   BENCH_TAG,
   benchWorkflowName,
   benchImpacts,
@@ -61,7 +61,7 @@ describe('planNodeBench', () => {
       connections: {},
     };
     expect(planNodeBench(orphan, 'Seul').feeds).toEqual([
-      { nodeName: BENCH_INPUT_NAME, role: 'input', inputIndex: 0, inputType: 'main', citedAt: [] },
+      { nodeName: benchInputName(), role: 'input', inputIndex: 0, inputType: 'main', citedAt: [] },
     ]);
   });
 

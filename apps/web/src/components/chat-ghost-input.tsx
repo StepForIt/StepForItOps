@@ -4,6 +4,7 @@ import React from 'react';
 import { Input, Typography } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { CompletionSources, completeDraft } from '../lib/chat-completion';
+import { BRAND } from '../lib/brand/colors';
 
 /**
  * Métriques de la zone de saisie antd, recopiées sur le calque de suggestion.
@@ -122,7 +123,7 @@ export function ChatGhostInput({
         >
           <div style={{ transform: `translateY(${-scrollTop}px)` }}>
             {value}
-            <span style={{ color: '#bfbfbf' }}>{suggestion}</span>
+            <span style={{ color: BRAND.slateLight }}>{suggestion}</span>
             {/* Rappel discret de la touche, sur la même ligne que la suggestion :
                 une aide qu'il faut deviner n'est utilisée par personne. */}
             <Typography.Text

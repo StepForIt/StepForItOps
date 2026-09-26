@@ -11,6 +11,7 @@ import {
   hashWorkflow,
   isN8nNotFound,
   isPlatformNotFound,
+  msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
@@ -76,8 +77,8 @@ export class WorkflowSyncService {
       new Set(workflows.map((raw) => String(raw.id))),
     );
     this.logger.log(
-      `Instance ${instanceId} : ${workflows.length} workflows synchronisés (${changed} modifiés), ` +
-        `${recovered} rattrapés hors liste, ${missing} absents de n8n`,
+      `Instance ${instanceId}: ${workflows.length} workflows synced (${changed} changed), ` +
+        `${recovered} recovered outside the list, ${missing} missing from n8n`,
     );
     this.emitInstanceSynced(instanceId, 'instance');
     return { synced: workflows.length, changed, recovered, missing };
@@ -104,7 +105,7 @@ export class WorkflowSyncService {
         where: { id, missingUpstreamAt: null },
         data: { missingUpstreamAt: new Date() },
       });
-      this.logger.log(`Workflow ${externalId} ("${knownName}") absent de ${platform} : marqué`);
+      this.logger.log(`Workflow ${externalId} ("${knownName}") missing from ${platform}: flagged`);
       this.emitInstanceSynced(instanceId, 'workflow');
       return { name: knownName, changed: false, missing: true };
     }
@@ -224,8 +225,8 @@ export class WorkflowSyncService {
     }
 
     this.logger.log(
-      `Instance ${instanceId} (${platform}) : ${summaries.length} workflows synchronisés ` +
-        `(${changed} modifiés), ${missing} absents`,
+      `Instance ${instanceId} (${platform}): ${summaries.length} workflows synced ` +
+        `(${changed} changed), ${missing} missing`,
     );
     this.emitInstanceSynced(instanceId, 'instance');
     return { synced: summaries.length, changed, recovered: 0, missing };
@@ -239,7 +240,7 @@ export class WorkflowSyncService {
    */
   async syncWorkflow(workflowId: string): Promise<WorkflowSyncReport> {
     const local = await this.prisma.workflow.findUnique({ where: { id: workflowId } });
-    if (!local) throw new NotFoundException(`Workflow ${workflowId} introuvable`);
+    if (!local) throw new NotFoundException(msg('platform.workflowNotFound', { id: workflowId }));
     const { platform } = await this.instances.getPlatformConfig(local.instanceId);
     if (platform !== 'n8n')
       return this.syncPlatformWorkflow(local.id, local.instanceId, local.externalId, local.name);
@@ -258,7 +259,7 @@ export class WorkflowSyncService {
           data: { missingUpstreamAt: new Date() },
         });
       }
-      this.logger.log(`Workflow ${local.externalId} ("${local.name}") absent de n8n : marqué`);
+      this.logger.log(`Workflow ${local.externalId} ("${local.name}") missing from n8n: flagged`);
       this.emitInstanceSynced(local.instanceId, 'workflow');
       return { name: local.name, changed: false, missing: true };
     }
@@ -304,7 +305,7 @@ export class WorkflowSyncService {
       } catch (error) {
         if (!isN8nNotFound(error)) {
           this.logger.warn(
-            `Workflow ${local.externalId} ("${local.name}") illisible : ${(error as Error).message}`,
+            `Workflow ${local.externalId} ("${local.name}") unreadable: ${(error as Error).message}`,
           );
           continue;
         }
@@ -314,7 +315,7 @@ export class WorkflowSyncService {
           where: { id: local.id },
           data: { missingUpstreamAt: new Date() },
         });
-        this.logger.log(`Workflow ${local.externalId} ("${local.name}") absent de n8n : marqué`);
+        this.logger.log(`Workflow ${local.externalId} ("${local.name}") missing from n8n: flagged`);
       }
     }
     return { recovered, missing };

@@ -7,6 +7,7 @@ import { RemoteSchemaCheckService } from '../../infra/remote-schema/remote-schem
 import { WorkflowsService } from '../workflows/workflows.service';
 import { FindingIgnoreService } from '../workflows/finding-ignore.service';
 import { InstancesService } from '../instances/instances.service';
+import { PlatformLocale } from '../../infra/i18n/platform-locale';
 import { REMOTE_SCHEMA_MANIFEST } from './manifest';
 
 export interface RemoteSchemaRunResult {
@@ -28,10 +29,16 @@ export class RemoteSchemaService {
     private readonly ignores: FindingIgnoreService,
     private readonly profiles: CheckProfilesService,
     private readonly checker: RemoteSchemaCheckService,
+    private readonly platformLocale: PlatformLocale,
   ) {}
 
   /** `disabledChecks` : sélection de l'écran de lancement, prioritaire sur le profil. */
-  async run(workflowId: string, disabledChecks?: string[]): Promise<RemoteSchemaRunResult> {
+  run(workflowId: string, disabledChecks?: string[]): Promise<RemoteSchemaRunResult> {
+    // Les findings sont stockés pour tous : dans la langue de la plateforme, pas celle du lanceur.
+    return this.platformLocale.run(() => this.runCheck(workflowId, disabledChecks));
+  }
+
+  private async runCheck(workflowId: string, disabledChecks?: string[]): Promise<RemoteSchemaRunResult> {
     const module = REMOTE_SCHEMA_MANIFEST.id;
     const disabled = await this.profiles.effective(workflowId, disabledChecks);
     // Tout décoché : pas de sonde n8n, mais les anciens findings partent — un

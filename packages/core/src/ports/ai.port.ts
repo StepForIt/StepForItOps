@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import { ChatImage } from '../domain/chat-attachments';
 
 /**
@@ -164,9 +165,11 @@ export class AiToolLoopError extends Error {
     readonly thinking: AiThinkingStep[],
   ) {
     super(
-      `Boucle d'outils interrompue après ${rounds} tours sans réponse finale${
-        trace.length > 0 ? ` (${summarizeToolTrace(trace)})` : ''
-      }`,
+      msg('platform.aiToolLoopInterrupted', {
+        rounds,
+        hasTools: trace.length > 0,
+        tools: summarizeToolTrace(trace),
+      }),
     );
     this.name = 'AiToolLoopError';
   }

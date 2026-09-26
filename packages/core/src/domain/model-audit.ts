@@ -1,4 +1,5 @@
 import { CheckFinding } from './check-finding';
+import { msg } from '../i18n/translate';
 import { LlmTask } from './llm-task';
 import {
   ModelCatalogEntry,
@@ -105,10 +106,10 @@ export function runModelAudit(input: ModelAuditInput): CheckFinding[] {
         severity: 'warning',
         code: 'model-floating-alias',
         nodeName: requirement.nodeName,
-        message: `Le modèle « ${model} » est un alias flottant : il change sans que le workflow bouge.`,
+        message: msg('analysis.auditFloatingAlias', { model }),
         data: {
           ...base,
-          suggestion: 'Épingler une version datée, pour que le comportement du workflow soit décidé ici.',
+          suggestion: msg('analysis.auditFloatingAliasFix'),
         },
       });
     }
@@ -118,11 +119,10 @@ export function runModelAudit(input: ModelAuditInput): CheckFinding[] {
         severity: 'info',
         code: 'model-unknown',
         nodeName: requirement.nodeName,
-        message: `Le modèle « ${model} » est absent du catalogue : ni tarif ni jugement possibles.`,
+        message: msg('analysis.auditUnknown', { model }),
         data: {
           ...base,
-          suggestion:
-            'Ajouter sa ligne dans le catalogue des modèles pour que coûts et audit le prennent en compte.',
+          suggestion: msg('analysis.auditUnknownFix'),
         },
       });
       continue;
@@ -159,13 +159,12 @@ function oversizedFinding(
       severity: 'info',
       code: 'model-oversized',
       nodeName: requirement.nodeName,
-      message: `« ${entry.pattern} » est un modèle de raisonnement, et rien ici ne demande d’outils, d’images ni de long contexte.`,
+      message: msg('analysis.auditOversized', { pattern: entry.pattern }),
       data: {
         ...base,
         catalogPattern: entry.pattern,
         currentTier: entry.tier,
-        suggestion:
-          'Vérifier qu’un modèle plus léger ne suffirait pas : le raisonnement se paie à chaque appel.',
+        suggestion: msg('analysis.auditOversizedFix'),
       },
     },
   ];
@@ -189,11 +188,11 @@ function aptitudeFindings(
       severity: 'error',
       code: 'model-missing-vision',
       nodeName: requirement.nodeName,
-      message: `Une image est envoyée à « ${entry.pattern} », qui ne sait pas la lire.`,
+      message: msg('analysis.auditMissingVision', { pattern: entry.pattern }),
       data: {
         ...data,
         requirement: 'vision',
-        suggestion: 'Choisir un modèle qui accepte les images, ou retirer l’entrée image de la chaîne.',
+        suggestion: msg('analysis.auditMissingVisionFix'),
       },
     });
   }
@@ -202,8 +201,8 @@ function aptitudeFindings(
       severity: 'error',
       code: 'model-missing-tools',
       nodeName: requirement.nodeName,
-      message: `L’agent porte des outils mais « ${entry.pattern} » ne sait pas les appeler : il tournera sans jamais en utiliser un.`,
-      data: { ...data, requirement: 'tools', suggestion: 'Choisir un modèle qui gère l’appel d’outils.' },
+      message: msg('analysis.auditMissingTools', { pattern: entry.pattern }),
+      data: { ...data, requirement: 'tools', suggestion: msg('analysis.auditMissingToolsFix') },
     });
   }
   if (requirement.needsStructuredOutput && entry.supportsStructuredOutput === false) {
@@ -211,11 +210,11 @@ function aptitudeFindings(
       severity: 'warning',
       code: 'model-missing-structured-output',
       nodeName: requirement.nodeName,
-      message: `Un parser structuré est branché derrière « ${entry.pattern} », qui ne garantit pas la forme de sa sortie.`,
+      message: msg('analysis.auditMissingStructured', { pattern: entry.pattern }),
       data: {
         ...data,
         requirement: 'structuredOutput',
-        suggestion: 'Choisir un modèle à sortie contrainte, ou accepter le repli sur un parsing best-effort.',
+        suggestion: msg('analysis.auditMissingStructuredFix'),
       },
     });
   }
@@ -230,13 +229,16 @@ function aptitudeFindings(
         severity: 'warning',
         code: 'model-context-too-small',
         nodeName: requirement.nodeName,
-        message: `Les entrées mesurées (p95 : ${Math.round(usage.promptTokensP95).toLocaleString('fr-FR')} tokens) frôlent la fenêtre de « ${entry.pattern} » (${entry.contextWindow.toLocaleString('fr-FR')}).`,
+        message: msg('analysis.auditContextTooSmall', {
+          p95: Math.round(usage.promptTokensP95),
+          pattern: entry.pattern,
+          window: entry.contextWindow,
+        }),
         data: {
           ...data,
           p95: Math.round(usage.promptTokensP95),
           contextWindow: entry.contextWindow,
-          suggestion:
-            'Passer à un modèle à fenêtre plus large, ou réduire ce qui est injecté dans le prompt.',
+          suggestion: msg('analysis.auditContextTooSmallFix'),
         },
       });
     }
@@ -251,7 +253,10 @@ function lifecycleFindings(
   base: Record<string, unknown>,
   now: Date,
 ): CheckFinding[] {
-  const successor = entry.replacedByPattern ? ` Successeur annoncé : ${entry.replacedByPattern}.` : '';
+  const successor = {
+    hasSuccessor: Boolean(entry.replacedByPattern),
+    successor: entry.replacedByPattern ?? '',
+  };
   const data = {
     ...base,
     catalogPattern: entry.pattern,
@@ -266,31 +271,34 @@ function lifecycleFindings(
         severity: 'error',
         code: 'model-retired',
         nodeName: requirement.nodeName,
-        message: `« ${entry.pattern} » est retiré : l’appel échoue, ou échouera au prochain passage.${successor}`,
+        message: msg('analysis.auditRetired', { pattern: entry.pattern, ...successor }),
         data: {
           ...data,
           suggestion: entry.replacedByPattern
-            ? `Basculer vers ${entry.replacedByPattern}.`
-            : 'Choisir un modèle encore servi par le provider.',
+            ? msg('analysis.auditSwitchTo', { pattern: entry.replacedByPattern })
+            : msg('analysis.auditRetiredFixNoSuccessor'),
         },
       },
     ];
   }
   if (entry.status === 'deprecated') {
-    const deadline = entry.retiresAt ? ` Retrait annoncé le ${formatDate(entry.retiresAt)}.` : '';
+    const deadline = {
+      hasDeadline: Boolean(entry.retiresAt),
+      deadline: entry.retiresAt ? formatDate(entry.retiresAt) : '',
+    };
     const soon = entry.retiresAt ? new Date(entry.retiresAt).getTime() - now.getTime() : null;
     return [
       {
         severity: 'warning',
         code: 'model-deprecated',
         nodeName: requirement.nodeName,
-        message: `« ${entry.pattern} » est déprécié.${deadline}${successor}`,
+        message: msg('analysis.auditDeprecated', { pattern: entry.pattern, ...deadline, ...successor }),
         data: {
           ...data,
           daysLeft: soon === null ? null : Math.round(soon / 86_400_000),
           suggestion: entry.replacedByPattern
-            ? `Basculer vers ${entry.replacedByPattern} avant l’échéance.`
-            : 'Prévoir la bascule avant le retrait.',
+            ? msg('analysis.auditDeprecatedFix', { pattern: entry.replacedByPattern })
+            : msg('analysis.auditDeprecatedFixNoSuccessor'),
         },
       },
     ];
@@ -345,7 +353,13 @@ function economyFindings(
           severity: 'info',
           code: 'model-task-oversized',
           nodeName: requirement.nodeName,
-          message: `${labelOf(task.task)} : un modèle plus léger suffit. ${entry.pattern} → ${candidate.entry.pattern}, −${candidate.savings.pct} % sur le tarif${candidate.savings.annualUsd !== null ? `, ~${candidate.savings.annualUsd} $/an aux volumes mesurés` : ''}. À vérifier sur un cas de test avant bascule.`,
+          message: msg('analysis.auditTaskOversized', {
+            label: msg('analysis.auditTaskLabel', { task: task.task }),
+            current: entry.pattern,
+            candidate: candidate.entry.pattern,
+            pct: candidate.savings.pct,
+            ...annualOf(candidate.savings.annualUsd),
+          }),
           data: {
             ...base,
             catalogPattern: entry.pattern,
@@ -358,7 +372,7 @@ function economyFindings(
             candidate: candidate.entry.pattern,
             savingsPct: candidate.savings.pct,
             savingsAnnualUsd: candidate.savings.annualUsd,
-            suggestion: `Basculer vers ${candidate.entry.pattern}, puis rejouer un cas de test : une descente de gamme change la sortie, elle ne se pose pas à l’aveugle.`,
+            suggestion: msg('analysis.auditTaskOversizedFix', { candidate: candidate.entry.pattern }),
           },
         });
         return findings;
@@ -387,15 +401,19 @@ function cheaperFinding(
   base: Record<string, unknown>,
   crossProvider: boolean,
 ): CheckFinding {
-  const money =
-    candidate.savings.annualUsd !== null ? `, ~${candidate.savings.annualUsd} $/an aux volumes mesurés` : '';
+  const params = {
+    candidate: candidate.entry.pattern,
+    provider: candidate.entry.provider,
+    pct: candidate.savings.pct,
+    ...annualOf(candidate.savings.annualUsd),
+  };
   return {
     severity: 'info',
     code,
     nodeName: requirement.nodeName,
     message: crossProvider
-      ? `Chez un autre provider, ${candidate.entry.pattern} (${candidate.entry.provider}) rend le même service pour −${candidate.savings.pct} %${money}.`
-      : `${candidate.entry.pattern} a les mêmes aptitudes et le même niveau pour −${candidate.savings.pct} %${money}.`,
+      ? msg('analysis.auditCheaperProvider', params)
+      : msg('analysis.auditCheaperSame', params),
     data: {
       ...base,
       catalogPattern: entry.pattern,
@@ -404,8 +422,8 @@ function cheaperFinding(
       savingsPct: candidate.savings.pct,
       savingsAnnualUsd: candidate.savings.annualUsd,
       suggestion: crossProvider
-        ? 'Changer de provider est un autre nœud, une autre credential et un prompt à recaler : à évaluer, pas à appliquer d’un clic.'
-        : `Basculer vers ${candidate.entry.pattern} : niveau et aptitudes conservés.`,
+        ? msg('analysis.auditCheaperProviderFix')
+        : msg('analysis.auditCheaperSameFix', { candidate: candidate.entry.pattern }),
     },
   };
 }
@@ -428,20 +446,9 @@ function worthSaying(pct: number, annualUsd: number | null, thresholds: ModelAud
   return true;
 }
 
-const TASK_LABELS: Record<string, string> = {
-  translation: 'Traduction',
-  classification: 'Classification',
-  extraction: 'Extraction de données',
-  summarization: 'Résumé',
-  rewriting: 'Réécriture',
-  generation: 'Rédaction',
-  code: 'Code',
-  reasoning: 'Raisonnement',
-  conversation: 'Conversation',
-};
-
-function labelOf(task: string): string {
-  return TASK_LABELS[task] ?? task;
+/** L'économie annuelle n'est annoncée que là où des usages ont été mesurés. */
+function annualOf(annualUsd: number | null): { hasAnnual: boolean; annual: number } {
+  return { hasAnnual: annualUsd !== null, annual: annualUsd ?? 0 };
 }
 
 function formatDate(iso: string): string {

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { CHECK_CATALOG, CHECK_GROUPS, CheckScope, SaveDecision } from '@nwm/core';
+import { CheckScope, SaveDecision, checkCatalogLocalized, checkGroupsLocalized } from '@nwm/core';
 import { ApplyResult, CheckProfilesService, ResolvedProfileView } from './check-profiles.service';
 
 export interface SelectionBody {
@@ -19,7 +19,7 @@ export class CheckProfilesController {
   /** Catalogue des contrôles : c'est lui qui peuple les cases à cocher. */
   @Get('catalog')
   catalog() {
-    return { groups: CHECK_GROUPS, checks: CHECK_CATALOG };
+    return { groups: checkGroupsLocalized(), checks: checkCatalogLocalized() };
   }
 
   @Get()

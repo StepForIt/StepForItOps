@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { Finding, ModelAuditSettings } from '@prisma/client';
-import { LLM_TASKS, LLM_TASK_LABELS } from '@nwm/core';
+import { LLM_TASKS, llmTaskLabel } from '@nwm/core';
 import { ModuleId } from '../../infra/modules-registry/module-id.decorator';
 import { MODEL_AUDIT_MANIFEST } from './manifest';
 import { AuditRunResult, ModelAuditService, ModelParcSummary } from './model-audit.service';
@@ -82,7 +82,7 @@ export class ModelAuditController {
   /** Le vocabulaire des tâches, pour que l'UI ne le recopie pas. */
   @Get('task-labels')
   taskLabels(): Array<{ task: string; label: string }> {
-    return LLM_TASKS.map((task) => ({ task, label: LLM_TASK_LABELS[task] }));
+    return LLM_TASKS.map((task) => ({ task, label: llmTaskLabel(task) }));
   }
 
   /** Findings de ce module pour un workflow (raccourci de la page workflow). */

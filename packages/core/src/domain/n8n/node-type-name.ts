@@ -36,3 +36,32 @@ export function toShortNodeType(nodeType: string): string {
   }
   return nodeType;
 }
+
+/**
+ * Le paquet npm d'un type de nœud : tout ce qui précède le DERNIER point
+ * (`@scope/n8n-nodes-foo.bar` → `@scope/n8n-nodes-foo`). Le nom d'un nœud n'a
+ * jamais de point, celui d'un paquet peut en avoir.
+ */
+export function nodePackageOf(nodeType: string): string | null {
+  const dot = nodeType.lastIndexOf('.');
+  return dot > 0 ? nodeType.slice(0, dot) : null;
+}
+
+/** Faux pour les deux paquets livrés avec n8n, dont le catalogue mutualisé porte déjà la doc. */
+export function isCommunityNodeType(nodeType: string): boolean {
+  const pkg = nodePackageOf(nodeType);
+  return pkg !== null && !PACKAGE_ALIASES.some((alias) => alias.long === pkg);
+}
+
+/** Les paquets communautaires d'un workflow, chacun avec les types qu'il y sert. */
+export function communityPackagesOf(workflow: {
+  nodes?: Array<{ type: string }>;
+}): Array<{ packageName: string; nodeTypes: string[] }> {
+  const byPackage = new Map<string, Set<string>>();
+  for (const node of workflow.nodes ?? []) {
+    if (!isCommunityNodeType(node.type)) continue;
+    const pkg = nodePackageOf(node.type) as string;
+    byPackage.set(pkg, (byPackage.get(pkg) ?? new Set()).add(node.type));
+  }
+  return [...byPackage].map(([packageName, types]) => ({ packageName, nodeTypes: [...types] }));
+}

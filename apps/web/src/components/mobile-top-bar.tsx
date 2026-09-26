@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Grid, theme } from 'antd';
 import { MenuOutlined } from '@ant-design/icons';
 import { ThemedTitleV2, useThemedLayoutContext } from '@refinedev/antd';
+import { BrandMark, BrandWordmark } from './brand-mark';
 
 /** Hauteur de la barre : un élément collant de page (`position: sticky`) se pose en dessous. */
 export const MOBILE_TOP_BAR_HEIGHT = 56;
@@ -20,6 +22,7 @@ export const MOBILE_TOP_BAR_HEIGHT = 56;
 export function MobileTopBar() {
   const { token } = theme.useToken();
   const { setMobileSiderOpen } = useThemedLayoutContext();
+  const t = useTranslations('shell.mobileTopBar');
   if (Grid.useBreakpoint().lg !== false) return null;
 
   return (
@@ -37,12 +40,12 @@ export function MobileTopBar() {
         borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}
     >
-      <ThemedTitleV2 collapsed={false} text="StepForIt Ops" />
+      <ThemedTitleV2 collapsed={false} icon={<BrandMark size={26} />} text={<BrandWordmark />} />
       <Button
         type="text"
         size="large"
         icon={<MenuOutlined />}
-        aria-label="Ouvrir le menu"
+        aria-label={t('openMenu')}
         onClick={() => setMobileSiderOpen(true)}
       />
     </header>

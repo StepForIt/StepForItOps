@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { runWithConcurrency } from '../../../lib/concurrency';
 import { applyRow, fetchPlan, fetchPreview } from './bulk-env-requests';
 import { isApplicable } from './row-status';
@@ -18,6 +19,7 @@ const NO_CHOICES: RowChoices = { validated: false, force: false, confirmSkip: fa
  * qu'en série la seconde le trouve sur la cible sous son nom et le réutilise.
  */
 export function useBulkEnv(action: BulkEnvAction) {
+  const t = useTranslations('workflowsList.bulkEnv.requests');
   const [rows, setRows] = React.useState<ReviewRow[]>([]);
   const [phase, setPhase] = React.useState<'setup' | 'planning' | 'review' | 'applying'>('setup');
   const [error, setError] = React.useState<string | null>(null);
@@ -38,7 +40,7 @@ export function useBulkEnv(action: BulkEnvAction) {
       const planned = plan.filter((row): row is PlannedRow => row.status === 'planned');
       await runWithConcurrency(planned, PREVIEW_CONCURRENCY, async (row) => {
         try {
-          const preview = await fetchPreview(action, row, settings);
+          const preview = await fetchPreview(action, row, settings, t);
           patch(row.familyKey, (current) => ({ ...current, preview, previewError: undefined }));
         } catch (cause) {
           patch(row.familyKey, (current) => ({ ...current, previewError: (cause as Error).message }));
@@ -62,7 +64,7 @@ export function useBulkEnv(action: BulkEnvAction) {
       choices: NO_CHOICES,
     }));
     try {
-      const preview = await fetchPreview(action, plan, settings);
+      const preview = await fetchPreview(action, plan, settings, t);
       patch(plan.familyKey, (current) => ({ ...current, preview }));
     } catch (cause) {
       patch(plan.familyKey, (current) => ({ ...current, previewError: (cause as Error).message }));
@@ -80,7 +82,7 @@ export function useBulkEnv(action: BulkEnvAction) {
       for (const row of targets.filter(isApplicable)) {
         patch(row.plan.familyKey, (current) => ({ ...current, outcome: { state: 'running' } }));
         try {
-          const result = await applyRow(action, row, settings);
+          const result = await applyRow(action, row, settings, t);
           patch(row.plan.familyKey, (current) => ({ ...current, outcome: { state: 'done', ...result } }));
         } catch (cause) {
           patch(row.plan.familyKey, (current) => ({

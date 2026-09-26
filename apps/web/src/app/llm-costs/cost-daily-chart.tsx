@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { Empty, Space, Tooltip, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
 import { DailyCost, formatTokens, formatUsd } from './types';
+import { BRAND } from '../../lib/brand/colors';
 
 const WIDTH = 680;
 const HEIGHT = 170;
@@ -14,9 +16,11 @@ const MAX_BAR_WIDTH = 28;
 const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 
-/** "2026-08-20" → "20/08" */
-function dayLabel(date: string): string {
-  return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+/** "2026-08-20" → "20/08" (fr) ou "08/20" (en) */
+function dayLabel(date: string, locale: string): string {
+  return locale.startsWith('fr')
+    ? `${date.slice(8, 10)}/${date.slice(5, 7)}`
+    : `${date.slice(5, 7)}/${date.slice(8, 10)}`;
 }
 
 /**
@@ -24,8 +28,10 @@ function dayLabel(date: string): string {
  * comme le graphe de tendance perf — cette taille n'a pas besoin d'une lib.
  */
 export function CostDailyChart({ daily }: { daily: DailyCost[] }) {
+  const t = useTranslations('health.llmCosts.chart');
+  const locale = useLocale();
   if (daily.length === 0) {
-    return <Empty description="Pas encore d'appels LLM historisés" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    return <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   const max = Math.max(...daily.map((d) => d.costUsd), 0.000001);
@@ -36,23 +42,22 @@ export function CostDailyChart({ daily }: { daily: DailyCost[] }) {
   return (
     <Space direction="vertical" size={4} style={{ width: '100%', maxWidth: WIDTH }}>
       <Typography.Text type="secondary">
-        Coût valorisé par jour
-        {daily.length < 3 &&
-          ` · ${daily.length} jour${daily.length > 1 ? 's' : ''} d'historique pour l'instant`}
+        {t('title')}
+        {daily.length < 3 && ` · ${t('shortHistory', { count: daily.length })}`}
       </Typography.Text>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         style={{ width: '100%', maxWidth: WIDTH, height: 'auto', display: 'block' }}
         role="img"
-        aria-label="Coût quotidien"
+        aria-label={t('ariaLabel')}
       >
         {yTicks.map((tick) => {
           const y = MARGIN.top + PLOT_HEIGHT - tick * PLOT_HEIGHT;
           return (
             <g key={tick}>
-              <line x1={MARGIN.left} x2={WIDTH - MARGIN.right} y1={y} y2={y} stroke="#f0f0f0" />
+              <line x1={MARGIN.left} x2={WIDTH - MARGIN.right} y1={y} y2={y} stroke={BRAND.craie} />
               <text x={MARGIN.left - 8} y={y + 4} textAnchor="end" fontSize={11} fill="#888">
-                {formatUsd(max * tick)}
+                {formatUsd(max * tick, locale)}
               </text>
             </g>
           );
@@ -64,13 +69,19 @@ export function CostDailyChart({ daily }: { daily: DailyCost[] }) {
           return (
             <g key={day.date}>
               <Tooltip
-                title={`${dayLabel(day.date)} · ${formatUsd(day.costUsd)} · ${day.calls} appel(s) · ${formatTokens(day.promptTokens)} in / ${formatTokens(day.completionTokens)} out`}
+                title={t('barTitle', {
+                  day: dayLabel(day.date, locale),
+                  cost: formatUsd(day.costUsd, locale),
+                  calls: day.calls,
+                  tokensIn: formatTokens(day.promptTokens, locale),
+                  tokensOut: formatTokens(day.completionTokens, locale),
+                })}
               >
-                <rect x={x} y={y} width={barWidth} height={Math.max(height, 1)} fill="#1677ff" rx={2} />
+                <rect x={x} y={y} width={barWidth} height={Math.max(height, 1)} fill={BRAND.primary} rx={2} />
               </Tooltip>
               {index % labelEvery === 0 && (
                 <text x={x + barWidth / 2} y={HEIGHT - 6} textAnchor="middle" fontSize={11} fill="#888">
-                  {dayLabel(day.date)}
+                  {dayLabel(day.date, locale)}
                 </text>
               )}
             </g>

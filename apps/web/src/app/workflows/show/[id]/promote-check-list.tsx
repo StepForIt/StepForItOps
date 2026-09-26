@@ -3,10 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button, Tag } from 'antd';
-import { ruleLabel } from '../../../../lib/finding-rules';
 import { RemoteSchemaTables, RemoteTableView } from '../../../../components/remote-schema-tables';
 import { PromoteCheck } from './promote-checks';
 import type { PromotePreview } from './promote-modal';
+import { BRAND } from '../../../../lib/brand/colors';
+import type { useTranslations } from 'next-intl';
+
+export type PromoteCheckT = ReturnType<typeof useTranslations<'workflowShow.promoteCheckList'>>;
 
 const list = (items: React.ReactNode[]) => (
   <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -17,24 +20,32 @@ const list = (items: React.ReactNode[]) => (
 );
 
 /** Ce qui manque sur la cible, nommé : « table X », « colonne Y ». */
-function remoteMissingNames(tables: RemoteTableView[]): string[] {
+function remoteMissingNames(tables: RemoteTableView[], t: PromoteCheckT): string[] {
   return tables.flatMap((table) =>
     table.status === 'missing'
-      ? [`table « ${table.label ?? table.key} »`]
-      : table.columns.filter((column) => column.present === false).map((column) => `« ${column.name} »`),
+      ? [t('remoteTable', { name: table.label ?? table.key })]
+      : table.columns
+          .filter((column) => column.present === false)
+          .map((column) => t('quoted', { name: column.name })),
   );
 }
 
-export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boolean): PromoteCheck[] {
+export function buildPromoteChecks(
+  preview: PromotePreview,
+  remoteAvailable: boolean,
+  t: PromoteCheckT,
+  /** Libellé d'une règle dans la langue courante (`useRuleLabel`). */
+  ruleLabel: (code: string) => string,
+): PromoteCheck[] {
   const { gates } = preview;
   const checks: PromoteCheck[] = [];
 
   const findings = gates.findings;
   checks.push({
     key: 'findings',
-    label: 'Vérification',
+    label: t('findings.label'),
     status: findings.ok ? 'ok' : 'error',
-    summary: findings.ok ? 'OK' : `${findings.errors} erreur(s)`,
+    summary: findings.ok ? t('ok') : t('findings.errors', { count: findings.errors }),
     detail: findings.ok ? undefined : (
       <>
         {list(
@@ -44,15 +55,17 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
               <strong>{ruleLabel(finding.code)}</strong>
               {finding.nodeName && <span style={{ color: '#999' }}> — {finding.nodeName}</span>}
               <div>{finding.message}</div>
-              {finding.suggestion && <div style={{ color: '#389e0d' }}>→ {finding.suggestion}</div>}
+              {finding.suggestion && <div style={{ color: BRAND.success }}>→ {finding.suggestion}</div>}
             </>
           )),
         )}
         {findings.errors > findings.items.length && (
-          <p style={{ margin: '4px 0' }}>… et {findings.errors - findings.items.length} autre(s).</p>
+          <p style={{ margin: '4px 0' }}>
+            {t('findings.more', { count: findings.errors - findings.items.length })}
+          </p>
         )}
         <Link href="/findings">
-          <Button size="small">Ouvrir les findings</Button>
+          <Button size="small">{t('findings.open')}</Button>
         </Link>
       </>
     ),
@@ -61,14 +74,16 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
   const tests = gates.tests;
   checks.push({
     key: 'tests',
-    label: 'Tests',
+    label: t('tests.label'),
     status: tests === null ? 'neutral' : tests.ok ? 'ok' : 'error',
     summary:
       tests === null
-        ? 'aucun cas de test'
+        ? t('tests.none')
         : tests.ok
-          ? `${tests.passed}/${tests.total} OK${tests.neverRun > 0 ? ` · ${tests.neverRun} jamais joué(s)` : ''}`
-          : `${tests.failed} en échec (onglet Test)`,
+          ? tests.neverRun > 0
+            ? t('tests.okNeverRun', { passed: tests.passed, total: tests.total, neverRun: tests.neverRun })
+            : t('tests.ok', { passed: tests.passed, total: tests.total })
+          : t('tests.failed', { count: tests.failed }),
   });
 
   const subs = gates.subWorkflows;
@@ -81,35 +96,37 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
   );
   checks.push({
     key: 'sub-workflows',
-    label: 'Sous-workflows',
+    label: t('subs.label'),
     status: subs.total === 0 ? 'neutral' : subs.ok ? 'ok' : 'error',
     summary:
       subs.total === 0
-        ? 'aucun'
+        ? t('subs.none')
         : subs.ok
-          ? `${subs.mapped}/${subs.total} trouvé(s)${subs.cascade > 0 ? ` · ${subs.cascade} à créer` : ''}`
-          : `introuvable(s) : ${blockedSubs.map(subName).join(', ')}`,
+          ? subs.cascade > 0
+            ? t('subs.okCascade', { mapped: subs.mapped, total: subs.total, cascade: subs.cascade })
+            : t('subs.ok', { mapped: subs.mapped, total: subs.total })
+          : t('subs.missing', { names: blockedSubs.map(subName).join(', ') }),
     detail:
       preview.subWorkflows.length === 0
         ? undefined
         : list(
             preview.subWorkflows.map((sub) => (
               <>
-                « {subName(sub)} »{' '}
+                {t('quoted', { name: subName(sub) })}{' '}
                 {sub.targetArchived ? (
-                  <Tag color="red">archivé sur la cible</Tag>
+                  <Tag color="red">{t('subs.archived')}</Tag>
                 ) : sub.status === 'mapped' ? (
-                  <Tag color="green">trouvé</Tag>
+                  <Tag color="green">{t('subs.mapped')}</Tag>
                 ) : sub.status === 'unchanged' ? (
-                  <Tag>inchangé</Tag>
+                  <Tag>{t('subs.unchanged')}</Tag>
                 ) : sub.status === 'dynamic' ? (
-                  <Tag color="orange">id calculé à l&apos;exécution, à vérifier</Tag>
+                  <Tag color="orange">{t('subs.dynamic')}</Tag>
                 ) : preview.cascade.some((c) => c.targetName === sub.targetName) ? (
-                  <Tag color="blue">sera créé</Tag>
+                  <Tag color="blue">{t('subs.willCreate')}</Tag>
                 ) : (
-                  <Tag color="red">à promouvoir d&apos;abord</Tag>
+                  <Tag color="red">{t('subs.promoteFirst')}</Tag>
                 )}
-                <span style={{ color: '#999' }}> — nœud {sub.nodeName}</span>
+                <span style={{ color: '#999' }}> {t('subs.node', { name: sub.nodeName })}</span>
               </>
             )),
           ),
@@ -117,10 +134,10 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
 
   if (remoteAvailable) {
     const remote = gates.remoteSchema;
-    const missing = remote ? remoteMissingNames(remote.tables) : [];
+    const missing = remote ? remoteMissingNames(remote.tables, t) : [];
     checks.push({
       key: 'remote',
-      label: 'Tables distantes',
+      label: t('remote.label'),
       status:
         remote === null || remote.tables.length === 0
           ? 'neutral'
@@ -131,14 +148,14 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
               : 'ok',
       summary:
         remote === null
-          ? 'non vérifiées'
+          ? t('remote.notChecked')
           : remote.tables.length === 0
-            ? 'aucune'
+            ? t('remote.none')
             : !remote.ok
-              ? `manquant sur la cible : ${missing.join(', ')}`
+              ? t('remote.missing', { names: missing.join(', ') })
               : remote.unverified.length > 0
-                ? `${remote.unverified.length} non vérifiée(s)`
-                : 'OK',
+                ? t('remote.unverified', { count: remote.unverified.length })
+                : t('ok'),
       detail: remote && remote.tables.length > 0 ? <RemoteSchemaTables tables={remote.tables} /> : undefined,
     });
   }
@@ -146,17 +163,17 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
   const credentials = gates.credentials;
   checks.push({
     key: 'credentials',
-    label: 'Credentials',
+    label: t('credentials.label'),
     status: credentials.ok ? 'ok' : 'warning',
-    summary: credentials.ok ? 'OK' : `absents de la cible : ${credentials.missing.join(', ')}`,
+    summary: credentials.ok ? t('ok') : t('credentials.missing', { names: credentials.missing.join(', ') }),
   });
 
   if (preview.unmapped.length > 0) {
     checks.push({
       key: 'unmapped',
-      label: 'Ressources non basculées',
+      label: t('unmapped.label'),
       status: 'warning',
-      summary: `${preview.unmapped.map((r) => r.label ?? r.key).join(', ')} — resteront sur les mêmes données`,
+      summary: t('unmapped.summary', { names: preview.unmapped.map((r) => r.label ?? r.key).join(', ') }),
       detail: (
         <>
           {list(
@@ -169,7 +186,7 @@ export function buildPromoteChecks(preview: PromotePreview, remoteAvailable: boo
           )}
           <Link href="/resource-mappings/create">
             <Button size="small" style={{ marginTop: 4 }}>
-              Déclarer un mapping
+              {t('unmapped.declare')}
             </Button>
           </Link>
         </>

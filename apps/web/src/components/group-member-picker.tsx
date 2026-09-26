@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Checkbox, Empty, Input, Space, Spin, Tag, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
 import { WorkflowFamily } from '../app/workflows/workflow-row';
 import { useEnvColor, useEnvLabel } from '../lib/envs';
@@ -22,6 +23,7 @@ export function GroupMemberPicker({
   value?: string[];
   onChange?: (ids: string[]) => void;
 }) {
+  const t = useTranslations('settings.groupMemberPicker');
   const envColor = useEnvColor();
   const envLabel = useEnvLabel();
   const [families, setFamilies] = useState<WorkflowFamily[]>([]);
@@ -82,29 +84,22 @@ export function GroupMemberPicker({
   };
 
   if (!instanceId) {
-    return <Typography.Text type="secondary">Choisis d’abord une instance.</Typography.Text>;
+    return <Typography.Text type="secondary">{t('chooseInstance')}</Typography.Text>;
   }
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="small">
       <Space wrap>
         <Input.Search
-          placeholder="Filtrer par nom…"
+          placeholder={t('filterPlaceholder')}
           allowClear
           style={{ width: 260 }}
           value={term}
           onChange={(event) => setTerm(event.target.value)}
         />
-        <Typography.Text type="secondary">
-          {selected.size} workflow{selected.size > 1 ? 's' : ''} sélectionné
-          {selected.size > 1 ? 's' : ''}
-        </Typography.Text>
+        <Typography.Text type="secondary">{t('selected', { count: selected.size })}</Typography.Text>
         {hiddenCount > 0 && (
-          <Typography.Text type="secondary">
-            · dont {hiddenCount} non listé{hiddenCount > 1 ? 's' : ''} (archivé
-            {hiddenCount > 1 ? 's' : ''} ou supprimé{hiddenCount > 1 ? 's' : ''} dans n8n), conservé
-            {hiddenCount > 1 ? 's' : ''}
-          </Typography.Text>
+          <Typography.Text type="secondary">{t('hidden', { count: hiddenCount })}</Typography.Text>
         )}
       </Space>
       <div
@@ -119,7 +114,7 @@ export function GroupMemberPicker({
         {loading ? (
           <Spin size="small" />
         ) : visible.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Aucun workflow" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('empty')} />
         ) : (
           visible.map((family) => (
             <FamilyLine
@@ -153,6 +148,7 @@ function FamilyLine({
   envColor: (env: string | null | undefined) => string;
   envLabel: (env: string | null | undefined) => string;
 }) {
+  const t = useTranslations('settings.groupMemberPicker');
   const chosen = family.members.filter((member) => selected.has(member.id)).length;
 
   return (
@@ -171,7 +167,7 @@ function FamilyLine({
           style={{ cursor: 'pointer', opacity: selected.has(member.id) ? 1 : 0.55 }}
           onClick={() => onToggleMember(member.id)}
         >
-          {member.env ? envLabel(member.env) : 'env ?'}
+          {member.env ? envLabel(member.env) : t('unknownEnv')}
         </Tag>
       ))}
     </div>

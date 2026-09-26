@@ -2,11 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Card, Col, Row, Skeleton, Space, Statistic, Tag, Tooltip, Typography } from 'antd';
+import { useLocale, useTranslations } from 'next-intl';
+import { Card, Skeleton, Space, Tag, Typography } from 'antd';
 import { Table } from '../components/resizable-table';
-import { DollarOutlined, FieldTimeOutlined, RiseOutlined, WarningOutlined } from '@ant-design/icons';
+import { RiseOutlined } from '@ant-design/icons';
 import { apiGet } from '../lib/api';
 import { HomeLinks } from './home-links';
+import { DashboardHero, type HeroFigure, type HeroSignal } from './dashboard/dashboard-hero';
+import { KpiTile } from './dashboard/kpi-tile';
+import './dashboard/dashboard.css';
 
 interface ClientRollup {
   clientId: string | null;
@@ -32,14 +36,20 @@ interface Overview {
   clients: ClientRollup[];
 }
 
-function formatHours(minutes: number): string {
-  if (minutes < 60) return `${Math.round(minutes)} min`;
-  return `${(minutes / 60).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
+type HomeT = ReturnType<typeof useTranslations<'misc.home'>>;
+
+function formatHours(minutes: number, t: HomeT, locale: string): string {
+  if (minutes < 60) return t('minutes', { value: Math.round(minutes) });
+  return t('hours', { value: (minutes / 60).toLocaleString(locale, { maximumFractionDigits: 1 }) });
 }
 
-function formatSince(overview: Overview): string {
+function formatPercent(rate: number, t: HomeT): string {
+  return t('percent', { value: (rate * 100).toFixed(1) });
+}
+
+function formatSince(overview: Overview, t: HomeT, locale: string): string {
   const since = new Date(overview.since);
-  const label = since.toLocaleString('fr-FR', {
+  const date = since.toLocaleString(locale, {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
@@ -47,14 +57,16 @@ function formatSince(overview: Overview): string {
     minute: '2-digit',
   });
   return overview.lastVisitAt && new Date(overview.lastVisitAt) < since
-    ? `dernières 24 h (dernière visite : ${label})`
+    ? t('since.expired', { date })
     : overview.lastVisitAt
-      ? `depuis ta dernière visite — ${label}`
-      : `dernières 24 h (première visite)`;
+      ? t('since.lastVisit', { date })
+      : t('since.firstVisit');
 }
 
 /** La vue du matin : qu'est-ce qui a changé depuis la dernière fois qu'on a regardé. */
 export default function HomePage() {
+  const t = useTranslations('misc.home');
+  const locale = useLocale();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -83,126 +95,96 @@ export default function HomePage() {
   }
 
   const { problems, executions, drifts, coverage, llm } = overview;
-  const quiet = problems.opened === 0 && problems.regressed === 0 && drifts.length === 0;
+  const signals: HeroSignal[] = [
+    ...(problems.opened > 0
+      ? [
+          {
+            href: '/errors',
+            label: t('opened', { count: problems.opened }),
+            tone: 'corail' as const,
+          },
+        ]
+      : []),
+    ...(problems.regressed > 0
+      ? [
+          {
+            href: '/errors',
+            label: t('regressed', { count: problems.regressed }),
+            tone: 'corail' as const,
+          },
+        ]
+      : []),
+    ...(drifts.length > 0
+      ? [
+          {
+            href: '/performance',
+            label: t('drifts', { count: drifts.length }),
+            tone: 'ambre' as const,
+          },
+        ]
+      : []),
+  ];
+  const successRate = executions.successRate === null ? '—' : formatPercent(executions.successRate, t);
+  const figures: HeroFigure[] = [
+    {
+      value: formatHours(overview.timeSavedMinutes, t, locale),
+      label:
+        overview.timeSavedEstimatedMinutes > 0 ? t('figures.timeSavedEstimated') : t('figures.timeSaved'),
+      tone: 'roi',
+    },
+    {
+      value: llm.costUsd === null ? '—' : `$${llm.costUsd.toFixed(2)}`,
+      label: t('figures.aiCost'),
+      tone: 'craie',
+      href: '/llm-costs',
+    },
+  ];
 
   return (
     <div style={{ padding: 24 }}>
-      <Typography.Title level={3} style={{ marginBottom: 4 }}>
-        Tableau de bord
+      <Typography.Title level={3} style={{ marginBottom: 16 }}>
+        {t('title')}
       </Typography.Title>
-      <Typography.Text type="secondary">{formatSince(overview)}</Typography.Text>
 
-      {quiet ? (
-        <Alert
-          type="success"
-          showIcon
-          style={{ margin: '16px 0' }}
-          message="Rien de nouveau à signaler : pas de nouveau problème, pas de rechute, pas de dérive."
+      <DashboardHero since={formatSince(overview, t, locale)} signals={signals} figures={figures} />
+
+      <div className="dash-kpis">
+        <KpiTile
+          label={t('stats.executions')}
+          value={executions.total.toLocaleString(locale)}
+          tone="marine"
         />
-      ) : (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ margin: '16px 0' }}
-          message={
-            <Space wrap>
-              {problems.opened > 0 && (
-                <Link href="/errors">
-                  <Tag color="red">{problems.opened} nouveau(x) problème(s)</Tag>
-                </Link>
-              )}
-              {problems.regressed > 0 && (
-                <Link href="/errors">
-                  <Tag color="volcano" icon={<WarningOutlined />}>
-                    {problems.regressed} rechute(s)
-                  </Tag>
-                </Link>
-              )}
-              {drifts.length > 0 && (
-                <Link href="/performance">
-                  <Tag color="orange" icon={<RiseOutlined />}>
-                    {drifts.length} dérive(s) de durée
-                  </Tag>
-                </Link>
-              )}
-            </Space>
+        <KpiTile
+          label={t('stats.success')}
+          value={successRate}
+          tone={executions.successRate !== null && executions.successRate < 0.95 ? 'corail' : 'roi'}
+        />
+        <KpiTile
+          label={t('stats.openProblems')}
+          value={problems.openTotal}
+          tone={problems.openTotal > 0 ? 'corail' : 'roi'}
+          href="/errors"
+        />
+        <KpiTile
+          label={t('stats.neverAnalyzed')}
+          value={`${coverage.neverAnalyzed}/${coverage.workflows}`}
+          tone={coverage.neverAnalyzed > 0 ? 'ambre' : 'roi'}
+          href="/findings"
+        />
+        <KpiTile
+          label={t('stats.timeSaved')}
+          value={formatHours(overview.timeSavedMinutes, t, locale)}
+          tone="lagon"
+          hint={
+            overview.timeSavedEstimatedMinutes > 0
+              ? t('estimatedHint', { value: formatHours(overview.timeSavedEstimatedMinutes, t, locale) })
+              : undefined
           }
         />
-      )}
-
-      <Row gutter={[16, 16]}>
-        <Col xs={12} md={6} lg={4}>
-          <Card size="small">
-            <Statistic title="Exécutions" value={executions.total} />
-          </Card>
-        </Col>
-        <Col xs={12} md={6} lg={4}>
-          <Card size="small">
-            <Statistic
-              title="Succès"
-              value={executions.successRate === null ? '—' : `${(executions.successRate * 100).toFixed(1)} %`}
-              valueStyle={{
-                color:
-                  executions.successRate !== null && executions.successRate < 0.95 ? '#cf1322' : undefined,
-              }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} md={6} lg={4}>
-          <Card size="small">
-            <Link href="/errors">
-              <Statistic
-                title="Problèmes ouverts"
-                value={problems.openTotal}
-                valueStyle={{ color: problems.openTotal > 0 ? '#cf1322' : undefined }}
-              />
-            </Link>
-          </Card>
-        </Col>
-        <Col xs={12} md={6} lg={4}>
-          <Card size="small">
-            <Tooltip
-              title={
-                overview.timeSavedEstimatedMinutes > 0
-                  ? `Dont ${formatHours(overview.timeSavedEstimatedMinutes)} ESTIMÉES depuis le contenu des workflows : ` +
-                    "le chiffre saisi sur la page d'un workflow remplace toujours son estimation."
-                  : 'Minutes saisies par workflow × exécutions réussies.'
-              }
-            >
-              <Statistic
-                title={overview.timeSavedEstimatedMinutes > 0 ? 'Temps gagné (estimé)' : 'Temps gagné'}
-                value={formatHours(overview.timeSavedMinutes)}
-                prefix={<FieldTimeOutlined />}
-              />
-            </Tooltip>
-          </Card>
-        </Col>
-        <Col xs={12} md={6} lg={4}>
-          <Card size="small">
-            <Link href="/llm-costs">
-              <Statistic
-                title="Coût LLM"
-                value={llm.costUsd === null ? '—' : `$${llm.costUsd.toFixed(2)}`}
-                prefix={<DollarOutlined />}
-              />
-            </Link>
-          </Card>
-        </Col>
-        <Col xs={12} md={6} lg={4}>
-          <Card size="small">
-            <Link href="/findings">
-              <Statistic
-                title="Jamais analysés"
-                value={`${coverage.neverAnalyzed}/${coverage.workflows}`}
-                valueStyle={{ color: coverage.neverAnalyzed > 0 ? '#d46b08' : undefined }}
-              />
-            </Link>
-          </Card>
-        </Col>
-      </Row>
+      </div>
 
       {drifts.length > 0 && (
-        <Card size="small" title="Dérives de durée en cours" style={{ marginTop: 16 }}>
+        <Card size="small" title={t('activeDrifts')} style={{ marginBottom: 16 }}>
           <Space wrap>
             {drifts.map((drift) => (
               <Link key={drift.workflowName} href="/performance">
@@ -215,7 +197,7 @@ export default function HomePage() {
         </Card>
       )}
 
-      <Card size="small" title="Par client" style={{ marginTop: 16 }}>
+      <Card size="small" title={t('byClient')}>
         <Table
           dataSource={overview.clients}
           rowKey={(row) => row.clientId ?? '(none)'}
@@ -225,16 +207,16 @@ export default function HomePage() {
         >
           <Table.Column<ClientRollup>
             dataIndex="clientName"
-            title="Client"
+            title={t('columns.client')}
             render={(name: string, record) =>
               record.clientId ? name : <Typography.Text type="secondary">{name}</Typography.Text>
             }
           />
-          <Table.Column dataIndex="instances" title="Instances" align="right" width={90} />
-          <Table.Column dataIndex="executions" title="Exécutions" align="right" width={110} />
+          <Table.Column dataIndex="instances" title={t('columns.instances')} align="right" width={90} />
+          <Table.Column dataIndex="executions" title={t('stats.executions')} align="right" width={110} />
           <Table.Column<ClientRollup>
             dataIndex="errors"
-            title="Échecs"
+            title={t('columns.failures')}
             align="right"
             width={90}
             render={(value: number) =>
@@ -243,34 +225,33 @@ export default function HomePage() {
           />
           <Table.Column<ClientRollup>
             dataIndex="successRate"
-            title="Succès"
+            title={t('stats.success')}
             width={100}
             render={(rate: number | null) =>
               rate === null ? (
                 '—'
               ) : (
-                <Tag color={rate < 0.95 ? 'orange' : 'green'}>{(rate * 100).toFixed(1)} %</Tag>
+                <Tag color={rate < 0.95 ? 'orange' : 'green'}>{formatPercent(rate, t)}</Tag>
               )
             }
           />
           <Table.Column<ClientRollup>
             dataIndex="timeSavedMinutes"
-            title="Temps gagné"
+            title={t('stats.timeSaved')}
             align="right"
             width={110}
-            render={(minutes: number) => formatHours(minutes)}
+            render={(minutes: number) => formatHours(minutes, t, locale)}
           />
           <Table.Column<ClientRollup>
             dataIndex="llmCostUsd"
-            title="Coût LLM"
+            title={t('stats.llmCost')}
             align="right"
             width={100}
             render={(cost: number | null) => (cost === null ? '—' : `$${cost.toFixed(2)}`)}
           />
         </Table>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          Le temps gagné se règle workflow par workflow (page du workflow, « min gagnées / exécution ») ; les
-          clients se gèrent dans Paramètres → Clients.
+          {t('footnote')}
         </Typography.Text>
       </Card>
 

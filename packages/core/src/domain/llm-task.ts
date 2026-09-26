@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { ModelTier } from './model-catalog';
+import { MessageId, msg } from '../i18n/translate';
 
 /**
  * La TÂCHE d'un nœud LLM : ce que la structure ne dit pas.
@@ -36,76 +37,44 @@ export function asLlmTask(value: unknown): LlmTask {
     : 'unknown';
 }
 
-export const LLM_TASK_LABELS: Record<LlmTask, string> = {
-  translation: 'Traduction',
-  classification: 'Classification',
-  extraction: 'Extraction de données',
-  summarization: 'Résumé',
-  rewriting: 'Réécriture',
-  generation: 'Rédaction / génération',
-  code: 'Code',
-  reasoning: 'Raisonnement en plusieurs étapes',
-  conversation: 'Conversation',
-  unknown: 'Indéterminée',
+/** Le libellé d'une tâche, dans la langue courante. */
+export function llmTaskLabel(task: LlmTask): string {
+  return msg('analysis.taskLabel', { task });
+}
+
+const TASK_RATIONALES: Record<LlmTask, MessageId> = {
+  translation: 'analysis.taskRationaleTranslation',
+  classification: 'analysis.taskRationaleClassification',
+  extraction: 'analysis.taskRationaleExtraction',
+  summarization: 'analysis.taskRationaleSummarization',
+  rewriting: 'analysis.taskRationaleRewriting',
+  generation: 'analysis.taskRationaleGeneration',
+  code: 'analysis.taskRationaleCode',
+  reasoning: 'analysis.taskRationaleReasoning',
+  conversation: 'analysis.taskRationaleConversation',
+  unknown: 'analysis.taskRationaleUnknown',
 };
+
+const DEFAULT_TASK_TIERS: Array<{ task: LlmTask; minTier: ModelTier }> = [
+  { task: 'translation', minTier: 'light' },
+  { task: 'classification', minTier: 'light' },
+  { task: 'extraction', minTier: 'light' },
+  { task: 'summarization', minTier: 'light' },
+  { task: 'rewriting', minTier: 'light' },
+  { task: 'generation', minTier: 'standard' },
+  { task: 'conversation', minTier: 'standard' },
+  { task: 'code', minTier: 'standard' },
+  { task: 'reasoning', minTier: 'reasoning' },
+  { task: 'unknown', minTier: 'reasoning' },
+];
 
 /**
  * Planchers par défaut. Des positions défendables, pas des mesures : elles sont
  * livrées, éditables, et portent leur justification à l'écran.
  */
-export const DEFAULT_TASK_PROFILES: Array<{ task: LlmTask; minTier: ModelTier; rationale: string }> = [
-  {
-    task: 'translation',
-    minTier: 'light',
-    rationale:
-      'La traduction est la tâche la mieux servie par les petits modèles : le sens est dans la source, pas dans le raisonnement.',
-  },
-  {
-    task: 'classification',
-    minTier: 'light',
-    rationale:
-      'Choisir une étiquette dans une liste fermée ne demande pas de raisonnement en plusieurs étapes.',
-  },
-  {
-    task: 'extraction',
-    minTier: 'light',
-    rationale:
-      "Retrouver des champs dans un texte : la difficulté est le format de sortie, pas l'intelligence.",
-  },
-  {
-    task: 'summarization',
-    minTier: 'light',
-    rationale:
-      'Un résumé fidèle est à la portée des petits modèles ; la longueur du contexte compte davantage que le tier.',
-  },
-  {
-    task: 'rewriting',
-    minTier: 'light',
-    rationale: 'Reformuler à consigne donnée reste une transformation de surface.',
-  },
-  {
-    task: 'generation',
-    minTier: 'standard',
-    rationale:
-      'La rédaction pour un lecteur externe se juge sur le style : le tier intermédiaire est le premier qui tienne.',
-  },
-  {
-    task: 'conversation',
-    minTier: 'standard',
-    rationale: "Un échange multi-tours doit tenir le fil ; c'est là que les modèles légers décrochent.",
-  },
-  { task: 'code', minTier: 'standard', rationale: 'Du code faux coûte plus cher que le modèle économisé.' },
-  {
-    task: 'reasoning',
-    minTier: 'reasoning',
-    rationale: 'Enchaîner des déductions est exactement ce pour quoi ces modèles existent.',
-  },
-  {
-    task: 'unknown',
-    minTier: 'reasoning',
-    rationale: 'Tâche non classée : on ne propose aucune descente de gamme, faute de savoir ce qui se joue.',
-  },
-];
+export function defaultTaskProfiles(): Array<{ task: LlmTask; minTier: ModelTier; rationale: string }> {
+  return DEFAULT_TASK_TIERS.map((profile) => ({ ...profile, rationale: msg(TASK_RATIONALES[profile.task]) }));
+}
 
 /**
  * Empreinte de la classification : elle porte le GABARIT, jamais l'échantillon

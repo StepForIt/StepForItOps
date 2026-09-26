@@ -7,6 +7,7 @@ import {
   extractUrlHost,
   extractWebhookPath,
   workflowWebhookPaths,
+  msg,
 } from '@nwm/core';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -51,12 +52,10 @@ export class KumaImportService {
   /** Liste les monitors Kuma avec leur état de rattachement local et le workflow détecté. */
   async listProbes(): Promise<ImportableProbe[]> {
     if (!(await this.kumaAdmin.isConfigured())) {
-      throw new BadRequestException(
-        'Uptime Kuma non configuré : renseigner les réglages Kuma (page Monitors) ou KUMA_URL/KUMA_USERNAME/KUMA_PASSWORD dans le .env',
-      );
+      throw new BadRequestException(msg('ops.kumaNotConfigured'));
     }
     const [probes, monitors] = await Promise.all([
-      callKuma('lecture des monitors', () => this.kumaAdmin.listProbes()),
+      callKuma(msg('ops.kumaActionReadMonitors'), () => this.kumaAdmin.listProbes()),
       this.prisma.monitor.findMany({ select: { id: true, kumaPushUrl: true, config: true } }),
     ]);
     const matched = await this.matchWorkflows(probes);
@@ -84,7 +83,7 @@ export class KumaImportService {
   /** Crée les monitors locaux pour les sondes sélectionnées. */
   async importProbes(externalIds: number[]): Promise<KumaImportResult> {
     if (!externalIds?.length) {
-      throw new BadRequestException('Aucune sonde sélectionnée');
+      throw new BadRequestException(msg('ops.kumaNoProbeSelected'));
     }
     const probes = await this.listProbes();
     const byId = new Map(probes.map((p) => [p.externalId, p]));
@@ -93,13 +92,13 @@ export class KumaImportService {
     for (const externalId of externalIds) {
       const probe = byId.get(externalId);
       if (!probe) {
-        result.skipped.push({ externalId, name: `#${externalId}`, reason: 'introuvable côté Kuma' });
+        result.skipped.push({ externalId, name: `#${externalId}`, reason: msg('ops.kumaSkipNotFound') });
         continue;
       }
       if (!probe.importable) {
         const reason = probe.linkedMonitorId
-          ? 'déjà rattachée à un monitor local'
-          : `type "${probe.type}" non importable`;
+          ? msg('ops.kumaSkipAlreadyLinked')
+          : msg('ops.kumaSkipTypeNotImportable', { type: probe.type });
         result.skipped.push({ externalId, name: probe.name, reason });
         continue;
       }
@@ -112,7 +111,7 @@ export class KumaImportService {
       });
     }
     this.logger.log(
-      `Import Kuma : ${result.imported.length} sondes importées, ${result.skipped.length} ignorées`,
+      `Kuma import: ${result.imported.length} probes imported, ${result.skipped.length} skipped`,
     );
     return result;
   }

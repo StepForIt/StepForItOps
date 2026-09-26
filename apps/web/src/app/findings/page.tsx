@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Alert, Badge, Button, Input, Select, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { ExportOutlined } from '@ant-design/icons';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../../lib/api';
 import { runWithConcurrency } from '../../lib/concurrency';
 import { useInstanceScope } from '../../lib/instance-scope';
@@ -80,6 +81,7 @@ function FindingsDetail({
   /** Prévient la liste parente (compteurs de la couverture) après un « Ignorer ». */
   onChanged: () => void;
 }) {
+  const t = useTranslations('inventory.findings.detail');
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -109,7 +111,7 @@ function FindingsDetail({
     // L'échec était avalé : la liste se rechargeait à l'identique et l'on
     // attribuait à l'analyse un silence qui venait de l'appel.
     await apiPost(`/optimizer/analyze/${workflowId}`).catch((error: unknown) =>
-      message.error(`Analyse non relancée — ${(error as Error).message}`),
+      message.error(t('reanalyseFailed', { error: (error as Error).message })),
     );
     setLocalVersion((v) => v + 1);
   };
@@ -131,11 +133,11 @@ function FindingsDetail({
           type="error"
           showIcon
           style={{ marginBottom: 8 }}
-          message="Findings non chargés"
+          message={t('loadFailed')}
           description={loadError}
           action={
             <Button size="small" onClick={() => setLocalVersion((v) => v + 1)}>
-              Réessayer
+              {t('retry')}
             </Button>
           }
         />
@@ -147,32 +149,24 @@ function FindingsDetail({
           onChanged();
         }}
         emptyText={
-          loadError
-            ? 'Findings non chargés : voir le message ci-dessus.'
-            : findings.length === 0
-              ? 'Aucun finding — lance une analyse.'
-              : 'Tous les findings de ce workflow sont masqués par les filtres.'
+          loadError ? t('emptyLoadFailed') : findings.length === 0 ? t('emptyNone') : t('emptyFiltered')
         }
         actions={
           <>
             {hasDefaultNames && (
               <Button size="small" onClick={() => setRenameOpen(true)}>
-                Renommer les nœuds (suggestions IA)
+                {t('renameNodes')}
               </Button>
             )}
             {hasStickyIssues && (
               <Button size="small" onClick={() => setStickyOpen(true)}>
-                Documenter les zones (sticky notes IA)
+                {t('documentZones')}
               </Button>
             )}
           </>
         }
       />
-      {hidden > 0 && (
-        <p style={{ marginTop: 8, color: '#999' }}>
-          {hidden} finding{hidden > 1 ? 's' : ''} masqué{hidden > 1 ? 's' : ''} par les filtres
-        </p>
-      )}
+      {hidden > 0 && <p style={{ marginTop: 8, color: '#999' }}>{t('hidden', { count: hidden })}</p>}
       <RenameSuggestionsModal
         workflowId={workflowId}
         open={renameOpen}
@@ -190,6 +184,8 @@ function FindingsDetail({
 }
 
 export default function FindingsCoverage() {
+  const t = useTranslations('inventory.findings.page');
+  const locale = useLocale();
   const envColor = useEnvColor();
   const envOptions = useEnvOptions();
   const { scope, instanceName } = useInstanceScope();
@@ -256,8 +252,8 @@ export default function FindingsCoverage() {
     setBusyRows([workflowId]);
     try {
       const { ok, errors } = await runModules(workflowId);
-      if (errors.length > 0) message.warning(`Analyse : ${ok}/4 modules — ${errors[0]}`);
-      else message.success('Analyse terminée');
+      if (errors.length > 0) message.warning(t('runPartial', { ok, error: errors[0] }));
+      else message.success(t('runDone'));
       load();
       setVersion((v) => v + 1);
     } finally {
@@ -287,13 +283,13 @@ export default function FindingsCoverage() {
       );
       if (failures.length > 0) {
         message.warning(
-          `Vérification terminée sur ${targets.length} workflows — ${failures.length} analyses en échec (ex. : ${failures[0]})`,
+          t('massPartial', { total: targets.length, failed: failures.length, example: failures[0] }),
           10,
         );
         // eslint-disable-next-line no-console
         console.warn(`Analyses en échec (${failures.length}) :\n${failures.join('\n')}`);
       } else {
-        message.success(`Vérification terminée sur ${targets.length} workflows`);
+        message.success(t('massDone', { total: targets.length }));
       }
       // Pas de `load()` final : le dernier workflow terminé a déjà rafraîchi la liste.
     } finally {
@@ -320,7 +316,7 @@ export default function FindingsCoverage() {
 
   const actions = (
     <Space wrap>
-      <Tooltip title="Tous les contrôles sur chaque workflow affiché">
+      <Tooltip title={t('runAllHint')}>
         <Button
           type="primary"
           loading={allProgress !== null}
@@ -328,11 +324,11 @@ export default function FindingsCoverage() {
           onClick={() => runAllWorkflows(filtered)}
         >
           {allProgress
-            ? `Vérification… ${allProgress.done}/${allProgress.total}`
-            : `Tout vérifier (${filtered.length})`}
+            ? t('runAllProgress', { done: allProgress.done, total: allProgress.total })
+            : t('runAll', { count: filtered.length })}
         </Button>
       </Tooltip>
-      <Button onClick={load}>Rafraîchir</Button>
+      <Button onClick={load}>{t('refresh')}</Button>
     </Space>
   );
   const width = (desktop: number) => (mobile ? '100%' : desktop);
@@ -341,7 +337,7 @@ export default function FindingsCoverage() {
       <Select
         mode="multiple"
         allowClear
-        placeholder="Sévérité"
+        placeholder={t('severity')}
         style={{ minWidth: width(180) }}
         value={severities}
         onChange={setSeverities}
@@ -353,7 +349,7 @@ export default function FindingsCoverage() {
       />
       <Select
         allowClear
-        placeholder="Module avec findings"
+        placeholder={t('moduleFilter')}
         style={{ minWidth: width(200) }}
         value={moduleFilter}
         onChange={setModuleFilter}
@@ -361,27 +357,27 @@ export default function FindingsCoverage() {
       />
       <Select
         allowClear
-        placeholder="Env"
+        placeholder={t('env')}
         style={{ minWidth: width(120) }}
         value={envFilter}
         onChange={setEnvFilter}
-        options={[...envOptions, { value: 'unknown', label: 'inconnu' }]}
+        options={[...envOptions, { value: 'unknown', label: t('unknownEnv') }]}
       />
       <Space>
         <Switch checked={onlyWithFindings} onChange={setOnlyWithFindings} />
-        <span>Uniquement avec findings</span>
+        <span>{t('onlyWithFindings')}</span>
       </Space>
     </>
   );
 
   return (
-    <ResponsiveCard title="Couverture d'analyse" extra={actions}>
+    <ResponsiveCard title={t('title')} extra={actions}>
       {mobile ? (
         <>
           <MobileFilterBar
             search={search}
             onSearch={setSearch}
-            searchPlaceholder="Rechercher un workflow…"
+            searchPlaceholder={t('searchPlaceholder')}
             activeCount={
               [severities.length > 0, moduleFilter, envFilter, onlyWithFindings].filter(Boolean).length
             }
@@ -398,7 +394,7 @@ export default function FindingsCoverage() {
       ) : (
         <Space wrap style={{ marginBottom: 16 }}>
           <Input.Search
-            placeholder="Rechercher un workflow…"
+            placeholder={t('searchPlaceholder')}
             allowClear
             style={{ width: 280 }}
             value={search}
@@ -426,11 +422,11 @@ export default function FindingsCoverage() {
       >
         <Table.Column<Summary>
           dataIndex="name"
-          title="Workflow"
+          title={t('columns.workflow')}
           render={(name: string, record) => (
             <Space size={4}>
               <Link href={`/workflows/show/${record.workflowId}`}>{name}</Link>
-              <Tooltip title="Ouvrir dans n8n">
+              <Tooltip title={t('openInN8n')}>
                 <a href={record.n8nUrl} target="_blank" rel="noopener noreferrer">
                   <ExportOutlined />
                 </a>
@@ -441,17 +437,17 @@ export default function FindingsCoverage() {
         {!scope && (
           <Table.Column<Summary>
             dataIndex="instanceId"
-            title="Instance"
-            render={(id: string) => <Tag color="geekblue">{instanceName(id)}</Tag>}
+            title={t('columns.instance')}
+            render={(id: string) => <Tag color="blue">{instanceName(id)}</Tag>}
           />
         )}
         <Table.Column<Summary>
           dataIndex="env"
-          title="Env"
+          title={t('columns.env')}
           render={(env: string | null) => (env ? <Tag color={envColor(env)}>{env}</Tag> : <Tag>?</Tag>)}
         />
         <Table.Column<Summary>
-          title="Findings"
+          title={t('columns.findings')}
           render={(_, record) => (
             <Space>
               <Badge count={record.counts.error} color="red" showZero={false} />
@@ -465,25 +461,21 @@ export default function FindingsCoverage() {
         />
         <Table.Column<Summary>
           dataIndex="byModule"
-          title="Modules passés"
+          title={t('columns.modules')}
           render={(byModule: Record<string, number>) => {
             const entries = Object.entries(byModule);
             if (entries.length === 0)
-              return <Typography.Text type="secondary">jamais analysé</Typography.Text>;
+              return <Typography.Text type="secondary">{t('neverAnalysed')}</Typography.Text>;
             const clean = entries.filter(([, count]) => count === 0).length;
             return (
               <Space size={4} wrap>
                 {entries
                   .filter(([, count]) => count > 0)
                   .map(([m, count]) => (
-                    <Tag key={m}>
-                      {m} · {count} finding{count > 1 ? 's' : ''}
-                    </Tag>
+                    <Tag key={m}>{t('moduleCount', { module: m, count })}</Tag>
                   ))}
                 {clean > 0 && (
-                  <Typography.Text type="secondary">
-                    {clean} module{clean > 1 ? 's' : ''} OK
-                  </Typography.Text>
+                  <Typography.Text type="secondary">{t('modulesOk', { count: clean })}</Typography.Text>
                 )}
               </Space>
             );
@@ -491,13 +483,13 @@ export default function FindingsCoverage() {
         />
         <Table.Column<Summary>
           dataIndex="lastCheckAt"
-          title="Dernière analyse"
-          render={(d: string | null) => (d ? new Date(d).toLocaleString('fr-FR') : '—')}
+          title={t('columns.lastCheck')}
+          render={(d: string | null) => (d ? new Date(d).toLocaleString(locale) : '—')}
         />
         <Table.Column<Summary>
           title=""
           render={(_, record) => (
-            <Tooltip title="Tous les contrôles, IA incluse">
+            <Tooltip title={t('runHint')}>
               <Button
                 size="small"
                 type="primary"
@@ -505,7 +497,7 @@ export default function FindingsCoverage() {
                 disabled={allProgress !== null && !busyRows.includes(record.workflowId)}
                 onClick={() => runAll(record.workflowId)}
               >
-                Vérifier
+                {t('run')}
               </Button>
             </Tooltip>
           )}

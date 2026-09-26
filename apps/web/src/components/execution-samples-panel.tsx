@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Empty, InputNumber, Space, Tag, message } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Table } from './resizable-table';
 import { apiGet } from '../lib/api';
 
@@ -30,6 +31,8 @@ export function ExecutionSamplesPanel({
   workflowId: string;
   active?: boolean;
 }) {
+  const t = useTranslations('reviewTools.executionSamples');
+  const tCommon = useTranslations('common');
   const [data, setData] = useState<SamplesResponse | null>(null);
   const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -51,21 +54,21 @@ export function ExecutionSamplesPanel({
       <Alert
         type="info"
         showIcon
-        message="Ce que chaque nœud a vraiment renvoyé"
+        message={t('title')}
         description={
           <>
-            Relevé sur les dernières exécutions de ce workflow. Sert à deux choses : répondre à «{' '}
-            <i>qu&apos;est-ce que ce nœud sort, en vrai ?</i> » quand on écrit une expression, et alimenter
-            les contrôles « Champs » — une expression qui lit un champ absent d&apos;ici remonte en finding (
-            <code>field-unknown</code>), un champ mal orthographié aussi (<code>field-typo</code>).
+            {t.rich('description', {
+              i: (chunks) => <i>{chunks}</i>,
+              code: (chunks) => <code>{chunks}</code>,
+            })}
           </>
         }
       />
       <Space wrap>
-        <span>Exécutions échantillonnées :</span>
+        <span>{t('sampled')}</span>
         <InputNumber min={1} max={100} value={limit} onChange={(v) => setLimit(v ?? 10)} />
         {data && data.sampledExecutions !== limit && (
-          <Tag>{data.sampledExecutions} exécution(s) exploitée(s)</Tag>
+          <Tag>{t('used', { count: data.sampledExecutions })}</Tag>
         )}
       </Space>
       <Table
@@ -76,18 +79,18 @@ export function ExecutionSamplesPanel({
         pagination={false}
         scroll={{ y: 420 }}
         locale={{
-          emptyText: <Empty description="Aucune exécution exploitable." />,
+          emptyText: <Empty description={t('empty')} />,
         }}
       >
-        <Table.Column<NodeSamples> dataIndex="node" title="Nœud" width={220} />
+        <Table.Column<NodeSamples> dataIndex="node" title={tCommon('columns.node')} width={220} />
         <Table.Column<NodeSamples>
-          title="Échantillon"
+          title={t('sample')}
           width={140}
-          render={(_, record) => `${record.items} items / ${record.executions} exéc.`}
+          render={(_, record) => t('sampleValue', { items: record.items, executions: record.executions })}
         />
         <Table.Column<NodeSamples>
           dataIndex="fields"
-          title="Champs"
+          title={t('fields')}
           render={(fields: string[]) => (
             <Space size={[4, 4]} wrap>
               {fields.map((field) => (

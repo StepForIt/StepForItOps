@@ -13,6 +13,7 @@ import {
 import { useTable } from '../../lib/list-memory/use-list-memory';
 import { Button, Space, Tag } from 'antd';
 import { Table } from '../../components/resizable-table';
+import { useTranslations } from 'next-intl';
 import { SyncModal } from './sync-modal';
 
 interface Instance {
@@ -25,6 +26,8 @@ interface Instance {
 }
 
 export default function InstancesList() {
+  const t = useTranslations('settings.instances');
+  const tc = useTranslations('common');
   const { tableProps, sorters } = useTable<Instance>({
     resource: 'instances',
     syncWithLocation: true,
@@ -37,14 +40,14 @@ export default function InstancesList() {
       <Table {...tableProps} rowKey="id">
         <Table.Column<Instance>
           dataIndex="name"
-          title="Nom"
+          title={tc('columns.name')}
           sorter
           defaultSortOrder={getDefaultSortOrder('name', sorters)}
           render={(name: string, record) => <Link href={`/instances/show/${record.id}`}>{name}</Link>}
         />
         <Table.Column<Instance>
           dataIndex="platform"
-          title="Plateforme"
+          title={t('platform')}
           sorter
           defaultSortOrder={getDefaultSortOrder('platform', sorters)}
           render={(platform: Instance['platform']) => (
@@ -53,7 +56,7 @@ export default function InstancesList() {
         />
         <Table.Column<Instance>
           dataIndex="baseUrl"
-          title="Adresse"
+          title={t('address')}
           sorter
           defaultSortOrder={getDefaultSortOrder('baseUrl', sorters)}
           // Pour un compte Make, `baseUrl` est déduite de la zone : l'afficher
@@ -61,17 +64,19 @@ export default function InstancesList() {
           // compte, c'est la zone et la team.
           render={(baseUrl: string, record) =>
             record.platform === 'make'
-              ? `${record.zone ?? '—'}${record.externalTeamId ? ` · team ${record.externalTeamId}` : ''}`
+              ? record.externalTeamId
+                ? t('makeAddressTeam', { zone: record.zone ?? '—', team: record.externalTeamId })
+                : (record.zone ?? '—')
               : baseUrl
           }
         />
         <Table.Column<Instance>
-          title="Actions"
+          title={tc('columns.actions')}
           className="row-actions"
           render={(_, record) => (
             <Space>
               <Button size="small" type="primary" onClick={() => setSyncInstance(record)}>
-                Synchroniser
+                {t('sync')}
               </Button>
               <ShowButton hideText size="small" recordItemId={record.id} />
               <EditButton hideText size="small" recordItemId={record.id} />

@@ -8,6 +8,7 @@ import {
   N8N_API_PORT,
   NODE_CATALOG_PORT,
   NOTIFICATION_PORT,
+  PACKAGE_DOCS_PORT,
   STORAGE_PORT,
   VCS_PORT,
   WORKFLOW_PLATFORM_PORT,
@@ -18,7 +19,7 @@ import { N8nApiAdapter, N8nPlatformAdapter } from '@nwm/adapter-n8n-api';
 import { MakeApiAdapter } from '@nwm/adapter-make-api';
 import { N8nMcpCatalogAdapter } from '@nwm/adapter-node-catalog';
 import { LiteLlmPricingAdapter } from '@nwm/adapter-model-pricing';
-import { Context7DocsAdapter } from '@nwm/adapter-docs';
+import { Context7DocsAdapter, NpmReadmeAdapter } from '@nwm/adapter-docs';
 import { GithubVcsAdapter } from '@nwm/adapter-github';
 import { GdriveStorageAdapter } from '@nwm/adapter-gdrive';
 import { AnthropicAiAdapter } from '@nwm/adapter-anthropic';
@@ -59,6 +60,7 @@ import { SwitchingAiAdapter } from './switching-ai.adapter';
     { provide: NODE_CATALOG_PORT, useClass: N8nMcpCatalogAdapter },
     { provide: MODEL_PRICING_PORT, useClass: LiteLlmPricingAdapter },
     { provide: DOCS_PORT, useClass: Context7DocsAdapter },
+    { provide: PACKAGE_DOCS_PORT, useClass: NpmReadmeAdapter },
     { provide: VCS_PORT, useClass: GithubVcsAdapter },
     { provide: STORAGE_PORT, useClass: GdriveStorageAdapter },
     {
@@ -93,6 +95,7 @@ import { SwitchingAiAdapter } from './switching-ai.adapter';
     NODE_CATALOG_PORT,
     MODEL_PRICING_PORT,
     DOCS_PORT,
+    PACKAGE_DOCS_PORT,
     VCS_PORT,
     STORAGE_PORT,
     AI_PORT,
