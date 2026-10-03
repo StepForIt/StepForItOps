@@ -15,7 +15,11 @@
       "filterWorkflow": "Filter by workflow",
       "grouped": "Grouped by env",
       "flat": "By n8n workflow",
-      "nothingToExport": "Nothing to export"
+      "nothingToExport": "Nothing to export",
+      "empty": {
+        "title": "No version yet",
+        "text": "Every sync takes a snapshot of your workflows: a full history, restorable in one click."
+      }
     },
     "actions": {
       "compare": "Compare",
@@ -185,7 +189,12 @@
       "save": "Save",
       "cancel": "Cancel",
       "labelPlaceholder": "E.g. NocoDB · CRM contacts",
-      "emptyAuto": "Empty = automatic name."
+      "emptyAuto": "Empty = automatic name.",
+      "emptyNone": {
+        "title": "No external resource detected",
+        "text": "Databases, tables and APIs your workflows call show up here: see who uses them before you change anything.",
+        "otherEnvs": "Also show dev and preprod"
+      }
     },
     "nocodb": {
       "title": "Find the real names (NocoDB)",
@@ -268,8 +277,8 @@
         "detected": "{count, plural, one {# detected link} other {# detected links}}",
         "manual": "{count, plural, one {# manual link} other {# manual links}}"
       },
-      "noWorkflow": "No workflows",
-      "noWorkflowDescription": "Sync an instance from the Workflows page: the map is built from the workflows already synced.",
+      "noWorkflow": "No workflow on the map",
+      "noWorkflowDescription": "Import your workflows: the map draws who calls whom, so you see at a glance what a change drags along.",
       "nothingToShow": "Nothing to show with these filters",
       "nothingToShowDescription": "No link matches. Uncheck “Hide isolated” to see all workflows, or add a manual link.",
       "graphTitle": "Diagram ({nodes, plural, one {# workflow} other {# workflows}}, {links, plural, one {# link} other {# links}})",
@@ -388,6 +397,10 @@
         "findings": "Findings",
         "modules": "Modules run",
         "lastCheck": "Last analysis"
+      },
+      "empty": {
+        "title": "No workflow to check yet",
+        "text": "Import your workflows: every analysis catches mistakes before they reach production."
       }
     }
   },
@@ -396,7 +409,11 @@
     "title": "Ignored findings",
     "refresh": "Refresh",
     "module": "Module",
-    "empty": "No rules",
+    "empty": {
+      "title": "No exclusion rule",
+      "text": "Every finding is shown. What is normal for you is marked “ignore” from the Findings page, once for every environment.",
+      "cta": "Go to findings"
+    },
     "familyHint": "The same business workflow in all its declared environments",
     "family": "{family} — all envs",
     "global": "all workflows",
@@ -427,6 +444,7 @@
       "mode": "Mode",
       "status": "Status",
       "started": "Started"
-    }
+    },
+    "emptyCta": "Pick a workflow to test"
   }
 }

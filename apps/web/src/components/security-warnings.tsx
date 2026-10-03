@@ -6,7 +6,8 @@ import { Alert } from 'antd';
 
 /**
  * Bannière d'avertissement quand la plateforme tourne sans protection :
- * pas d'authentification front, API sans jeton, ou secret de session absent.
+ * pas d'authentification front, API sans jeton, secret de session absent, ou
+ * secrets d'instance stockés en clair (pas de `SECRETS_KEY`).
  * Volontairement bruyante — une install de prod correctement configurée ne la
  * voit jamais, et en dev local elle rappelle que tout est ouvert.
  */
@@ -15,6 +16,7 @@ const MESSAGES = {
   'auth-open': 'authOpen',
   'api-open': 'apiOpen',
   'no-session-secret': 'noSessionSecret',
+  'secrets-plain': 'secretsPlain',
 } as const;
 
 function isKnown(code: string): code is keyof typeof MESSAGES {

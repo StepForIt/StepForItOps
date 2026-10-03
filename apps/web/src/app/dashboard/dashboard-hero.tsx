@@ -31,7 +31,7 @@ export function DashboardHero({
 }) {
   const t = useTranslations('misc.home.hero');
   return (
-    <section className="dash-hero">
+    <section className="dash-hero" data-studio="dash-hero">
       <NodeMotif />
       <div className="dash-hero-main">
         <div className="dash-hero-kicker">{since}</div>

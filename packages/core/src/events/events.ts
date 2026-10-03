@@ -1,9 +1,13 @@
+import { ApiKeyTier } from '../domain/api-key-expiry';
 import { PlatformId } from '../ports/workflow-platform.port';
 
 /** Catalogue des événements inter-modules. */
 export const EVENTS = {
   workflowSynced: 'workflow.synced',
   instanceSynced: 'instance.synced',
+  instanceApiKeyExpiring: 'instance.apiKeyExpiring',
+  instanceApiKeyExpired: 'instance.apiKeyExpired',
+  instanceApiKeyRejected: 'instance.apiKeyRejected',
   workflowUpdated: 'workflow.updated',
   versionCreated: 'version.created',
   verificationCompleted: 'verification.completed',
@@ -61,6 +65,30 @@ export interface InstanceSyncedEvent {
   instanceId: string;
   /** `workflow` : resynchro d'un seul workflow de cette instance. */
   scope: 'instance' | 'workflow';
+}
+
+/**
+ * La clé API d'une instance franchit un palier de son échéance (`J-14`, `J-3`) ou
+ * vient d'expirer. Une émission par palier et par clé : le cron quotidien ne répète pas.
+ */
+export interface InstanceApiKeyExpiryEvent {
+  instanceId: string;
+  instanceName: string;
+  tier: ApiKeyTier;
+  expiresAt: string; // ISO
+  occurredAt: string; // ISO
+}
+
+/**
+ * La plateforme de l'instance vient de refuser sa clé (401/403). Une émission par
+ * refus : les synchros suivantes, refusées elles aussi, n'en émettent pas d'autre.
+ */
+export interface InstanceApiKeyRejectedEvent {
+  instanceId: string;
+  instanceName: string;
+  status: number;
+  reason: string;
+  occurredAt: string; // ISO
 }
 
 export interface VersionCreatedEvent {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { msg } from '@nwm/core';
+import { apiKeyExpiryState, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PlatformSettingsService } from '../../infra/settings/platform-settings.service';
 
@@ -16,6 +16,14 @@ export interface DashboardOverview {
   executions: { total: number; errors: number; successRate: number | null };
   problems: { opened: number; regressed: number; openTotal: number };
   drifts: Array<{ workflowName: string; ratio: number; alertedAt: string }>;
+  /** Clés API à traiter maintenant : refusées, expirées ou sous J-14. Un état, pas un
+   * événement de la fenêtre — une clé qui expire demain compte même si on l'a déjà vue. */
+  apiKeys: Array<{
+    instanceId: string;
+    instanceName: string;
+    state: 'rejected' | 'expired' | 'soon';
+    expiresAt: string | null;
+  }>;
   coverage: { workflows: number; neverAnalyzed: number };
   llm: { costUsd: number | null; calls: number };
   timeSavedMinutes: number;
@@ -171,6 +179,8 @@ export class DashboardService {
       null,
     );
 
+    const apiKeys = await this.apiKeysToRenew(now);
+
     return {
       since: since.toISOString(),
       lastVisitAt: visit?.lastSeenAt.toISOString() ?? null,
@@ -185,6 +195,7 @@ export class DashboardService {
         ratio: row.ratio,
         alertedAt: row.alertedAt.toISOString(),
       })),
+      apiKeys,
       coverage: {
         workflows: workflows.length,
         neverAnalyzed: workflows.filter((w) => w._count.analysisRuns === 0).length,
@@ -197,5 +208,27 @@ export class DashboardService {
       timeSavedEstimatedMinutes: [...perInstance.values()].reduce((sum, acc) => sum + acc.savedEstimated, 0),
       clients: [...clients.values()].sort((a, b) => b.executions - a.executions),
     };
+  }
+
+  private async apiKeysToRenew(now: Date): Promise<DashboardOverview['apiKeys']> {
+    const rows = await this.prisma.instance.findMany({
+      where: {
+        OR: [
+          { apiKeyRejectedAt: { not: null } },
+          { apiKeyExpiresAt: { lte: new Date(now.getTime() + 14 * 24 * 3600 * 1000) } },
+        ],
+      },
+      select: { id: true, name: true, apiKeyExpiresAt: true, apiKeyRejectedAt: true },
+      orderBy: { name: 'asc' },
+    });
+    return rows.map((row) => {
+      const state = apiKeyExpiryState(row.apiKeyExpiresAt, now);
+      return {
+        instanceId: row.id,
+        instanceName: row.name,
+        state: row.apiKeyRejectedAt ? 'rejected' : state === 'expired' ? 'expired' : 'soon',
+        expiresAt: row.apiKeyExpiresAt?.toISOString() ?? null,
+      };
+    });
   }
 }

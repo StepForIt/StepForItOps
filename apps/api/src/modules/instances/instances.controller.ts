@@ -1,5 +1,5 @@
 import { PlatformId } from '@nwm/core';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { InstanceInput, InstancesService, InstanceView } from './instances.service';
 import { RefineListQuery, toPrismaListArgs, withTotalCount } from '../../common/crud/paginate';
@@ -24,14 +24,19 @@ export class InstancesController {
     return this.instances.get(id);
   }
 
+  /** `x-user-email` (posé par le proxy de la console) signe un refus de l'accès complet (`fullAccessDismiss`). */
   @Post()
-  create(@Body() input: InstanceInput): Promise<InstanceView> {
-    return this.instances.create(input);
+  create(@Body() input: InstanceInput, @Headers('x-user-email') author?: string): Promise<InstanceView> {
+    return this.instances.create(input, author);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() input: Partial<InstanceInput>): Promise<InstanceView> {
-    return this.instances.update(id, input);
+  update(
+    @Param('id') id: string,
+    @Body() input: Partial<InstanceInput>,
+    @Headers('x-user-email') author?: string,
+  ): Promise<InstanceView> {
+    return this.instances.update(id, input, author);
   }
 
   @Delete(':id')

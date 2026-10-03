@@ -15,7 +15,7 @@ const CACHE_TTL_MS = 10_000;
 
 let cached: { at: number; state: DbAuthState | null } = { at: 0, state: null };
 
-function apiBase(): string {
+export function apiBase(): string {
   return process.env.API_INTERNAL_URL || 'http://localhost:3001';
 }
 

@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const { withSentryConfig } = require('@sentry/nextjs');
 // Traductions : pas de préfixe de langue dans l'URL, la config de requête lit le cookie (src/i18n/request.ts).
@@ -8,6 +9,11 @@ const withNextIntl = require('next-intl/plugin')('./src/i18n/request.ts');
 // assets du déploiement précédent : les caches ne sont purgés qu'au changement
 // de nom, et un nom figé ne change jamais.
 const buildId = process.env.BUILD_ID || String(Date.now());
+
+// Ajouts propres aux images StepForIt (`src/private/`), exclus du dépôt public : sans eux, l'emplacement monté par
+// le layout retombe sur un composant vide.
+const privateUi = path.join(__dirname, 'src/private/index.tsx');
+const privateUiAlias = fs.existsSync(privateUi) ? privateUi : path.join(__dirname, 'src/private-ui-stub.tsx');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -25,6 +31,14 @@ const nextConfig = {
   ...(process.env.NEXT_KEEP_COMPILED_PAGES && {
     onDemandEntries: { maxInactiveAge: 60 * 60 * 1000, pagesBufferLength: 100 },
   }),
+  webpack(config, { dev }) {
+    config.resolve.alias['@private-ui'] = privateUiAlias;
+    // Parcours e2e seulement : webpack écrit son cache sur disque après une minute sans compilation
+    // — plus de 2 Go une fois toutes les routes compilées, soit 30 à 55 s de serveur figé sur un
+    // runner de CI, en plein parcours. Personne ne relit ce cache (la CI part d'un dossier vide).
+    if (dev && process.env.NEXT_WEBPACK_MEMORY_CACHE) config.cache = { type: 'memory' };
+    return config;
+  },
   // Inliné dans le bundle client au build (cf. buildId ci-dessus).
   env: { NEXT_PUBLIC_BUILD_ID: buildId },
   transpilePackages: [
@@ -37,7 +51,7 @@ const nextConfig = {
   ],
   // Proxy interne vers l'API : le navigateur ne parle qu'à l'origine du front
   // (pas de CORS, pas de localhost:3001 en dur). En Docker, l'API est jointe
-  // via le réseau interne (http://api:3001).
+  // via le réseau interne (http://stepforit-ops-api:3001, alias posé par les compose).
   async rewrites() {
     const apiInternalUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001';
     return [{ source: '/backend/:path*', destination: `${apiInternalUrl}/:path*` }];

@@ -16,6 +16,10 @@ const ROUTES = [
   '/app-logs',
   '/resources',
   '/instances',
+  '/instances/create',
+  '/instances/show/prechauffage',
+  '/instances/edit/prechauffage',
+  '/config-transfer',
   // Appelées par la mise en page de chaque écran. Compilées en plein parcours,
   // elles reconstruisaient le graphe client de toutes les pages gardées.
   '/api/security-status',

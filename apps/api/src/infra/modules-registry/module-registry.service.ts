@@ -24,7 +24,13 @@ export class ModuleRegistryService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
+    await this.reload();
+  }
+
+  /** Relit l'activation de la base : après une restauration complète, le cache décrit la base d'avant. */
+  async reload(): Promise<void> {
     const states = await this.prisma.moduleState.findMany();
+    this.enabledCache.clear();
     for (const state of states) this.enabledCache.set(state.id, state.enabled);
   }
 

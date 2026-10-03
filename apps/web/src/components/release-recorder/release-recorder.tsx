@@ -116,6 +116,8 @@ export function ReleaseRecorderProvider({ children }: { children: React.ReactNod
     if (mode !== 'recording') return undefined;
     return onApiWrite(({ method, path, body }) => {
       if (path.startsWith('/release-procedures')) return;
+      // Jamais un geste rejouable, et le corps porte des secrets ou une clé d'export.
+      if (path.startsWith('/config-transfer')) return;
       apiPost<{ captured: boolean }>('/release-procedures/recording/capture', { method, path, body })
         .then(({ captured }) => {
           const current = procedureRef.current;

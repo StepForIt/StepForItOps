@@ -3,6 +3,7 @@
 import React from 'react';
 import { Alert, Button, Popconfirm, Space, Tooltip, Typography, message } from 'antd';
 import {
+  AimOutlined,
   CheckCircleOutlined,
   InboxOutlined,
   ReloadOutlined,
@@ -13,6 +14,8 @@ import { useTranslations } from 'next-intl';
 import { apiPost } from '../../lib/api';
 import { runWithConcurrency } from '../../lib/concurrency';
 import { WorkflowRow } from './workflow-row';
+import { ImpactStudyModal } from '../../components/impact-study/impact-study-modal';
+import { useEnabledModules } from '../../lib/enabled-modules';
 
 /** Workflows traités de front : chaque action est un aller-retour vers n8n. */
 const BULK_CONCURRENCY = 4;
@@ -123,6 +126,10 @@ export function WorkflowBulkActions({
   const tCommon = useTranslations('common');
   const actions = bulkActions(t);
   const [running, setRunning] = React.useState<{ action: string; done: number; total: number } | null>(null);
+  // Lecture seule : l'étude se lance sans confirmation, sur tout ce qui est coché.
+  const tImpact = useTranslations('misc.impactStudy');
+  const { enabled } = useEnabledModules();
+  const [studying, setStudying] = React.useState<string[] | null>(null);
 
   const run = async (action: BulkAction, targets: WorkflowRow[]) => {
     setRunning({ action: action.key, done: 0, total: targets.length });
@@ -159,67 +166,85 @@ export function WorkflowBulkActions({
   };
 
   return (
-    <Alert
-      type="info"
-      style={{ marginBottom: 16 }}
-      icon={<CheckCircleOutlined />}
-      showIcon
-      message={
-        <Space wrap>
-          <Typography.Text strong>{t('selected', { count: selected.length })}</Typography.Text>
-          {actions.map((action) => {
-            const targets = selected.filter(action.eligible);
-            const ignored = selected.length - targets.length;
-            const busy = running?.action === action.key;
-            const label = busy
-              ? t('running', { label: action.label, done: running.done, total: running.total })
-              : action.label;
-            return (
-              <Popconfirm
-                key={action.key}
-                title={t('confirmTitle', { label: action.label, count: targets.length })}
-                description={
-                  action.description || ignored > 0 ? (
-                    <div style={{ maxWidth: 340 }}>
-                      {action.description}
-                      {ignored > 0 && (
-                        <div style={{ marginTop: action.description ? 4 : 0 }}>
-                          {t('ignored', { count: ignored, reason: action.skipped })}
-                        </div>
-                      )}
-                    </div>
-                  ) : undefined
-                }
-                okText={action.label}
-                cancelText={tCommon('cancel')}
-                disabled={targets.length === 0 || running !== null}
-                onConfirm={() => run(action, targets)}
-              >
-                <Tooltip
-                  title={
-                    targets.length === 0
-                      ? t('noTarget', { reason: action.skipped || t('emptySelection') })
-                      : undefined
+    <>
+      <Alert
+        type="info"
+        style={{ marginBottom: 16 }}
+        icon={<CheckCircleOutlined />}
+        showIcon
+        message={
+          <Space wrap>
+            <Typography.Text strong>{t('selected', { count: selected.length })}</Typography.Text>
+            {actions.map((action) => {
+              const targets = selected.filter(action.eligible);
+              const ignored = selected.length - targets.length;
+              const busy = running?.action === action.key;
+              const label = busy
+                ? t('running', { label: action.label, done: running.done, total: running.total })
+                : action.label;
+              return (
+                <Popconfirm
+                  key={action.key}
+                  title={t('confirmTitle', { label: action.label, count: targets.length })}
+                  description={
+                    action.description || ignored > 0 ? (
+                      <div style={{ maxWidth: 340 }}>
+                        {action.description}
+                        {ignored > 0 && (
+                          <div style={{ marginTop: action.description ? 4 : 0 }}>
+                            {t('ignored', { count: ignored, reason: action.skipped })}
+                          </div>
+                        )}
+                      </div>
+                    ) : undefined
                   }
+                  okText={action.label}
+                  cancelText={tCommon('cancel')}
+                  disabled={targets.length === 0 || running !== null}
+                  onConfirm={() => run(action, targets)}
                 >
-                  <Button
-                    size="small"
-                    icon={action.icon}
-                    loading={busy}
-                    disabled={targets.length === 0 || (running !== null && !busy)}
+                  <Tooltip
+                    title={
+                      targets.length === 0
+                        ? t('noTarget', { reason: action.skipped || t('emptySelection') })
+                        : undefined
+                    }
                   >
-                    {label}
-                    {ignored > 0 && targets.length > 0 ? ` (${targets.length})` : ''}
-                  </Button>
-                </Tooltip>
-              </Popconfirm>
-            );
-          })}
-          <Button size="small" type="link" onClick={onClear} disabled={running !== null}>
-            {t('clearAll')}
-          </Button>
-        </Space>
-      }
-    />
+                    <Button
+                      size="small"
+                      icon={action.icon}
+                      loading={busy}
+                      disabled={targets.length === 0 || (running !== null && !busy)}
+                    >
+                      {label}
+                      {ignored > 0 && targets.length > 0 ? ` (${targets.length})` : ''}
+                    </Button>
+                  </Tooltip>
+                </Popconfirm>
+              );
+            })}
+            {(!enabled || enabled.includes('impact-study')) && (
+              <Tooltip title={tImpact('actionHint')}>
+                <Button
+                  size="small"
+                  icon={<AimOutlined />}
+                  disabled={running !== null}
+                  onClick={() => setStudying(selected.map((workflow) => workflow.id))}
+                >
+                  {tImpact('action')}
+                </Button>
+              </Tooltip>
+            )}
+            <Button size="small" type="link" onClick={onClear} disabled={running !== null}>
+              {t('clearAll')}
+            </Button>
+          </Space>
+        }
+      />
+      <ImpactStudyModal
+        subject={studying ? { kind: 'workflows', ids: studying } : null}
+        onClose={() => setStudying(null)}
+      />
+    </>
   );
 }

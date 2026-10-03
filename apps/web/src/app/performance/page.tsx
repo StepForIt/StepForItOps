@@ -6,6 +6,7 @@ import { Button, Input, Segmented, Space, Switch, Tag, Tooltip, Typography, mess
 import { Table } from '../../components/resizable-table';
 import { ReloadOutlined, RiseOutlined } from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { apiGet, apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
@@ -116,7 +117,26 @@ export default function PerformancePage() {
         // Écran étroit : le tableau défile dans la carte au lieu de déborder de la page.
         scroll={{ x: 960 }}
         locale={{
-          emptyText: t('empty'),
+          emptyText: loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              needsInstances
+              search={search}
+              onClearSearch={() => setSearch('')}
+              filterCount={onlyDrifted ? 1 : 0}
+              onResetFilters={() => setOnlyDrifted(false)}
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Button type="primary" icon={<ReloadOutlined />} onClick={sampleNow} loading={sampling}>
+                    {t('empty.cta')}
+                  </Button>
+                ),
+              }}
+            />
+          ),
         }}
         expandable={{
           expandedRowRender: (record: WorkflowPerfSummary) => (

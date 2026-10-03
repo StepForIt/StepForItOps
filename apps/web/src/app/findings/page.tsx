@@ -14,6 +14,8 @@ import { StickySuggestionsModal } from '../../components/sticky-suggestions-moda
 import { DisplayFinding, FindingsList } from '../../components/findings-list';
 import { useEnvColor, useEnvOptions } from '../../lib/envs';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
+import { SyncInstancesButton } from '../../components/empty-state/sync-instances-button';
 import { useIsMobile } from '../../components/mobile/use-is-mobile';
 import { MobileFilterBar } from '../../components/mobile/mobile-filter-bar';
 import { ResponsiveCard } from '../../components/mobile/responsive-card';
@@ -331,6 +333,32 @@ export default function FindingsCoverage() {
       <Button onClick={load}>{t('refresh')}</Button>
     </Space>
   );
+  const resetFilters = () => {
+    setSeverities([]);
+    setModuleFilter(undefined);
+    setEnvFilter(undefined);
+    setOnlyWithFindings(false);
+  };
+  const filterCount = [severities.length > 0, moduleFilter, envFilter, onlyWithFindings].filter(
+    Boolean,
+  ).length;
+  // Une ligne par workflow : liste vide sans filtre = rien d'importé, donc rien à contrôler.
+  const empty = loading ? (
+    <EmptyPlaceholder />
+  ) : (
+    <ListEmptyState
+      needsInstances
+      search={search}
+      onClearSearch={() => setSearch('')}
+      filterCount={filterCount}
+      onResetFilters={resetFilters}
+      idle={{
+        title: t('empty.title'),
+        text: t('empty.text'),
+        actions: <SyncInstancesButton instanceId={scope} onSynced={load} />,
+      }}
+    />
+  );
   const width = (desktop: number) => (mobile ? '100%' : desktop);
   const filterControls = (
     <>
@@ -378,15 +406,8 @@ export default function FindingsCoverage() {
             search={search}
             onSearch={setSearch}
             searchPlaceholder={t('searchPlaceholder')}
-            activeCount={
-              [severities.length > 0, moduleFilter, envFilter, onlyWithFindings].filter(Boolean).length
-            }
-            onReset={() => {
-              setSeverities([]);
-              setModuleFilter(undefined);
-              setEnvFilter(undefined);
-              setOnlyWithFindings(false);
-            }}
+            activeCount={filterCount}
+            onReset={resetFilters}
           >
             {filterControls}
           </MobileFilterBar>
@@ -408,6 +429,7 @@ export default function FindingsCoverage() {
         mobileLayout={{ badges: ['env'] }}
         rowKey="workflowId"
         loading={loading}
+        locale={{ emptyText: empty }}
         expandable={{
           expandedRowRender: (record) => (
             <FindingsDetail

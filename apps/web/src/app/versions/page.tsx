@@ -16,6 +16,8 @@ import { VersionDiffModal } from './diff-modal';
 import { LatestVersionsTable } from './latest-table';
 import { VersionFamiliesTable } from './families-table';
 import { VersionHandlers } from './version-actions';
+import { ListEmptyState } from '../../components/empty-state/list-empty-state';
+import { SyncInstancesButton } from '../../components/empty-state/sync-instances-button';
 
 interface ArchiveMove {
   workflowName: string;
@@ -143,6 +145,20 @@ export default function VersionsList() {
     refreshLists();
   };
 
+  // Pas encore de version : elles naissent de la synchro, qu'on propose sur place.
+  const empty = (
+    <ListEmptyState
+      needsInstances
+      filterCount={onlyWorkflow ? 1 : 0}
+      onResetFilters={() => setOnlyWorkflow(null)}
+      idle={{
+        title: t('empty.title'),
+        text: t('empty.text'),
+        actions: <SyncInstancesButton instanceId={scope} onSynced={refreshLists} />,
+      }}
+    />
+  );
+
   return (
     <List
       headerButtons={
@@ -196,6 +212,7 @@ export default function VersionsList() {
           scope={scope}
           instanceName={instanceName}
           handlers={handlers}
+          empty={empty}
         />
       ) : (
         <LatestVersionsTable
@@ -203,6 +220,7 @@ export default function VersionsList() {
           scope={scope}
           instanceName={instanceName}
           handlers={handlers}
+          empty={empty}
         />
       )}
       <RestoreModal versionId={restoreId} onClose={closeRestore} />

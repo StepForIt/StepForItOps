@@ -385,13 +385,21 @@
   "exportTargets": {
     "enabled": "Enabled",
     "yes": "yes",
-    "no": "no"
+    "no": "no",
+    "empty": {
+      "title": "No external backup",
+      "text": "Send every version of your workflows to GitHub or Google Drive: a copy outside the platform, always up to date."
+    }
   },
   "workflowGroups": {
     "group": "Group",
     "workflows": "Workflows",
     "none": "none",
-    "duplicateTooltip": "Duplicate all the group's workflows to an env"
+    "duplicateTooltip": "Duplicate all the group's workflows to an env",
+    "empty": {
+      "title": "No group yet",
+      "text": "Sort your workflows by business area (billing, CRM…) to filter, check and verify them in batches."
+    }
   },
   "workflowGroupEdit": {
     "thisGroup": "this group",
@@ -410,12 +418,52 @@
     "deleteConfirm": "Delete this client? Its instances remain, unassigned.",
     "new": "New client",
     "rename": "Rename client",
-    "name": "Client name"
+    "name": "Client name",
+    "empty": {
+      "title": "No client yet",
+      "text": "Group each client’s instances to follow their ROI, errors and costs on a single screen."
+    }
   },
   "resourceMappings": {
     "discover": "Discover from a workflow",
     "provider": "Provider",
     "logicalName": "Logical name",
-    "envs": "Environments"
+    "envs": "Environments",
+    "empty": {
+      "title": "No environment mapping",
+      "text": "Say once which dev base matches which prod base: promotion rewires everything on its own."
+    }
+  },
+  "apiKey": {
+    "column": "Key expires on",
+    "noDate": "no date",
+    "noDateLong": "Key without an expiry date.",
+    "expiresOn": "Expires on {date}",
+    "rejectedTag": "refused",
+    "rejected": "API key of {name} refused by the platform.",
+    "expired": "API key of {name} expired on {date}.",
+    "soon": "API key of {name}: expires on {date}.",
+    "open": "Open",
+    "replace": "Replace the key"
+  },
+  "fullAccess": {
+    "title": "Full access to this instance",
+    "intro": "With the n8n owner account, Ops reads the n8n version and the nodes actually installed on this instance, and can carry out administration actions. Without it, those features stay closed.",
+    "storage": "The password is stored encrypted on the server and is never shown again nor sent back to the screen: only the email stays visible.",
+    "email": "n8n owner email",
+    "password": "Password",
+    "saveWith": "Save with full access",
+    "continueWithout": "Continue without",
+    "dontAskAgain": "Don't ask me again for this instance",
+    "partialTag": "partial access",
+    "banner": "Partial access: the n8n owner account of {name} is not set.",
+    "fill": "Set it up",
+    "dismiss": "Don't ask again for this instance",
+    "dismissedOn": "Full access declined on {date}",
+    "dismissedBy": " by {by}",
+    "askAgain": "Ask for full access again",
+    "saved": "Owner account saved: full access is on.",
+    "dismissed": "Got it: Ops won't ask again for this instance.",
+    "askedAgain": "Ops will ask for full access again for this instance."
   }
 }

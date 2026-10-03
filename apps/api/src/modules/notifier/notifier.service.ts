@@ -6,6 +6,8 @@ import {
   AlertDigestBuffer,
   EVENTS,
   ErrorGroupNotableEvent,
+  InstanceApiKeyExpiryEvent,
+  InstanceApiKeyRejectedEvent,
   MonitorRelayEvent,
   NOTIFICATION_PORT,
   NotificationMessage,
@@ -264,6 +266,57 @@ export class NotifierService {
         .filter(Boolean)
         .join('\n'),
     };
+    for (const channel of channels) {
+      try {
+        await this.dispatch(channel, message);
+      } catch (error) {
+        this.logger.warn(`Alert failed on "${channel.name}": ${(error as Error).message}`);
+      }
+    }
+  }
+
+  @OnEvent(EVENTS.instanceApiKeyExpiring)
+  async onApiKeyExpiring(event: InstanceApiKeyExpiryEvent): Promise<void> {
+    await this.apiKey({
+      title: msg('ops.alertApiKeyExpiringTitle', {
+        instance: event.instanceName,
+        days: event.tier === 'J-3' ? 3 : 14,
+      }),
+      body: [
+        msg('ops.alertApiKeyExpiresAt', { date: event.expiresAt.slice(0, 10) }),
+        msg('ops.alertApiKeyRenew'),
+      ].join('\n'),
+    });
+  }
+
+  @OnEvent(EVENTS.instanceApiKeyExpired)
+  async onApiKeyExpired(event: InstanceApiKeyExpiryEvent): Promise<void> {
+    await this.apiKey({
+      title: msg('ops.alertApiKeyExpiredTitle', { instance: event.instanceName }),
+      body: [
+        msg('ops.alertApiKeyExpiresAt', { date: event.expiresAt.slice(0, 10) }),
+        msg('ops.alertApiKeyRenew'),
+      ].join('\n'),
+    });
+  }
+
+  @OnEvent(EVENTS.instanceApiKeyRejected)
+  async onApiKeyRejected(event: InstanceApiKeyRejectedEvent): Promise<void> {
+    await this.apiKey({
+      title: msg('ops.alertApiKeyRejectedTitle', { instance: event.instanceName }),
+      body: [
+        msg('ops.alertApiKeyRejectedBody', { status: event.status, reason: event.reason }),
+        msg('ops.alertApiKeyRejectedImpact'),
+      ].join('\n'),
+    });
+  }
+
+  /** Diffusion sur les canaux qui suivent les clés API d'instance. */
+  private async apiKey(message: NotificationMessage): Promise<void> {
+    if (!(await this.registry.isEnabled(NOTIFIER_MANIFEST.id))) return;
+    const channels = await this.prisma.notificationChannel.findMany({
+      where: { enabled: true, onApiKey: true },
+    });
     for (const channel of channels) {
       try {
         await this.dispatch(channel, message);

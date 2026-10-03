@@ -15,7 +15,11 @@
       "filterWorkflow": "Filtrer par workflow",
       "grouped": "Groupées par env",
       "flat": "Par workflow n8n",
-      "nothingToExport": "Rien à exporter"
+      "nothingToExport": "Rien à exporter",
+      "empty": {
+        "title": "Aucune version pour l’instant",
+        "text": "Chaque synchro photographie vos workflows : un historique complet, restaurable en un clic."
+      }
     },
     "actions": {
       "compare": "Comparer",
@@ -185,7 +189,12 @@
       "save": "Enregistrer",
       "cancel": "Annuler",
       "labelPlaceholder": "Ex : NocoDB · Contacts CRM",
-      "emptyAuto": "Vide = nom automatique."
+      "emptyAuto": "Vide = nom automatique.",
+      "emptyNone": {
+        "title": "Aucune ressource externe détectée",
+        "text": "Bases, tables et API appelées par vos workflows apparaissent ici : on voit qui les utilise avant d’y toucher.",
+        "otherEnvs": "Voir aussi dev et preprod"
+      }
     },
     "nocodb": {
       "title": "Retrouver les vrais noms (NocoDB)",
@@ -268,8 +277,8 @@
         "detected": "{count, plural, one {# lien détecté} other {# liens détectés}}",
         "manual": "{count, plural, one {# lien manuel} other {# liens manuels}}"
       },
-      "noWorkflow": "Aucun workflow",
-      "noWorkflowDescription": "Synchronise une instance depuis la page Workflows : la carte se construit à partir des workflows déjà synchronisés.",
+      "noWorkflow": "Aucun workflow sur la carte",
+      "noWorkflowDescription": "Importez vos workflows : la carte dessine qui appelle qui, pour voir d’un coup d’œil ce qu’une modification entraîne.",
       "nothingToShow": "Rien à afficher avec ces filtres",
       "nothingToShowDescription": "Aucun lien ne correspond. Décoche « Masquer les isolés » pour voir tous les workflows, ou ajoute un lien manuel.",
       "graphTitle": "Schéma ({nodes} workflows, {links} liens)",
@@ -388,6 +397,10 @@
         "findings": "Findings",
         "modules": "Modules passés",
         "lastCheck": "Dernière analyse"
+      },
+      "empty": {
+        "title": "Aucun workflow à contrôler pour l’instant",
+        "text": "Importez vos workflows : chaque analyse repère les erreurs avant qu’elles n’arrivent en prod."
       }
     }
   },
@@ -396,7 +409,11 @@
     "title": "Findings ignorés",
     "refresh": "Rafraîchir",
     "module": "Module",
-    "empty": "Aucune règle",
+    "empty": {
+      "title": "Aucune règle d’exclusion",
+      "text": "Tout finding est affiché. Ce qui est normal chez vous se marque « ignorer » depuis la page Findings, une fois pour tous les environnements.",
+      "cta": "Aller aux findings"
+    },
     "familyHint": "Le même workflow métier dans tous ses environnements déclarés",
     "family": "{family} — tous env.",
     "global": "tous les workflows",
@@ -427,6 +444,7 @@
       "mode": "Mode",
       "status": "Statut",
       "started": "Démarré"
-    }
+    },
+    "emptyCta": "Choisir un workflow à tester"
   }
 }

@@ -28,6 +28,7 @@ import { useIsMobile } from '../../components/mobile/use-is-mobile';
 import { MOBILE_TOP_BAR_HEIGHT } from '../../components/mobile-top-bar';
 import { WorkflowsMobileList } from './mobile/workflows-mobile-list';
 import { FamiliesMobileList } from './mobile/families-mobile-list';
+import { WorkflowsEmptyState } from './workflows-empty-state';
 
 interface GroupOption {
   id: string;
@@ -225,7 +226,24 @@ export default function WorkflowsList() {
       block={block}
     />
   );
+  // Liste vide : la raison et le geste qui en sort (ajouter une instance, la
+  // synchroniser, retirer la recherche ou les filtres) plutôt qu'une page blanche.
+  const empty = (
+    <WorkflowsEmptyState
+      search={filters.q}
+      filterCount={activeFilterCount(filters, { scoped: Boolean(scope) })}
+      instanceId={scope ?? filters.instanceId ?? null}
+      onSynced={refreshList}
+      onClearSearch={() => {
+        setText('');
+        set('q')(undefined);
+      }}
+      onResetFilters={() => setFilters({ ...DEFAULT_FILTERS, q: filters.q })}
+      onShowArchived={() => setFilters((current) => ({ ...current, archived: 'all' }))}
+    />
+  );
   const listProps = {
+    empty,
     filters: crudFilters,
     search: filters.q,
     instanceId: scope ?? filters.instanceId ?? null,

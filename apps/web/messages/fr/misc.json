@@ -435,10 +435,10 @@
       "intro": "Génère un fichier JSON contenant les instances n8n, les cibles d'export, les mappings d'environnement, les monitors, les réglages (IA, monitoring, généraux), l'état des modules, les exclusions de findings, les groupes de workflows et les liens manuels de la carte — à importer sur une autre instance de la plateforme. Les workflows et leurs versions ne font pas partie de l'export (ils se resynchronisent depuis n8n).",
       "disabled": {
         "title": "Export désactivé sur cette installation",
-        "body": "Le fichier sortirait en clair les clés API n8n, les tokens GitHub / Drive, le mot de passe Uptime Kuma, les clés des fournisseurs IA et les jetons de heartbeat. L'export ne s'ouvre qu'en local (CONFIG_EXPORT_ENABLED=1, posé par docker-compose.override.yml), là où le fichier ne quitte pas la machine. L'import ci-dessous reste disponible."
+        "body": "Le fichier porte les clés API n8n, les tokens GitHub / Drive, le mot de passe Uptime Kuma et les clés des fournisseurs IA (scellés par une clé d'export), et les jetons de heartbeat en clair. L'export ne s'ouvre qu'en local (docker-compose.override.yml) ou, sur un serveur, le temps d'un export en redéployant sur docker-compose.export.yml. L'import ci-dessous reste disponible."
       },
       "includeSecrets": "Inclure les secrets (clés API n8n, tokens GitHub / Drive)",
-      "secretsWarning": "Le fichier contiendra des secrets en clair : ne le partagez pas et supprimez-le après import.",
+      "secretsWarning": "Les secrets sortent scellés par votre clé d'export : sans elle, le fichier ne les rend à personne.",
       "download": "Télécharger la configuration"
     },
     "import": {
@@ -446,19 +446,67 @@
       "file": "Fichier de configuration",
       "drop": "Déposez le fichier de configuration ici (ou cliquez)",
       "dropHint": "Fichier JSON généré par l'export d'une autre instance",
-      "twoPasses": {
-        "title": "Sur une base vierge, importez en deux passes",
-        "body": "Les monitors, exclusions, groupes et liens manuels pointent vers des workflows : ils ne se rétablissent qu'une fois ceux-ci synchronisés. 1) importez (les instances sont créées), 2) synchronisez les workflows depuis la page Instances, 3) ré-importez le même fichier en « Fusionner » — les références manquantes signalées ci-dessous se recolleront."
-      },
       "merge": "Fusionner (met à jour l'existant)",
       "skipExisting": "Ne pas toucher l'existant",
       "preview": "Prévisualisation de « {file} » (export du {date}{secrets, select, with {, avec secrets} other {, sans secrets}})",
       "previewHint": "Rien n'a encore été écrit : vérifiez puis confirmez l'import.",
       "confirm": "Appliquer cet import ?",
       "run": "Importer",
-      "done": "Import terminé"
+      "done": "Import terminé",
+      "onePass": {
+        "title": "Import en une passe",
+        "body": "Les monitors, exclusions, groupes et liens manuels pointent vers des workflows : l'import synchronise d'abord les instances concernées, puis rattache ces références dans la foulée."
+      },
+      "syncs": "Instances synchronisées",
+      "syncPlanned": "{instance} : sera synchronisée pendant l'import",
+      "syncDone": "{instance} : {count, plural, one {# workflow synchronisé} other {# workflows synchronisés}}"
     },
-    "warnings": "Avertissements"
+    "warnings": "Avertissements",
+    "backup": {
+      "title": "Sauvegarde complète (tout, historique compris)",
+      "intro": "Toutes les données de la plateforme, sans exception : historique des versions, erreurs et exécutions, exclusions de findings, leçons de l'assistant, conversations et pièces jointes, coûts IA, procédures, réglages et secrets. À la différence de l'export ci-dessus, qui voyage vers une AUTRE plateforme et fusionne, elle remet CETTE plateforme exactement dans l'état de la sauvegarde. Un fichier scellé par votre clé d'export, qui peut peser lourd.",
+      "secretsWarning": "Le fichier entier est scellé par votre clé d'export : sans elle, il ne se restaure pas.",
+      "download": "Télécharger la sauvegarde complète",
+      "downloadDisabled": "Téléchargement fermé sur cette installation (même règle que l'export ci-dessus). La restauration reste disponible.",
+      "restoreTitle": "Restaurer une sauvegarde complète",
+      "drop": "Déposez le fichier de sauvegarde ici (ou cliquez)",
+      "uploading": "Téléversement et vérification du fichier…",
+      "dropHint": "Rien n'est écrit à ce stade : le fichier est relu en entier, puis un aperçu s'affiche.",
+      "preview": "« {file} » : sauvegarde du {date}, {rows, plural, one {# ligne} other {# lignes}}",
+      "replaceWarning": "La restauration REMPLACE tout : chaque table est vidée puis remplie avec le fichier. Ce qui a été créé depuis la sauvegarde sera perdu. En cas d'échec, rien n'est modifié.",
+      "columns": {
+        "table": "Table",
+        "current": "Aujourd'hui (remplacé)",
+        "inFile": "Dans la sauvegarde"
+      },
+      "confirm": {
+        "title": "Tout remplacer par cette sauvegarde ?",
+        "body": "Irréversible : les données actuelles seront effacées."
+      },
+      "run": "Tout remplacer",
+      "done": "Restauration terminée : {rows, plural, one {# ligne restaurée} other {# lignes restaurées}}",
+      "doneHint": "Rechargez la page. Si la connexion était gérée par la plateforme, une reconnexion peut être demandée.",
+      "toast": {
+        "refused": "Fichier refusé : {error}",
+        "restored": "Sauvegarde restaurée",
+        "failed": "Échec de la restauration (rien n'a été modifié) : {error}"
+      }
+    },
+    "exportKey": {
+      "title": "Votre clé d'export",
+      "body": "Ce fichier ne s'ouvrira qu'avec cette clé. Copiez-la dans votre gestionnaire de mots de passe, à part du fichier.",
+      "keyLabel": "Clé d'export",
+      "copy": "Copier la clé",
+      "copied": "Clé copiée",
+      "once": "Elle ne sera plus jamais affichée : ni la plateforme ni le navigateur ne la gardent.",
+      "stored": "J'ai rangé cette clé en lieu sûr",
+      "download": "Télécharger",
+      "cancel": "Annuler",
+      "askLabel": "Clé d'export du fichier",
+      "sealedConfig": "Fichier scellé : donnez la clé d'export affichée lors de l'export.",
+      "sealedBackup": "Sauvegarde scellée : donnez la clé d'export affichée lors du téléchargement.",
+      "open": "Ouvrir le fichier"
+    }
   },
   "globalError": {
     "title": "La console a rencontré une erreur",
@@ -502,7 +550,12 @@
     "hero": {
       "allGood": "Tout roule",
       "toLook": "À regarder"
-    }
+    },
+    "apiKeys": "{count, plural, one {# clé API à traiter} other {# clés API à traiter}}",
+    "apiKeysTitle": "Clés API",
+    "apiKeyRejected": "refusée",
+    "apiKeyExpired": "expirée le {date}",
+    "apiKeySoon": "expire le {date}"
   },
   "homeLinks": {
     "instances": {
@@ -574,7 +627,8 @@
       "relayBroken": "surveillance muette",
       "modelLifecycle": "modèle déprécié",
       "on": "actif",
-      "off": "coupé"
+      "off": "coupé",
+      "apiKey": "clé API"
     },
     "sendTest": "Envoyer un message d'essai",
     "deleteConfirm": "Supprimer ce canal ?",
@@ -592,7 +646,13 @@
       "onRelayBroken": "Surveillance muette",
       "onRelayBrokenHelp": "Le push vers la sonde Uptime Kuma échoue : plus rien ne signalerait l'arrêt de ce monitor.",
       "onModelLifecycle": "Modèle déprécié ou retiré",
-      "onModelLifecycleHelp": "Un modèle appelé par un workflow du parc n'est plus servi par son provider."
+      "onModelLifecycleHelp": "Un modèle appelé par un workflow du parc n'est plus servi par son provider.",
+      "onApiKey": "Clé API d’instance",
+      "onApiKeyHelp": "Échéance à J-14 et J-3, clé expirée ou refusée par la plateforme."
+    },
+    "empty": {
+      "title": "Aucun canal d’alerte",
+      "text": "Branchez Slack ou un webhook : les nouveaux problèmes, rechutes et dérives arrivent là où votre équipe regarde."
     }
   },
   "procedures": {
@@ -624,6 +684,33 @@
       "ok": "Dupliquer",
       "created": "« {name} » créée",
       "same": "Même saut que l'originale"
+    },
+    "export": "Exporter",
+    "exportAll": "Exporter tout",
+    "exportSelected": "Exporter ({count})",
+    "exported": "{count, plural, one {# procédure exportée} other {# procédures exportées}}",
+    "import": "Importer",
+    "impact": "Étude d'impact",
+    "importModal": {
+      "title": "Importer des procédures",
+      "drop": "Dépose un fichier d'export de procédures (.json)",
+      "conflict": "Si une procédure du même nom existe",
+      "skip": "La garder (ignorer celle du fichier)",
+      "replace": "La remplacer",
+      "duplicate": "Importer à côté, sous un autre nom",
+      "ok": "Importer {count, plural, =0 {} one {# procédure} other {# procédures}}",
+      "outcome": {
+        "create": "créée",
+        "replace": "remplacée",
+        "skip": "ignorée"
+      },
+      "as": "sous « {name} »",
+      "done": "{created} créée(s), {replaced} remplacée(s), {skipped} ignorée(s)",
+      "invalid": "Fichier illisible : ce n'est pas du JSON"
+    },
+    "empty": {
+      "title": "Aucune procédure de mise en ligne",
+      "text": "Enregistrez une mise en prod une fois, comme une macro : elle se rejoue ensuite en un clic, sans rien oublier."
     }
   },
   "setup": {
@@ -640,5 +727,51 @@
     "confirm": "Confirmer le mot de passe",
     "submit": "Créer le compte et entrer",
     "googleLater": "La connexion Google (par domaine Workspace) peut s'ajouter ensuite par variables d'environnement — voir docs/authentification.md."
+  },
+  "impactStudy": {
+    "titleOne": "Étude d'impact · {name}",
+    "titleMany": "Étude d'impact · {count, plural, one {# workflow} other {# workflows}}",
+    "titleProcedure": "Étude d'impact du rejeu · {name}",
+    "level": {
+      "critical": "Critique",
+      "high": "Élevé",
+      "medium": "Modéré",
+      "low": "Faible"
+    },
+    "summary": {
+      "highest": "Niveau le plus haut",
+      "workflows": "Workflows",
+      "executions": "Exécutions ({days} j)",
+      "externalCallers": "Appelants touchés",
+      "resources": "Ressources externes",
+      "byLevel": "{count} {level}"
+    },
+    "header": "{executions} exéc. · {callers, plural, =0 {aucun appelant} one {# appelant} other {# appelants}}",
+    "detail": {
+      "callers": "Appelé par ({count})",
+      "callees": "Appelle ({count})",
+      "entryPoints": "Portes d'entrée",
+      "resources": "Ressources externes ({count})",
+      "unmapped": "Aucun mapping d'env : une bascule ne la suivra pas",
+      "activity": "Activité",
+      "lastExecution": "Dernière exécution le {date} · {failures, plural, =0 {aucun échec} one {# échec} other {# échecs}} sur 30 j",
+      "noExecution": "Aucune exécution historisée sur 30 j",
+      "partial": "Scénario Make : appels, portes et ressources ne sont pas encore lus."
+    },
+    "empty": "Rien à étudier",
+    "procedure": {
+      "hop": "Rejoué sur",
+      "from": "Depuis",
+      "to": "Vers",
+      "nothing": "Aucun geste automatique : seules des étapes manuelles.",
+      "steps": "étape {steps}",
+      "role": {
+        "write": "écrit",
+        "run": "exécuté",
+        "read": "lu"
+      }
+    },
+    "action": "Étude d'impact",
+    "actionHint": "Ce qu'engage une modification : appelants, exécutions, URL, ressources"
   }
 }

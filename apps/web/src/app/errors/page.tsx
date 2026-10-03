@@ -9,7 +9,6 @@ import {
   Card,
   Col,
   Dropdown,
-  Empty,
   Input,
   Modal,
   Row,
@@ -42,6 +41,7 @@ import { ErrorGroupDrawer } from './error-group-drawer';
 import { OTHERS_COLOR, buildColorMap } from './error-chart-colors';
 import type { BackfillResult, ErrorGroupRow, ErrorStats, ExecutionErrorRow, RegroupResult } from './types';
 import { BRAND } from '../../lib/brand/colors';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 
 const PERIODS = [7, 30, 90];
 
@@ -61,6 +61,8 @@ export default function ErrorsPage() {
   const [workflowFilter, setWorkflowFilter] = usePersistedState<string | null>('workflow', null);
   const [dayFilter, setDayFilter] = useState<string | null>(null);
   const [search, setSearch] = usePersistedState('search', '');
+  // Saisie en cours : la recherche ne part qu'à Entrée, mais « Effacer » doit vider le champ.
+  const [searchText, setSearchText] = useState(search);
   const [view, setView] = usePersistedState('view', 'groups', {
     validate: (value) => VIEWS.find((option) => option === value),
   });
@@ -270,12 +272,21 @@ export default function ErrorsPage() {
         />
       )}
 
+      {/* Une page d'erreurs vide est une bonne nouvelle : elle le dit comme telle. */}
       {empty && (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('emptyPeriod')}>
-          <Button icon={<CloudDownloadOutlined />} onClick={() => setBackfillOpen(true)}>
-            {t('page.backfillMenu')}
-          </Button>
-        </Empty>
+        <ListEmptyState
+          needsInstances
+          idle={{
+            tone: 'success',
+            title: t('empty.title', { days }),
+            text: t('empty.text'),
+            actions: (
+              <Button icon={<CloudDownloadOutlined />} onClick={() => setBackfillOpen(true)}>
+                {t('page.backfillMenu')}
+              </Button>
+            ),
+          }}
+        />
       )}
 
       {!empty && (
@@ -378,7 +389,8 @@ export default function ErrorsPage() {
               placeholder={t('page.searchPlaceholder')}
               allowClear
               style={{ width: 320 }}
-              defaultValue={search}
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
               onSearch={setSearch}
             />
             {filterLabel && (
@@ -416,7 +428,20 @@ export default function ErrorsPage() {
               tableLayout="fixed"
               onRow={(record) => ({ onClick: () => setSelected(record), style: { cursor: 'pointer' } })}
               locale={{
-                emptyText: <Empty description={t('page.noError')} image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+                emptyText: tableProps.loading ? (
+                  <EmptyPlaceholder />
+                ) : (
+                  <ListEmptyState
+                    search={search}
+                    onClearSearch={() => {
+                      setSearchText('');
+                      setSearch('');
+                    }}
+                    filterCount={(workflowFilter ? 1 : 0) + (dayFilter ? 1 : 0)}
+                    onResetFilters={clearFilters}
+                    idle={{ tone: 'success', title: t('page.noError') }}
+                  />
+                ),
               }}
             >
               <Table.Column

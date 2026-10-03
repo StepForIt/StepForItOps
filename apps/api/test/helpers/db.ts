@@ -54,6 +54,6 @@ export async function resetDb(): Promise<void> {
   // défaut » et le cache « désactivé ». Un test qui désactive un module le
   // réactive donc lui-même, par la même route.
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "Workflow", "Instance", "ResourceMapping", "PlatformSettings", "ReleaseProcedure", "NodePackageDoc" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "Workflow", "Instance", "ResourceMapping", "PlatformSettings", "ReleaseProcedure", "NodePackageDoc", "NotificationChannel" RESTART IDENTITY CASCADE',
   );
 }

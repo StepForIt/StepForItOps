@@ -60,7 +60,8 @@
     "codes": {
       "authOpen": "Access without authentication — create the admin via /setup.",
       "apiOpen": "API_ACCESS_TOKEN missing: anonymous API.",
-      "noSessionSecret": "SESSION_SECRET missing."
+      "noSessionSecret": "SESSION_SECRET missing.",
+      "secretsPlain": "Instance secrets stored in clear: set SECRETS_KEY to encrypt them."
     }
   },
   "installApp": {

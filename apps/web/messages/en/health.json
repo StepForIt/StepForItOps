@@ -129,6 +129,10 @@
       "backfillTitle": "Import error history from n8n",
       "backfillOk": "Import the last {days} days",
       "backfillInstance": "Choose the n8n instance"
+    },
+    "empty": {
+      "title": "No error in the last {days} days",
+      "text": "Your monitored workflows run smoothly. Older errors can be imported in one click."
     }
   },
   "llmCosts": {
@@ -211,7 +215,12 @@
       "model": "Model",
       "budgetTitle": "Daily budget",
       "budgetHint": "Alerts once a day above the threshold. Empty = disabled.",
-      "perDay": "$ / day"
+      "perDay": "$ / day",
+      "empty": {
+        "title": "No AI call detected yet",
+        "text": "Every model call in your workflows is priced here, with nothing to install: by workflow, by model, by day.",
+        "cta": "Refresh costs"
+      }
     }
   },
   "performance": {
@@ -226,7 +235,11 @@
     "title": "Workflow performance",
     "searchPlaceholder": "Search a workflow…",
     "onlyDrifted": "Drifts only",
-    "empty": "No executions in this period.",
+    "empty": {
+      "title": "No measurement for this period yet",
+      "text": "Durations, success rates and drifts of your monitored workflows show up here from the first runs.",
+      "cta": "Measure now"
+    },
     "percent": "{value}%",
     "failures": "{count, plural, one {# failure} other {# failures}}",
     "driftTooltip": "Median ×{ratio} vs the previous {days} days",
@@ -273,7 +286,10 @@
     "refreshCatalog": "Refresh the catalog",
     "staleCatalog": "Catalog out of date ({days} d): obsolescence and savings checks paused.",
     "parc": {
-      "empty": "No LLM node in the synced fleet.",
+      "empty": {
+        "title": "No AI model audited yet",
+        "text": "The audit spots models that are retired, unfit or too expensive for the task, and prices the possible savings."
+      },
       "model": "Model",
       "status": "Status",
       "unknownTooltip": "Not in the catalog",
@@ -399,7 +415,11 @@
       "bulkTitle": "Create Kuma probes for an instance",
       "bulkOk": "Create probes",
       "bulkHint": "For each <b>active</b> workflow without a heartbeat monitor: creates the local monitor + the push probe in Uptime Kuma. You will still need to paste the heartbeat snippet into each workflow.",
-      "chooseInstance": "Choose the n8n instance"
+      "chooseInstance": "Choose the n8n instance",
+      "empty": {
+        "title": "Nothing is monitored yet",
+        "text": "A monitor warns you as soon as a workflow fails or stops beating, before your customers notice."
+      }
     }
   }
 }

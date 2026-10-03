@@ -8,6 +8,7 @@ import { Table } from '../../components/resizable-table';
 import { ScanOutlined } from '@ant-design/icons';
 import { WorkflowScanDrawer } from '../../components/workflow-scan-drawer';
 import { useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 
 interface Mapping {
   id: string;
@@ -37,7 +38,31 @@ export default function MappingsList() {
         </>
       }
     >
-      <Table {...tableProps} rowKey="id">
+      <Table
+        {...tableProps}
+        rowKey="id"
+        locale={{
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              needsInstances
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Space wrap style={{ justifyContent: 'center' }}>
+                    <Button type="primary" icon={<ScanOutlined />} onClick={() => setScanOpen(true)}>
+                      {t('discover')}
+                    </Button>
+                    <CreateButton type="default" />
+                  </Space>
+                ),
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column
           dataIndex="provider"
           title={t('provider')}

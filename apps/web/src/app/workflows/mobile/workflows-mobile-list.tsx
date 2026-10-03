@@ -9,6 +9,7 @@ import { WorkflowRow, WorkflowSelection } from '../workflow-row';
 import { RowEffect, selectionToggle, toggleExpanded } from '../../../components/mobile/mobile-gestures';
 import { WorkflowMobileItem } from './workflow-mobile-item';
 import { mobilePagination } from '../../../components/mobile/mobile-pagination';
+import { EmptyPlaceholder } from '../../../components/empty-state/list-empty-state';
 
 /** Vue plate sur mobile : une ligne par workflow n8n, dépliable. Même requête que `WorkflowsTable`. */
 export function WorkflowsMobileList({
@@ -19,6 +20,7 @@ export function WorkflowsMobileList({
   instanceName,
   selection,
   selecting,
+  empty,
 }: {
   filters: CrudFilters;
   search?: string;
@@ -28,6 +30,8 @@ export function WorkflowsMobileList({
   selection: WorkflowSelection;
   /** Mode sélection ouvert : le tap coche au lieu de déplier. */
   selecting: boolean;
+  /** Ce que montre la liste quand elle revient vide (`WorkflowsEmptyState`). */
+  empty: React.ReactNode;
 }) {
   const { enabled } = useEnabledModules();
   const showGroups = !enabled || enabled.includes('workflow-groups');
@@ -49,6 +53,7 @@ export function WorkflowsMobileList({
       dataSource={rows}
       rowKey="id"
       loading={Boolean(list.tableProps.loading) || list.syncing}
+      locale={{ emptyText: list.tableProps.loading || list.syncing ? <EmptyPlaceholder /> : empty }}
       pagination={mobilePagination(list)}
       renderItem={(workflow) => (
         <List.Item style={{ padding: 0 }}>

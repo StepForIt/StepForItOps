@@ -5,6 +5,7 @@ import { getLocale, getMessages, getTimeZone, getTranslations } from 'next-intl/
 import { Familjen_Grotesk, Inter } from 'next/font/google';
 import { RefineApp } from './refine-app';
 import { PwaRegister } from '../components/pwa-register';
+import { PrivateUi } from '@private-ui';
 import './globals.css';
 import './design-system.css';
 import { BRAND_CSS_VARS } from '../lib/brand/theme';
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body style={{ margin: 0 }}>
         <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>
           <PwaRegister />
+          <PrivateUi />
           <RefineApp>{children}</RefineApp>
         </NextIntlClientProvider>
       </body>

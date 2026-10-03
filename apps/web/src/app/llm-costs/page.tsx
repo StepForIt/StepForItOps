@@ -29,6 +29,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
+import { ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { apiGet, apiPost, apiPut } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
@@ -308,6 +309,27 @@ export default function LlmCostsPage() {
             days={days}
             loading={loading}
             totalCost={totalCost}
+            empty={
+              <ListEmptyState
+                needsInstances
+                search={search}
+                onClearSearch={() => setSearch('')}
+                idle={{
+                  title: t('page.empty.title'),
+                  text: t('page.empty.text'),
+                  actions: (
+                    <Button
+                      type="primary"
+                      icon={<ThunderboltOutlined />}
+                      loading={sampling}
+                      onClick={sampleNow}
+                    >
+                      {t('page.empty.cta')}
+                    </Button>
+                  ),
+                }}
+              />
+            }
           />
         </Card>
 

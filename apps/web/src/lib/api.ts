@@ -27,7 +27,7 @@ function apiT() {
  * Message d'erreur exploitable : JSON Nest → son `message` (stack en console si DEBUG_ERRORS=1) ;
  * réponse non JSON → c'est le proxy Next qui répond, l'API est injoignable, pas plantée.
  */
-function errorFromBody(path: string, status: number, text: string): Error {
+export function errorFromBody(path: string, status: number, text: string): Error {
   try {
     const payload = JSON.parse(text) as { message?: string | string[]; stack?: string[] };
     const message = Array.isArray(payload.message) ? payload.message.join(' · ') : payload.message;

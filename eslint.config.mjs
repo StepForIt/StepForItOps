@@ -30,6 +30,8 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       'apps/web/next-env.d.ts',
+      // Déposé par le studio vidéo, pas notre code.
+      '**/.studio/**',
     ],
   },
   js.configs.recommended,
@@ -61,6 +63,12 @@ export default tseslint.config(
       // `main.ts` (avant que le logger n'existe) portent leur commentaire.
       'no-console': 'error',
     },
+  },
+  {
+    // Le vocabulaire du studio vidéo : chargé par Playwright côté studio, jamais par le produit.
+    // Ses journaux vont dans le journal de la capture, pas dans celui d'une app.
+    files: ['studio/**/*.ts'],
+    rules: { 'no-console': 'off' },
   },
   {
     // Le service worker : ni Node ni fenêtre, son propre jeu de globales.
@@ -107,19 +115,6 @@ export default tseslint.config(
     // `process`, et le lint n'a aucun moyen de distinguer les deux moitiés.
     files: ['apps/web/audit-ux/**/*.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
-  },
-  {
-    // La vidéo promo : la capture est un parcours Playwright qui parle à qui la
-    // lance, la composition Remotion du React rendu dans un navigateur.
-    files: ['apps/promo/**/*.{ts,tsx}'],
-    languageOptions: { globals: { ...globals.node, ...globals.browser } },
-    rules: { 'no-console': 'off' },
-  },
-  {
-    // Seulement la vidéo : les fixtures Playwright s'appellent aussi `use`.
-    files: ['apps/promo/video/**/*.tsx'],
-    plugins: { 'react-hooks': reactHooks },
-    rules: reactHooks.configs.recommended.rules,
   },
   prettier,
 );

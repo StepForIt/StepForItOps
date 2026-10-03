@@ -27,5 +27,30 @@
     "env": "Env",
     "status": "Status",
     "message": "Message"
+  },
+  "emptyState": {
+    "noInstance": {
+      "title": "Connect your first n8n or Make",
+      "text": "Add an instance: its workflows land here within seconds, versioned, checked and monitored. Read only, nothing changes on your side.",
+      "cta": "Add an instance"
+    },
+    "noSearchMatch": {
+      "title": "Nothing matches \"{search}\"",
+      "text": "Check the spelling, or clear the search to see everything again.",
+      "clear": "Clear search"
+    },
+    "noFilterMatch": {
+      "title": "Nothing passes these filters",
+      "text": "{count, plural, one {# active filter hides} other {# active filters hide}} the whole list.",
+      "reset": "Clear filters"
+    },
+    "sync": {
+      "one": "Sync {name}",
+      "all": "Sync {count, plural, one {the instance} other {all # instances}}",
+      "progress": "Syncing {done}/{total}…",
+      "syncedSome": "{count, plural, one {# workflow imported} other {# workflows imported}}",
+      "syncedNone": "Sync done: the instance has no workflow yet.",
+      "failed": "Sync did not complete"
+    }
   }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "@nwm/demo",
+  "version": "0.3.0",
+  "license": "BUSL-1.1",
+  "private": true,
+  "description": "Le mode démo : la vraie console sur un parc fictif (base …_demo, n8n et IA de façade)",
+  "scripts": {
+    "stack": "sh scripts/stack.sh",
+    "n8n": "node demo-n8n.mjs",
+    "ai": "node demo-ai.mjs",
+    "api": "sh scripts/api.sh",
+    "web": "sh scripts/web.sh"
+  }
+}

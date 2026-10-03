@@ -35,6 +35,7 @@ export interface ChannelView {
   onBudget: boolean;
   onRelayBroken: boolean;
   onModelLifecycle: boolean;
+  onApiKey: boolean;
   createdAt: Date;
 }
 
@@ -50,6 +51,7 @@ export interface ChannelBody {
   onBudget?: boolean;
   onRelayBroken?: boolean;
   onModelLifecycle?: boolean;
+  onApiKey?: boolean;
 }
 
 /** Canaux d'alerte (resource Refine « notification-channels »). */
@@ -98,6 +100,7 @@ export class NotificationChannelsController {
         onBudget: body.onBudget ?? true,
         onRelayBroken: body.onRelayBroken ?? true,
         onModelLifecycle: body.onModelLifecycle ?? true,
+        onApiKey: body.onApiKey ?? true,
       },
     });
     return toView(row);
@@ -123,6 +126,7 @@ export class NotificationChannelsController {
         ...(body.onBudget !== undefined ? { onBudget: body.onBudget } : {}),
         ...(body.onRelayBroken !== undefined ? { onRelayBroken: body.onRelayBroken } : {}),
         ...(body.onModelLifecycle !== undefined ? { onModelLifecycle: body.onModelLifecycle } : {}),
+        ...(body.onApiKey !== undefined ? { onApiKey: body.onApiKey } : {}),
       },
     });
     return toView(row);
@@ -164,6 +168,7 @@ function toView(row: NotificationChannel): ChannelView {
     onBudget: row.onBudget,
     onRelayBroken: row.onRelayBroken,
     onModelLifecycle: row.onModelLifecycle,
+    onApiKey: row.onApiKey,
     createdAt: row.createdAt,
   };
 }

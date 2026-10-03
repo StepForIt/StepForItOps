@@ -4,7 +4,7 @@ WORKDIR /repo
 # Par défaut le front passe par son proxy /backend → API via le réseau Docker.
 # NEXT_PUBLIC_API_URL ne sert que pour pointer une API distante directement.
 ARG NEXT_PUBLIC_API_URL=
-ARG API_INTERNAL_URL=http://api:3001
+ARG API_INTERNAL_URL=http://stepforit-ops-api:3001
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV API_INTERNAL_URL=$API_INTERNAL_URL
 # Remontée des erreurs du front (Sentry / GlitchTip, cf. docs/sentry.md). Le
@@ -33,6 +33,8 @@ EXPOSE 3000
 CMD ["sh", "-c", "cd apps/web && ./node_modules/.bin/next dev -p 3000 -H 0.0.0.0"]
 
 FROM deps AS build
+# Versionne le cache du service worker (cf. next.config.js) ; vide ⇒ horodatage du build.
+ARG BUILD_ID=
 # .next/cache = cache de compilation Next (webpack + SWC). En cache BuildKit,
 # un déploiement ne recompile que ce qui a changé.
 RUN --mount=type=cache,id=next-web,target=/repo/apps/web/.next/cache \

@@ -27,5 +27,30 @@
     "env": "Env",
     "status": "Statut",
     "message": "Message"
+  },
+  "emptyState": {
+    "noInstance": {
+      "title": "Branchez votre premier n8n ou Make",
+      "text": "Déclarez une instance : ses workflows arrivent ici en quelques secondes, versionnés, vérifiés et surveillés. Lecture seule, rien n'est modifié chez vous.",
+      "cta": "Ajouter une instance"
+    },
+    "noSearchMatch": {
+      "title": "Rien ne correspond à « {search} »",
+      "text": "Vérifiez l'orthographe, ou effacez la recherche pour tout revoir.",
+      "clear": "Effacer la recherche"
+    },
+    "noFilterMatch": {
+      "title": "Rien ne passe ces filtres",
+      "text": "{count, plural, one {# filtre posé écarte} other {# filtres posés écartent}} toute la liste.",
+      "reset": "Retirer les filtres"
+    },
+    "sync": {
+      "one": "Synchroniser {name}",
+      "all": "Synchroniser {count, plural, one {l'instance} other {les # instances}}",
+      "progress": "Synchronisation {done}/{total}…",
+      "syncedSome": "{count, plural, one {# workflow importé} other {# workflows importés}}",
+      "syncedNone": "Synchro faite : l'instance ne contient encore aucun workflow.",
+      "failed": "La synchro n'a pas abouti"
+    }
   }
 }

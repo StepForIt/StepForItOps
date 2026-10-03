@@ -9,6 +9,7 @@ import { analysis } from './analysis';
 import { ops } from './ops';
 import { platform } from './platform';
 import { learning } from './learning';
+import { impact } from './impact';
 
 /** Un espace par domaine : chacun vit dans son fichier, et les identifiants s'écrivent `<espace>.<clé>`. */
 export const MESSAGES = {
@@ -23,4 +24,5 @@ export const MESSAGES = {
   ops,
   platform,
   learning,
+  impact,
 };

@@ -271,5 +271,16 @@
       "copy": "copy “{name}”",
       "renamed": ", renamed “{name}”"
     }
+  },
+  "empty": {
+    "notSynced": {
+      "title": "Your instance is ready, now import its workflows",
+      "text": "One click brings them here. After that, sync runs on its own every hour."
+    },
+    "allArchived": {
+      "title": "All your workflows are archived",
+      "text": "{count, plural, one {# archived workflow is hidden} other {# archived workflows are hidden}} by default.",
+      "show": "Show archived"
+    }
   }
 }

@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { envsFromChain, normalizeEnvs } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { ExportKey } from '../../infra/secrets/export-key';
 import { CONFIG_BUNDLE_KIND, CONFIG_BUNDLE_VERSION, ConfigBundle } from './config-bundle.types';
+import { SECRET_CONFIG_KEYS, sealBundle } from './config-bundle-sealing';
+import { exportKeyHttpError } from './export-key-errors';
 import { monitorInstanceId } from './monitor-instance-ref';
-
-/** Clés considérées comme sensibles dans les configs JSON (cibles export, monitors). */
-const SECRET_KEYS = ['token', 'accessToken', 'apiKey', 'clientSecret', 'refreshToken', 'password'];
 
 function stripSecrets(config: Record<string, unknown>): Record<string, unknown> {
   const clean = { ...config };
-  for (const key of SECRET_KEYS) delete clean[key];
+  for (const key of SECRET_CONFIG_KEYS) delete clean[key];
   return clean;
 }
 
@@ -17,7 +17,25 @@ function stripSecrets(config: Record<string, unknown>): Record<string, unknown> 
 export class ConfigExportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async buildBundle(includeSecrets: boolean): Promise<ConfigBundle> {
+  /**
+   * Avec secrets, la clé d'export est OBLIGATOIRE : ils ne sortent que scellés
+   * par elle, jamais en clair et jamais par `SECRETS_KEY` (cf. export-key.ts).
+   */
+  async buildBundle(includeSecrets: boolean, exportKey?: string): Promise<ConfigBundle> {
+    const key = includeSecrets ? this.exportKey(exportKey) : null;
+    const bundle = await this.readBundle(includeSecrets);
+    return key ? sealBundle(bundle, key) : bundle;
+  }
+
+  private exportKey(passphrase: string | undefined): ExportKey {
+    try {
+      return ExportKey.create(passphrase);
+    } catch (error) {
+      throw exportKeyHttpError(error, 'export');
+    }
+  }
+
+  private async readBundle(includeSecrets: boolean): Promise<ConfigBundle> {
     const [
       instances,
       targets,
@@ -31,7 +49,7 @@ export class ConfigExportService {
       groups,
       links,
     ] = await Promise.all([
-      this.prisma.instance.findMany({ orderBy: { createdAt: 'asc' } }),
+      this.prisma.instance.findMany({ orderBy: { createdAt: 'asc' }, include: { client: true } }),
       this.prisma.exportTarget.findMany({ orderBy: { createdAt: 'asc' } }),
       this.prisma.resourceMapping.findMany({ orderBy: { createdAt: 'asc' } }),
       this.prisma.monitor.findMany({
@@ -79,6 +97,13 @@ export class ConfigExportService {
         name: i.name,
         baseUrl: i.baseUrl,
         apiKey: includeSecrets ? i.apiKey : null,
+        platform: i.platform,
+        zone: i.zone,
+        externalOrgId: i.externalOrgId,
+        externalTeamId: i.externalTeamId,
+        n8nEmail: i.n8nEmail,
+        n8nPassword: includeSecrets ? i.n8nPassword : null,
+        client: i.client?.name ?? null,
       })),
       exportTargets: targets.map((t) => {
         const config = (t.config ?? {}) as Record<string, unknown>;

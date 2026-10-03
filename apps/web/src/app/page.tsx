@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card, Skeleton, Space, Tag, Typography } from 'antd';
 import { Table } from '../components/resizable-table';
-import { RiseOutlined } from '@ant-design/icons';
+import { KeyOutlined, RiseOutlined } from '@ant-design/icons';
 import { apiGet } from '../lib/api';
 import { HomeLinks } from './home-links';
 import { DashboardHero, type HeroFigure, type HeroSignal } from './dashboard/dashboard-hero';
@@ -29,6 +29,12 @@ interface Overview {
   executions: { total: number; errors: number; successRate: number | null };
   problems: { opened: number; regressed: number; openTotal: number };
   drifts: Array<{ workflowName: string; ratio: number; alertedAt: string }>;
+  apiKeys: Array<{
+    instanceId: string;
+    instanceName: string;
+    state: 'rejected' | 'expired' | 'soon';
+    expiresAt: string | null;
+  }>;
   coverage: { workflows: number; neverAnalyzed: number };
   llm: { costUsd: number | null; calls: number };
   timeSavedMinutes: number;
@@ -95,6 +101,8 @@ export default function HomePage() {
   }
 
   const { problems, executions, drifts, coverage, llm } = overview;
+  const apiKeys = overview.apiKeys ?? [];
+  const apiKeysBroken = apiKeys.some((key) => key.state !== 'soon');
   const signals: HeroSignal[] = [
     ...(problems.opened > 0
       ? [
@@ -111,6 +119,15 @@ export default function HomePage() {
             href: '/errors',
             label: t('regressed', { count: problems.regressed }),
             tone: 'corail' as const,
+          },
+        ]
+      : []),
+    ...(apiKeys.length > 0
+      ? [
+          {
+            href: '/instances',
+            label: t('apiKeys', { count: apiKeys.length }),
+            tone: apiKeysBroken ? ('corail' as const) : ('ambre' as const),
           },
         ]
       : []),
@@ -148,7 +165,7 @@ export default function HomePage() {
 
       <DashboardHero since={formatSince(overview, t, locale)} signals={signals} figures={figures} />
 
-      <div className="dash-kpis">
+      <div className="dash-kpis" data-studio="dash-kpis">
         <KpiTile
           label={t('stats.executions')}
           value={executions.total.toLocaleString(locale)}
@@ -182,6 +199,25 @@ export default function HomePage() {
           }
         />
       </div>
+
+      {apiKeys.length > 0 && (
+        <Card size="small" title={t('apiKeysTitle')} style={{ marginBottom: 16 }}>
+          <Space wrap>
+            {apiKeys.map((key) => (
+              <Link key={key.instanceId} href={`/instances/show/${key.instanceId}`}>
+                <Tag color={key.state === 'soon' ? 'orange' : 'red'} icon={<KeyOutlined />}>
+                  {key.instanceName} ·{' '}
+                  {key.state === 'rejected'
+                    ? t('apiKeyRejected')
+                    : t(key.state === 'expired' ? 'apiKeyExpired' : 'apiKeySoon', {
+                        date: key.expiresAt ? new Date(key.expiresAt).toLocaleDateString(locale) : '',
+                      })}
+                </Tag>
+              </Link>
+            ))}
+          </Space>
+        </Card>
+      )}
 
       {drifts.length > 0 && (
         <Card size="small" title={t('activeDrifts')} style={{ marginBottom: 16 }}>

@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  ApiKeyExpiryState,
   N8nApiPort,
   N8N_API_PORT,
   N8nInstanceConfig,
@@ -9,6 +10,8 @@ import {
   WorkflowPlatformPort,
   WorkflowPlatformPorts,
   WORKFLOW_PLATFORM_PORTS,
+  apiKeyExpiryState,
+  jwtExpiresAt,
   msg,
 } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -29,6 +32,12 @@ export interface InstanceInput {
   n8nEmail?: string | null;
   /** Vide ou absent lors d'un update : conserve le mot de passe existant. */
   n8nPassword?: string;
+  /**
+   * `true` : « ne plus me demander l'accès complet pour cette instance » ;
+   * `false` : redemander. Absent : inchangé. Porté par la sauvegarde elle-même,
+   * pour que « Continuer sans » n'ait qu'un aller-retour et rien à rattraper.
+   */
+  fullAccessDismiss?: boolean;
   /**
    * `n8n` (défaut) ou `make`. Déclaré et jamais deviné : c'est cette valeur qui
    * décide avec quel code on lit le contenu des workflows de cette instance.
@@ -51,11 +60,19 @@ export interface InstanceView {
   /** L'email est montré (il identifie le compte) ; le mot de passe ne l'est jamais. */
   n8nEmail: string | null;
   hasN8nLogin: boolean;
+  /** Refus de l'accès complet : qui, quand ; null tant que personne n'a refusé. */
+  fullAccessDismissedAt: Date | null;
+  fullAccessDismissedBy: string | null;
   /** Ce que cette instance sert. */
   platform: PlatformId;
   zone: string | null;
   externalOrgId: string | null;
   externalTeamId: string | null;
+  /** Échéance lue dans la clé ; null quand la clé ne porte pas de date. */
+  apiKeyExpiresAt: Date | null;
+  apiKeyState: ApiKeyExpiryState;
+  /** Premier refus (401/403) encore en cours, sinon null. */
+  apiKeyRejectedAt: Date | null;
   createdAt: Date;
 }
 
@@ -69,10 +86,14 @@ const VIEW_SELECT = {
   clientId: true,
   n8nEmail: true,
   n8nPassword: true,
+  fullAccessDismissedAt: true,
+  fullAccessDismissedBy: true,
   platform: true,
   zone: true,
   externalOrgId: true,
   externalTeamId: true,
+  apiKeyExpiresAt: true,
+  apiKeyRejectedAt: true,
 } as const;
 
 function toView(row: {
@@ -84,10 +105,14 @@ function toView(row: {
   clientId: string | null;
   n8nEmail: string | null;
   n8nPassword: string | null;
+  fullAccessDismissedAt: Date | null;
+  fullAccessDismissedBy: string | null;
   platform: string;
   zone: string | null;
   externalOrgId: string | null;
   externalTeamId: string | null;
+  apiKeyExpiresAt: Date | null;
+  apiKeyRejectedAt: Date | null;
 }): InstanceView {
   return {
     id: row.id,
@@ -97,12 +122,33 @@ function toView(row: {
     clientId: row.clientId,
     n8nEmail: row.n8nEmail,
     hasN8nLogin: Boolean(row.n8nEmail && row.n8nPassword),
+    fullAccessDismissedAt: row.fullAccessDismissedAt,
+    fullAccessDismissedBy: row.fullAccessDismissedBy,
     platform: row.platform as PlatformId,
     zone: row.zone,
     externalOrgId: row.externalOrgId,
     externalTeamId: row.externalTeamId,
+    apiKeyExpiresAt: row.apiKeyExpiresAt,
+    apiKeyState: apiKeyExpiryState(row.apiKeyExpiresAt, new Date()),
+    apiKeyRejectedAt: row.apiKeyRejectedAt,
     createdAt: row.createdAt,
   };
+}
+
+/**
+ * Ce qu'une clé enregistrée remet à zéro : son échéance est relue, et le palier
+ * alerté comme le refus appartenaient à la clé précédente.
+ */
+function keyFields(apiKey: string) {
+  return { apiKey, apiKeyExpiresAt: jwtExpiresAt(apiKey), apiKeyAlertedTier: null, apiKeyRejectedAt: null };
+}
+
+/** Poser (`true`) ou lever (`false`) le refus de l'accès complet ; rien quand l'entrée n'en parle pas. */
+function dismissFields(dismiss: boolean | undefined, author: string | undefined) {
+  if (dismiss === undefined) return {};
+  return dismiss
+    ? { fullAccessDismissedAt: new Date(), fullAccessDismissedBy: author?.trim() || null }
+    : { fullAccessDismissedAt: null, fullAccessDismissedBy: null };
 }
 
 @Injectable()
@@ -193,17 +239,19 @@ export class InstancesService {
     };
   }
 
-  async create(input: InstanceInput): Promise<InstanceView> {
+  /** `author` : qui enregistre (en-tête `x-user-email`), pour signer un éventuel refus de l'accès complet. */
+  async create(input: InstanceInput, author?: string): Promise<InstanceView> {
     const apiKey = input.apiKey?.trim();
     if (!apiKey) throw new BadRequestException(msg('platform.apiKeyRequired'));
     const row = await this.prisma.instance.create({
       data: {
         name: input.name,
         baseUrl: input.baseUrl,
-        apiKey,
+        ...keyFields(apiKey),
         clientId: input.clientId ?? null,
         n8nEmail: input.n8nEmail?.trim() || null,
         n8nPassword: input.n8nPassword?.trim() || null,
+        ...dismissFields(input.fullAccessDismiss, author),
         platform: input.platform ?? 'n8n',
         zone: input.zone?.trim() || null,
         externalOrgId: input.externalOrgId?.trim() || null,
@@ -215,14 +263,15 @@ export class InstancesService {
   }
 
   /** Une clé API vide ou absente conserve celle déjà enregistrée. */
-  async update(id: string, input: Partial<InstanceInput>): Promise<InstanceView> {
+  async update(id: string, input: Partial<InstanceInput>, author?: string): Promise<InstanceView> {
     const apiKey = input.apiKey?.trim();
     const row = await this.prisma.instance.update({
       where: { id },
       data: {
+        ...dismissFields(input.fullAccessDismiss, author),
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.baseUrl !== undefined ? { baseUrl: input.baseUrl } : {}),
-        ...(apiKey ? { apiKey } : {}),
+        ...(apiKey ? keyFields(apiKey) : {}),
         ...(input.clientId !== undefined ? { clientId: input.clientId } : {}),
         // Email vidé ⇒ le compte est retiré, mot de passe compris : laisser un
         // secret orphelin derrière un champ que l'UI n'affiche plus serait pire

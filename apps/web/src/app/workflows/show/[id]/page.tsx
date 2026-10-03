@@ -27,6 +27,7 @@ import {
 import {
   CheckCircleTwoTone,
   SettingOutlined,
+  AimOutlined,
   ClockCircleOutlined,
   CodeOutlined,
   ExportOutlined,
@@ -42,6 +43,7 @@ import { MermaidView } from '../../../../components/mermaid-view';
 import { RenameSuggestionsModal } from '../../../../components/rename-suggestions-modal';
 import { ExecutionSamplesPanel } from '../../../../components/execution-samples-panel';
 import { RemoteSchemaModal } from '../../../../components/remote-schema-modal';
+import { ImpactStudyModal } from '../../../../components/impact-study/impact-study-modal';
 import { useEnabledModules } from '../../../../lib/enabled-modules';
 import { WorkflowJsonModal } from '../../../../components/workflow-json-modal';
 import { PromoteModal } from './promote-modal';
@@ -184,7 +186,9 @@ export default function WorkflowShow() {
   const [moduleFilter, setModuleFilter] = useState<string | undefined>();
   const [severityFilter, setSeverityFilter] = useState<string | undefined>();
   const [remoteModalOpen, setRemoteModalOpen] = useState(false);
+  const [impactOpen, setImpactOpen] = useState(false);
   const { enabled: enabledModules } = useEnabledModules();
+  const tImpact = useTranslations('misc.impactStudy');
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [publishRun, setPublishRun] = useState<PublishRunView | null>(null);
   // Duplication du groupe auquel appartient ce workflow : le geste part d'ici, là
@@ -598,6 +602,17 @@ export default function WorkflowShow() {
                     },
                   ]
                 : []),
+              ...(!enabledModules || enabledModules.includes('impact-study')
+                ? [
+                    {
+                      key: 'impact',
+                      label: tImpact('action'),
+                      icon: <AimOutlined />,
+                      hint: tImpact('actionHint'),
+                      onClick: () => setImpactOpen(true),
+                    },
+                  ]
+                : []),
               ...(can('naming')
                 ? [{ key: 'naming', label: t('actions.naming'), onClick: () => setRenameModalOpen(true) }]
                 : []),
@@ -817,6 +832,12 @@ export default function WorkflowShow() {
         onApplied={afterRenames}
       />
 
+      <ImpactStudyModal
+        subject={
+          impactOpen && workflow ? { kind: 'workflows', ids: [workflow.id], title: workflow.name } : null
+        }
+        onClose={() => setImpactOpen(false)}
+      />
       <RemoteSchemaModal
         workflowId={workflowId}
         open={remoteModalOpen}

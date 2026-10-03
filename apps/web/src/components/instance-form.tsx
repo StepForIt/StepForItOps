@@ -6,6 +6,22 @@ import type { FormInstance, FormProps } from 'antd';
 import { ApiOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { apiGet, apiPost } from '../lib/api';
+import { useEnabledModules } from '../lib/enabled-modules';
+import {
+  adminModuleEnabled,
+  formHasN8nLogin,
+  fullAccessPayload,
+  needsFullAccessPrompt,
+  type FullAccessOutcome,
+  type FullAccessState,
+} from '../lib/full-access/full-access-prompt';
+import { FullAccessModal } from './full-access-modal';
+
+type InstanceValues = Record<string, unknown> & {
+  platform?: string;
+  n8nEmail?: string;
+  n8nPassword?: string;
+};
 
 interface InstanceFormProps {
   formProps: FormProps;
@@ -50,6 +66,10 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
   );
   const isEdit = Boolean(instanceId);
   const isMake = platform === 'make';
+  const { enabled } = useEnabledModules();
+  // Saisie en attente derrière la modale « accès complet » : elle repart
+  // entière quelle que soit l'issue, c'est tout l'objet de la retenir ici.
+  const [pending, setPending] = useState<InstanceValues | null>(null);
 
   useEffect(() => {
     apiGet<Array<{ id: string; name: string }>>('/clients?_start=0&_end=200')
@@ -95,119 +115,148 @@ export function InstanceForm({ formProps, instanceId }: InstanceFormProps) {
     }
   };
 
+  // En édition, `initialValues` est la fiche telle que l'API la rend (sans mot de passe).
+  const existing = formProps.initialValues as Partial<FullAccessState> | undefined;
+  const onFinish = (values: InstanceValues) => {
+    const prompt = needsFullAccessPrompt({
+      adminEnabled: adminModuleEnabled(enabled),
+      platform: values.platform ?? 'n8n',
+      hasN8nLogin: formHasN8nLogin(
+        values,
+        existing ? { hasN8nLogin: Boolean(existing.hasN8nLogin) } : undefined,
+      ),
+      fullAccessDismissedAt: existing?.fullAccessDismissedAt ?? null,
+    });
+    if (prompt) {
+      setPending(values);
+      return;
+    }
+    return formProps.onFinish?.(values);
+  };
+  const settle = (outcome: FullAccessOutcome) => {
+    const values = pending;
+    setPending(null);
+    if (values) void formProps.onFinish?.(fullAccessPayload(values, outcome));
+  };
+
   return (
-    <Form
-      {...formProps}
-      layout="vertical"
-      onValuesChange={(changed, all) => {
-        // Chez Make, l'URL n'est pas saisie : elle EST la zone. La déduire ici
-        // évite un champ que personne ne saurait remplir autrement.
-        if (changed.zone) formProps.form?.setFieldValue('baseUrl', `https://${changed.zone}`);
-        formProps.onValuesChange?.(changed, all);
-      }}
-    >
-      <Form.Item label={t('name')} name="name" rules={[{ required: true }]}>
-        <Input placeholder={isMake ? t('namePlaceholderMake') : t('namePlaceholderN8n')} />
-      </Form.Item>
-      <Form.Item
-        label={t('platform')}
-        name="platform"
-        initialValue="n8n"
-        extra={isEdit ? t('platformLocked') : t('platformHint')}
+    <>
+      <Form
+        {...formProps}
+        layout="vertical"
+        onFinish={onFinish}
+        onValuesChange={(changed, all) => {
+          // Chez Make, l'URL n'est pas saisie : elle EST la zone. La déduire ici
+          // évite un champ que personne ne saurait remplir autrement.
+          if (changed.zone) formProps.form?.setFieldValue('baseUrl', `https://${changed.zone}`);
+          formProps.onValuesChange?.(changed, all);
+        }}
       >
-        <Select
-          disabled={isEdit}
-          onChange={(value) => setPlatform(value as 'n8n' | 'make')}
-          options={[
-            { value: 'n8n', label: 'n8n' },
-            { value: 'make', label: 'Make.com' },
+        <Form.Item label={t('name')} name="name" rules={[{ required: true }]}>
+          <Input placeholder={isMake ? t('namePlaceholderMake') : t('namePlaceholderN8n')} />
+        </Form.Item>
+        <Form.Item
+          label={t('platform')}
+          name="platform"
+          initialValue="n8n"
+          extra={isEdit ? t('platformLocked') : t('platformHint')}
+        >
+          <Select
+            disabled={isEdit}
+            onChange={(value) => setPlatform(value as 'n8n' | 'make')}
+            options={[
+              { value: 'n8n', label: 'n8n' },
+              { value: 'make', label: 'Make.com' },
+            ]}
+          />
+        </Form.Item>
+
+        {/* L'ESSENTIEL d'abord : ce qu'il faut pour que la plateforme lise les workflows. */}
+        {isMake ? (
+          <>
+            <Form.Item label={t('zone')} name="zone" rules={[{ required: true }]} extra={t('zoneHint')}>
+              <Select placeholder="eu1.make.com" options={MAKE_ZONES.map((z) => ({ value: z, label: z }))} />
+            </Form.Item>
+            <Form.Item name="baseUrl" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label={t('makeToken')}
+              name="apiKey"
+              rules={[{ required: !isEdit }]}
+              extra={isEdit ? t('keepToken') : t('makeTokenHint')}
+            >
+              <Input.Password placeholder={isEdit ? t('tokenStored') : t('makeTokenPlaceholder')} />
+            </Form.Item>
+          </>
+        ) : (
+          <>
+            <Form.Item
+              label={t('baseUrl')}
+              name="baseUrl"
+              rules={[{ required: true }]}
+              extra={t('baseUrlHint')}
+            >
+              <Input placeholder="https://n8n.mondomaine.tld" />
+            </Form.Item>
+            <Form.Item
+              label={t('apiKey')}
+              name="apiKey"
+              rules={[{ required: !isEdit }]}
+              extra={isEdit ? t('keepKey') : undefined}
+            >
+              <Input.Password placeholder={isEdit ? t('keyStored') : t('apiKeyPlaceholder')} />
+            </Form.Item>
+          </>
+        )}
+
+        {/* L'ACCESSOIRE, replié : périmètre Make / compte du catalogue de nœuds /
+          rattachement. Rien ici n'est requis pour connecter l'instance. */}
+        <Collapse
+          ghost
+          style={{ marginBottom: 24 }}
+          items={[
+            {
+              key: 'advanced',
+              label: t('advanced'),
+              forceRender: true,
+              children: isMake ? (
+                <>
+                  <Form.Item label={t('team')} name="externalTeamId" extra={t('teamHint')}>
+                    <Input placeholder="2648401" />
+                  </Form.Item>
+                  <Form.Item label={t('org')} name="externalOrgId" extra={t('orgHint')}>
+                    <Input placeholder="8875044" />
+                  </Form.Item>
+                  <ClientField clients={clients} />
+                </>
+              ) : (
+                <>
+                  <Form.Item label={t('n8nAccount')} name="n8nEmail" extra={t('n8nAccountHint')}>
+                    <Input placeholder="admin@mondomaine.tld" autoComplete="off" />
+                  </Form.Item>
+                  <Form.Item
+                    label={t('n8nPassword')}
+                    name="n8nPassword"
+                    extra={isEdit ? t('keepPassword') : undefined}
+                  >
+                    <Input.Password
+                      placeholder={isEdit ? t('passwordStored') : t('passwordPlaceholder')}
+                      autoComplete="new-password"
+                    />
+                  </Form.Item>
+                  <ClientField clients={clients} />
+                </>
+              ),
+            },
           ]}
         />
-      </Form.Item>
-
-      {/* L'ESSENTIEL d'abord : ce qu'il faut pour que la plateforme lise les workflows. */}
-      {isMake ? (
-        <>
-          <Form.Item label={t('zone')} name="zone" rules={[{ required: true }]} extra={t('zoneHint')}>
-            <Select placeholder="eu1.make.com" options={MAKE_ZONES.map((z) => ({ value: z, label: z }))} />
-          </Form.Item>
-          <Form.Item name="baseUrl" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label={t('makeToken')}
-            name="apiKey"
-            rules={[{ required: !isEdit }]}
-            extra={isEdit ? t('keepToken') : t('makeTokenHint')}
-          >
-            <Input.Password placeholder={isEdit ? t('tokenStored') : t('makeTokenPlaceholder')} />
-          </Form.Item>
-        </>
-      ) : (
-        <>
-          <Form.Item
-            label={t('baseUrl')}
-            name="baseUrl"
-            rules={[{ required: true }]}
-            extra={t('baseUrlHint')}
-          >
-            <Input placeholder="https://n8n.mondomaine.tld" />
-          </Form.Item>
-          <Form.Item
-            label={t('apiKey')}
-            name="apiKey"
-            rules={[{ required: !isEdit }]}
-            extra={isEdit ? t('keepKey') : undefined}
-          >
-            <Input.Password placeholder={isEdit ? t('keyStored') : t('apiKeyPlaceholder')} />
-          </Form.Item>
-        </>
-      )}
-
-      {/* L'ACCESSOIRE, replié : périmètre Make / compte du catalogue de nœuds /
-          rattachement. Rien ici n'est requis pour connecter l'instance. */}
-      <Collapse
-        ghost
-        style={{ marginBottom: 24 }}
-        items={[
-          {
-            key: 'advanced',
-            label: t('advanced'),
-            forceRender: true,
-            children: isMake ? (
-              <>
-                <Form.Item label={t('team')} name="externalTeamId" extra={t('teamHint')}>
-                  <Input placeholder="2648401" />
-                </Form.Item>
-                <Form.Item label={t('org')} name="externalOrgId" extra={t('orgHint')}>
-                  <Input placeholder="8875044" />
-                </Form.Item>
-                <ClientField clients={clients} />
-              </>
-            ) : (
-              <>
-                <Form.Item label={t('n8nAccount')} name="n8nEmail" extra={t('n8nAccountHint')}>
-                  <Input placeholder="admin@mondomaine.tld" autoComplete="off" />
-                </Form.Item>
-                <Form.Item
-                  label={t('n8nPassword')}
-                  name="n8nPassword"
-                  extra={isEdit ? t('keepPassword') : undefined}
-                >
-                  <Input.Password
-                    placeholder={isEdit ? t('passwordStored') : t('passwordPlaceholder')}
-                    autoComplete="new-password"
-                  />
-                </Form.Item>
-                <ClientField clients={clients} />
-              </>
-            ),
-          },
-        ]}
-      />
-      <Button icon={<ApiOutlined />} loading={testing} onClick={() => testConnection(formProps.form)}>
-        {t('testConnection')}
-      </Button>
-    </Form>
+        <Button icon={<ApiOutlined />} loading={testing} onClick={() => testConnection(formProps.form)}>
+          {t('testConnection')}
+        </Button>
+      </Form>
+      {/* Hors du formulaire : la modale porte le sien (e-mail, mot de passe). */}
+      <FullAccessModal open={pending !== null} onOutcome={settle} />
+    </>
   );
 }

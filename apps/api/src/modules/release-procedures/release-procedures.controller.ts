@@ -12,6 +12,12 @@ import {
   ReleaseProceduresService,
   StepPatch,
 } from './release-procedures.service';
+import {
+  ProcedureImportInput,
+  ProcedureImportReport,
+  ReleaseProceduresTransferService,
+} from './release-procedures-transfer.service';
+import { ProcedureBundle } from '@nwm/core';
 
 /** Sans session (dev local, `AUTH_OPTIONAL`), tout le monde enregistre sous le même nom. */
 const who = (email?: string): string => email?.trim() || 'local';
@@ -19,7 +25,10 @@ const who = (email?: string): string => email?.trim() || 'local';
 @ModuleId('release-procedures')
 @Controller('release-procedures')
 export class ReleaseProceduresController {
-  constructor(private readonly procedures: ReleaseProceduresService) {}
+  constructor(
+    private readonly procedures: ReleaseProceduresService,
+    private readonly transfer: ReleaseProceduresTransferService,
+  ) {}
 
   @Get()
   async list(@Res({ passthrough: true }) res: Response): Promise<ProcedureRow[]> {
@@ -44,6 +53,25 @@ export class ReleaseProceduresController {
     @Headers('x-user-email') email?: string,
   ): Promise<{ captured: boolean; step?: ProcedureStepRow }> {
     return this.procedures.capture(who(email), body);
+  }
+
+  /** `?ids=a,b` : celles-là ; sans : toutes les procédures prêtes. */
+  @Get('export')
+  export(@Query('ids') ids?: string): Promise<ProcedureBundle> {
+    const list = ids
+      ?.split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+    return this.transfer.export(list);
+  }
+
+  /** `dryRun` : le plan seul, rien d'écrit. */
+  @Post('import')
+  import(
+    @Body() body: ProcedureImportInput,
+    @Headers('x-user-email') email?: string,
+  ): Promise<ProcedureImportReport> {
+    return this.transfer.import(body, who(email));
   }
 
   @Get('resolve')

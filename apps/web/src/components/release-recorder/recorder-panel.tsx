@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import { App, Button, Input, Space, Tag, Tooltip, Typography } from 'antd';
-import { CloseOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { AimOutlined, CloseOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { ImpactStudyModal } from '../impact-study/impact-study-modal';
+import { useEnabledModules } from '../../lib/enabled-modules';
 import { useTranslations } from 'next-intl';
 import {
   closestCenter,
@@ -39,6 +41,9 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
   // Où ira la prochaine étape ajoutée ; `null` : à la fin (ou au curseur du rejeu).
   const [insertAt, setInsertAt] = useState<number | null>(null);
   const [gestureOpen, setGestureOpen] = useState(false);
+  const [studying, setStudying] = useState(false);
+  const tImpact = useTranslations('misc.impactStudy');
+  const { enabled } = useEnabledModules();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     // Au doigt, un appui prolongé : sinon le défilement du tiroir partirait en glisser.
@@ -89,6 +94,17 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
           <Typography.Text strong ellipsis style={{ flex: 1 }}>
             {procedure.name}
           </Typography.Text>
+          {mode !== 'recording' && (!enabled || enabled.includes('impact-study')) && steps.length > 0 && (
+            <Tooltip title={tImpact('action')}>
+              <Button
+                type="text"
+                size="small"
+                icon={<AimOutlined />}
+                onClick={() => setStudying(true)}
+                aria-label={tImpact('action')}
+              />
+            </Tooltip>
+          )}
           {onHide && (
             <Button
               type="text"
@@ -204,6 +220,20 @@ export function RecorderPanel({ onHide }: { onHide?: () => void }) {
           </div>
         )}
       </div>
+      <ImpactStudyModal
+        subject={
+          studying
+            ? {
+                kind: 'procedure',
+                id: procedure.id,
+                name: procedure.name,
+                source: hop?.source,
+                target: hop?.target,
+              }
+            : null
+        }
+        onClose={() => setStudying(false)}
+      />
       <GestureModal
         open={gestureOpen}
         recorded={recorded}

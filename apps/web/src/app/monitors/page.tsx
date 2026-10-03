@@ -14,6 +14,7 @@ import {
   TagsOutlined,
 } from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { apiGet, apiPost } from '../../lib/api';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { KumaSettingsModal } from './kuma-settings-modal';
@@ -245,7 +246,35 @@ export default function MonitorsList() {
           description={t('notConfiguredHint')}
         />
       )}
-      <Table {...tableProps} rowKey="id" mobileLayout={{ badges: ['lastStatus'] }}>
+      <Table
+        {...tableProps}
+        rowKey="id"
+        mobileLayout={{ badges: ['lastStatus'] }}
+        locale={{
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            // Surveiller une instance d'un coup (Kuma configuré), sinon créer un premier monitor.
+            <ListEmptyState
+              needsInstances
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Space wrap style={{ justifyContent: 'center' }}>
+                    {kumaConfigured && (
+                      <Button type="primary" icon={<CloudUploadOutlined />} onClick={() => setBulkOpen(true)}>
+                        {t('actions.bulk')}
+                      </Button>
+                    )}
+                    <CreateButton type={kumaConfigured ? 'default' : 'primary'} />
+                  </Space>
+                ),
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column
           dataIndex="name"
           title={tc('columns.name')}

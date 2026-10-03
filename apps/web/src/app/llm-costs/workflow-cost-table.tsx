@@ -4,6 +4,7 @@ import React from 'react';
 import { Progress, Space, Tag, Tooltip, Typography } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { useLocale, useTranslations } from 'next-intl';
+import { EmptyPlaceholder } from '../../components/empty-state/list-empty-state';
 import { useEnvColor } from '../../lib/envs';
 import { WorkflowExecutions } from './workflow-executions';
 import { WorkflowCost, WorkflowCostFamily, formatTokens, formatUsd } from './types';
@@ -23,6 +24,7 @@ export function WorkflowCostTable({
   days,
   loading,
   totalCost,
+  empty,
 }: {
   workflows: WorkflowCost[];
   families: WorkflowCostFamily[];
@@ -30,6 +32,8 @@ export function WorkflowCostTable({
   days: number;
   loading: boolean;
   totalCost: number;
+  /** Ce que montre la liste quand elle revient vide. */
+  empty: React.ReactNode;
 }) {
   const envColor = useEnvColor();
   const t = useTranslations('health.llmCosts');
@@ -107,6 +111,7 @@ export function WorkflowCostTable({
         rowKey="id"
         dataSource={families}
         loading={loading}
+        locale={{ emptyText: loading ? <EmptyPlaceholder /> : empty }}
         size="small"
         pagination={{ pageSize: 15, hideOnSinglePage: true }}
         scroll={{ x: true }}
@@ -166,6 +171,7 @@ export function WorkflowCostTable({
       rowKey={(row) => `${row.instanceId}|${row.externalWorkflowId}`}
       dataSource={workflows}
       loading={loading}
+      locale={{ emptyText: loading ? <EmptyPlaceholder /> : empty }}
       size="small"
       pagination={{ pageSize: 15, hideOnSinglePage: true }}
       scroll={{ x: true }}

@@ -9,6 +9,9 @@ dist/
 *.tsbuildinfo
 coverage/
 
+# La lib du vocabulaire, déposée par le studio vidéo à chaque synchronisation (studio/product.ts)
+.studio/
+
 # Playwright : rapports, traces et captures des parcours en échec
 test-results/
 playwright-report/

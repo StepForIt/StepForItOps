@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { InstancesService } from '../instances/instances.service';
+import { ApiKeyHealthService } from '../instances/api-key-health.service';
 import { TimeSavedService } from './time-saved.service';
 
 /** Résultat d'une synchronisation d'instance. */
@@ -58,13 +59,14 @@ export class WorkflowSyncService {
     private readonly instances: InstancesService,
     private readonly timeSaved: TimeSavedService,
     @Inject(N8N_API_PORT) private readonly n8n: N8nApiPort,
+    private readonly apiKeyHealth: ApiKeyHealthService,
   ) {}
 
   async syncInstance(instanceId: string): Promise<SyncReport> {
     const { platform } = await this.instances.getPlatformConfig(instanceId);
     if (platform !== 'n8n') return this.syncPlatformInstance(instanceId);
     const config = await this.instances.getConfig(instanceId);
-    const workflows = await this.n8n.listWorkflows(config);
+    const workflows = await this.apiKeyHealth.watch(instanceId, () => this.n8n.listWorkflows(config));
     let changed = 0;
 
     for (const raw of workflows) {
@@ -157,7 +159,7 @@ export class WorkflowSyncService {
    */
   private async syncPlatformInstance(instanceId: string): Promise<SyncReport> {
     const { platform, port, config } = await this.instances.getPlatformConfig(instanceId);
-    const summaries = await port.listWorkflows(config);
+    const summaries = await this.apiKeyHealth.watch(instanceId, () => port.listWorkflows(config));
     const locals = await this.prisma.workflow.findMany({
       where: { instanceId },
       select: { id: true, externalId: true, hash: true, raw: true },

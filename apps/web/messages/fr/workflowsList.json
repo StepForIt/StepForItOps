@@ -271,5 +271,16 @@
       "copy": "copie « {name} »",
       "renamed": ", renommé « {name} »"
     }
+  },
+  "empty": {
+    "notSynced": {
+      "title": "Votre instance est prête, il reste à importer ses workflows",
+      "text": "Un clic les ramène ici. Ensuite, la synchro se refait toute seule chaque heure."
+    },
+    "allArchived": {
+      "title": "Tous vos workflows sont archivés",
+      "text": "{count, plural, one {# workflow archivé est masqué} other {# workflows archivés sont masqués}} par défaut.",
+      "show": "Afficher les archivés"
+    }
   }
 }

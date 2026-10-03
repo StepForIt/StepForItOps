@@ -106,6 +106,8 @@ export default defineConfig({
         // La clé fait exister le fournisseur ; l'URL le remplace par le nôtre.
         ANTHROPIC_API_KEY: 'cle-de-test-e2e',
         ANTHROPIC_BASE_URL: `http://127.0.0.1:${FAKE_AI_PORT}`,
+        // Ouvre l'export, comme en dev local : le parcours de la clé d'export en a besoin.
+        CONFIG_EXPORT_ENABLED: '1',
       },
     },
     {
@@ -132,6 +134,8 @@ export default defineConfig({
         NODE_OPTIONS: '--max-old-space-size=4096',
         // Une page compilée le reste jusqu'à la fin des parcours (cf. next.config.js).
         NEXT_KEEP_COMPILED_PAGES: '1',
+        // Pas d'écriture du cache webpack en plein parcours (cf. next.config.js).
+        NEXT_WEBPACK_MEMORY_CACHE: '1',
       },
     },
   ],

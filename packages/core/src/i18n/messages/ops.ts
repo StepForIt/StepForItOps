@@ -149,6 +149,14 @@ export const ops = defineMessages(
     alertBudgetBody: 'LLM cost for {date} above the daily budget.',
     alertBudgetTop: 'Top contributors:\n{top}',
     alertBudgetOnce: 'Only one alert per day — details on the AI costs page.',
+    alertApiKeyExpiringTitle: 'API key of {instance} expires in {days} days',
+    alertApiKeyExpiredTitle: 'API key of {instance} has expired',
+    alertApiKeyExpiresAt: 'Expiry: {date}',
+    alertApiKeyRenew: 'Create a new key in the platform and save it on the instance.',
+    alertApiKeyRejectedTitle: 'API key of {instance} refused',
+    alertApiKeyRejectedBody: 'The platform answered {status}: {reason}',
+    alertApiKeyRejectedImpact:
+      'Sync, error polling and every write to this instance fail until the key is replaced.',
 
     // Tableau de bord, coûts IA
     noClient: 'No client',
@@ -294,6 +302,14 @@ export const ops = defineMessages(
     alertBudgetBody: 'Coût LLM du {date} au-dessus du budget quotidien.',
     alertBudgetTop: 'Plus gros contributeurs :\n{top}',
     alertBudgetOnce: 'Une seule alerte par jour — le détail est sur la page Coûts IA.',
+    alertApiKeyExpiringTitle: 'La clé API de {instance} expire dans {days} jours',
+    alertApiKeyExpiredTitle: 'La clé API de {instance} a expiré',
+    alertApiKeyExpiresAt: 'Échéance : {date}',
+    alertApiKeyRenew: 'Créez une nouvelle clé sur la plateforme et enregistrez-la sur l’instance.',
+    alertApiKeyRejectedTitle: 'Clé API de {instance} refusée',
+    alertApiKeyRejectedBody: 'La plateforme a répondu {status} : {reason}',
+    alertApiKeyRejectedImpact:
+      'Synchro, suivi des erreurs et écritures sur cette instance échouent tant que la clé n’est pas remplacée.',
 
     noClient: 'Sans client',
     unknownModel: '(modèle inconnu)',

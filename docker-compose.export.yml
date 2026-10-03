@@ -1,0 +1,18 @@
+# La prod (docker-compose.yml) avec l'export de configuration OUVERT. Dans
+# Dokploy : redéployer sur ce fichier le temps d'un export, puis revenir sur
+# docker-compose.yml. L'export sort tous les secrets en clair en un seul GET :
+# ne jamais le laisser en service.
+services:
+  postgres:
+    extends: { file: docker-compose.yml, service: postgres }
+  migrate:
+    extends: { file: docker-compose.yml, service: migrate }
+  api:
+    extends: { file: docker-compose.yml, service: api }
+    environment:
+      CONFIG_EXPORT_ENABLED: '1'
+  web:
+    extends: { file: docker-compose.yml, service: web }
+
+volumes:
+  pgdata:

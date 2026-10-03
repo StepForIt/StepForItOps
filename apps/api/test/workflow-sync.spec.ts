@@ -4,6 +4,7 @@ import { WorkflowSyncService } from '../src/modules/workflows/workflow-sync.serv
 import { PrismaService } from '../src/infra/prisma/prisma.service';
 import { EventBusService } from '../src/infra/events/event-bus.service';
 import { InstancesService } from '../src/modules/instances/instances.service';
+import { ApiKeyHealthService } from '../src/modules/instances/api-key-health.service';
 import { TimeSavedService } from '../src/modules/workflows/time-saved.service';
 import { RecordingBus, recordingBus } from './helpers/fakes';
 import { resetDb, testPrisma } from './helpers/db';
@@ -58,7 +59,15 @@ function makeService(n8n: N8nApiPort, bus: RecordingBus, estimates: { calls: num
       return { minutesSavedEstimate: 5 };
     },
   } as unknown as TimeSavedService;
-  return new WorkflowSyncService(prisma, bus as unknown as EventBusService, instances, timeSaved, n8n);
+  const apiKeyHealth = new ApiKeyHealthService(prisma, bus as unknown as EventBusService);
+  return new WorkflowSyncService(
+    prisma,
+    bus as unknown as EventBusService,
+    instances,
+    timeSaved,
+    n8n,
+    apiKeyHealth,
+  );
 }
 
 async function makeInstance(): Promise<string> {
@@ -101,6 +110,24 @@ describe('WorkflowSyncService', () => {
     // `workflow.synced`, donc les abonnés qui s'intéressent à l'ÉTAT du parc
     // n'ont que celui-là.
     expect(bus.emitted.at(-1)?.name).toBe(EVENTS.instanceSynced);
+  });
+
+  it('une clé refusée au listing est annoncée une fois, et levée par la synchro suivante', async () => {
+    const instanceId = await makeInstance();
+    const refusing = {
+      async listWorkflows() {
+        throw new N8nApiError('unauthorized', 401);
+      },
+    } as unknown as N8nApiPort;
+
+    await expect(makeService(refusing, bus, estimates).syncInstance(instanceId)).rejects.toThrow();
+    await expect(makeService(refusing, bus, estimates).syncInstance(instanceId)).rejects.toThrow();
+    expect(bus.emitted.filter((event) => event.name === EVENTS.instanceApiKeyRejected)).toHaveLength(1);
+
+    await makeService(fakeN8n([]), bus, estimates).syncInstance(instanceId);
+    expect(
+      (await prisma.instance.findUniqueOrThrow({ where: { id: instanceId } })).apiKeyRejectedAt,
+    ).toBeNull();
   });
 
   it('n’écrase pas une estimation affinée quand le contenu n’a pas bougé', async () => {

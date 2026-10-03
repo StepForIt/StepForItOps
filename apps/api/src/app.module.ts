@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ApiTokenGuard } from './common/auth/api-token.guard';
 import { LoggingModule } from './infra/logging/logging.module';
 import { PrismaModule } from './infra/prisma/prisma.module';
+import { SecretsModule } from './infra/secrets/secrets.module';
 import { PlatformSettingsModule } from './infra/settings/platform-settings.module';
 import { AuthSettingsModule } from './infra/auth-settings/auth-settings.module';
 import { CheckProfilesModule } from './infra/check-profiles/check-profiles.module';
@@ -34,6 +35,7 @@ export class AppModule {
         ScheduleModule.forRoot(),
         LoggingModule,
         PrismaModule,
+        SecretsModule,
         PlatformSettingsModule,
         I18nModule,
         AuthSettingsModule,

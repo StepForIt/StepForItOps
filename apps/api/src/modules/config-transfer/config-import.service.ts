@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { EVENTS, envIds, normalizeEnvs, msg } from '@nwm/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { ExportKey } from '../../infra/secrets/export-key';
 import { EventBusService } from '../../infra/events/event-bus.service';
 import { ModuleRegistryService } from '../../infra/modules-registry/module-registry.service';
 import {
@@ -14,7 +15,10 @@ import {
   SectionReport,
   WorkflowRef,
 } from './config-bundle.types';
+import { unsealBundle } from './config-bundle-sealing';
+import { exportKeyHttpError } from './export-key-errors';
 import { ConfigImportWorkflowScopedService } from './config-import-workflow-scoped.service';
+import { ConfigImportSyncService } from './config-import-sync.service';
 import { WorkflowRefResolver } from './workflow-ref.resolver';
 import { monitorInstanceId, withInstanceId } from './monitor-instance-ref';
 
@@ -28,10 +32,18 @@ export class ConfigImportService {
     private readonly registry: ModuleRegistryService,
     private readonly refs: WorkflowRefResolver,
     private readonly workflowScoped: ConfigImportWorkflowScopedService,
+    private readonly importSync: ConfigImportSyncService,
   ) {}
 
-  async importBundle(bundle: ConfigBundle, strategy: ImportStrategy, dryRun: boolean): Promise<ImportReport> {
-    this.validate(bundle);
+  async importBundle(
+    sealedBundle: ConfigBundle,
+    strategy: ImportStrategy,
+    dryRun: boolean,
+    exportKey?: string,
+  ): Promise<ImportReport> {
+    this.validate(sealedBundle);
+    // Dès l'aperçu : une clé fausse se dit avant de décrire un import qui échouerait.
+    const bundle = this.opened(sealedBundle, exportKey);
     // Les ids résolus au tour précédent sont périmés (workflows resynchronisés entre-temps).
     this.refs.reset();
 
@@ -52,9 +64,12 @@ export class ConfigImportService {
         workflowLinks: { created: 0, updated: 0, skipped: 0 },
       },
       warnings: [],
+      syncs: [],
     };
 
     await this.importInstances(bundle, strategy, dryRun, report);
+    // Avant tout ce qui vise un workflow : l'import aboutit en une passe, même sur une base vierge.
+    await this.importSync.syncReferenced(bundle, dryRun, report);
     await this.importExportTargets(bundle, strategy, dryRun, report);
     await this.importResourceMappings(bundle, strategy, dryRun, report);
     await this.importMonitors(bundle, strategy, dryRun, report);
@@ -81,6 +96,16 @@ export class ConfigImportService {
       );
     }
     return report;
+  }
+
+  /** Rouvre les secrets scellés par la clé d'export ; un fichier sans `sealed` passe tel quel. */
+  private opened(bundle: ConfigBundle, exportKey: string | undefined): ConfigBundle {
+    if (!bundle.sealed) return bundle;
+    try {
+      return unsealBundle(bundle, ExportKey.open(bundle.sealed, exportKey));
+    } catch (error) {
+      throw exportKeyHttpError(error, 'import');
+    }
   }
 
   private validate(bundle: ConfigBundle): void {
@@ -124,23 +149,43 @@ export class ConfigImportService {
     for (const entry of bundle.instances ?? []) {
       const existing = await this.prisma.instance.findFirst({ where: { baseUrl: entry.baseUrl } });
       const action = this.act(!!existing, strategy, report.sections.instances);
+      if (dryRun) this.refs.planInstance(entry.baseUrl);
       if (action === 'skip') continue;
       if (action === 'create' && entry.apiKey === null) {
         report.warnings.push(msg('platform.importInstanceNoKey', { name: entry.name }));
       }
       if (dryRun) continue;
+      const clientId = await this.resolveClientId(entry.client);
+      // Un champ absent (bundle d'avant) garde la valeur locale ; un secret null aussi.
+      const data = {
+        name: entry.name,
+        ...(entry.platform !== undefined ? { platform: entry.platform } : {}),
+        ...(entry.zone !== undefined ? { zone: entry.zone } : {}),
+        ...(entry.externalOrgId !== undefined ? { externalOrgId: entry.externalOrgId } : {}),
+        ...(entry.externalTeamId !== undefined ? { externalTeamId: entry.externalTeamId } : {}),
+        ...(entry.n8nEmail !== undefined ? { n8nEmail: entry.n8nEmail } : {}),
+        ...(entry.n8nPassword != null ? { n8nPassword: entry.n8nPassword } : {}),
+        ...(clientId !== undefined ? { clientId } : {}),
+      };
       if (action === 'create') {
         await this.prisma.instance.create({
-          data: { name: entry.name, baseUrl: entry.baseUrl, apiKey: entry.apiKey ?? '' },
+          data: { ...data, baseUrl: entry.baseUrl, apiKey: entry.apiKey ?? '' },
         });
       } else if (existing) {
-        // apiKey null = secrets exclus de l'export → on garde la clé locale.
         await this.prisma.instance.update({
           where: { id: existing.id },
-          data: { name: entry.name, ...(entry.apiKey !== null ? { apiKey: entry.apiKey } : {}) },
+          data: { ...data, ...(entry.apiKey !== null ? { apiKey: entry.apiKey } : {}) },
         });
       }
     }
+  }
+
+  /** undefined = champ absent du bundle, on ne touche pas au rattachement local. */
+  private async resolveClientId(name: string | null | undefined): Promise<string | null | undefined> {
+    if (name === undefined) return undefined;
+    if (name === null) return null;
+    const client = await this.prisma.client.upsert({ where: { name }, create: { name }, update: {} });
+    return client.id;
   }
 
   private async importExportTargets(
@@ -251,6 +296,9 @@ export class ConfigImportService {
     if (localInstanceId) {
       return { config: withInstanceId(entry.config, localInstanceId), enabled: entry.enabled };
     }
+    if (entry.instanceRef && this.refs.instanceExpected(entry.instanceRef)) {
+      return { config: entry.config, enabled: entry.enabled };
+    }
 
     report.warnings.push(
       msg('platform.importMonitorUnresolved', {
@@ -270,7 +318,7 @@ export class ConfigImportService {
   ): Promise<string | null> {
     if (!ref) return null;
     const workflowId = await this.refs.workflowId(ref);
-    if (!workflowId) {
+    if (!workflowId && !this.refs.workflowExpected(ref)) {
       report.warnings.push(
         WorkflowRefResolver.missing(
           msg('platform.importSubject', { kind: 'monitor', name: monitorName }),

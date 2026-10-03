@@ -15,6 +15,7 @@ import { useEnvColor } from '../../lib/envs';
 import { useWorkflowList } from './use-workflow-list';
 import { formatDate } from './format-date';
 import { useEnabledModules } from '../../lib/enabled-modules';
+import { EmptyPlaceholder } from '../../components/empty-state/list-empty-state';
 
 /** Vue plate : une ligne par workflow n8n. */
 export function WorkflowsTable({
@@ -24,6 +25,7 @@ export function WorkflowsTable({
   showInstance,
   instanceName,
   selection,
+  empty,
 }: {
   filters: CrudFilters;
   /** Terme cherché : c'est lui qui autorise la synchro de rattrapage, pas les autres filtres. */
@@ -33,6 +35,8 @@ export function WorkflowsTable({
   instanceName: (id: string) => string;
   /** Cases à cocher des actions groupées, tenues par la page. */
   selection: WorkflowSelection;
+  /** Ce que montre la liste quand elle revient vide (`WorkflowsEmptyState`). */
+  empty: React.ReactNode;
 }) {
   const t = useTranslations('workflowsList.shared');
   const tCommon = useTranslations('common');
@@ -53,6 +57,7 @@ export function WorkflowsTable({
       {...tableProps}
       rowKey="id"
       loading={tableProps.loading || syncing}
+      locale={{ emptyText: tableProps.loading || syncing ? <EmptyPlaceholder /> : empty }}
       rowSelection={{
         selectedRowKeys: selection.ids,
         // antd ne rend que les lignes de la page courante : le scope est cette

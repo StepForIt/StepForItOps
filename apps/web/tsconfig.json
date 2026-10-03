@@ -16,7 +16,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@private-ui": ["./src/private/index.tsx", "./src/private-ui-stub.tsx"]
     }
   },
   "include": [

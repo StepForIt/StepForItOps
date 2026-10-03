@@ -255,4 +255,4 @@ autre ne voit : **format, lint, typecheck, tests et builds** ; **migrations** (`
 sur une base neuve, puis `prisma:check` qui rejoue les migrations dans une shadow database —
 le premier compare la BASE au schéma, le second les MIGRATIONS) ; **image de production**,
 dont la dernière couche est un démarrage à blanc qui refuse une dépendance importée mais non
-déclarée ; **parcours navigateur**. Détail des commandes locales : [README.md](README.md).
+déclarée ; **parcours navigateur**. Détail des commandes locales : [README.fr.md](README.fr.md).

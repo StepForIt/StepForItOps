@@ -5,14 +5,15 @@
  */
 
 import { EnvDefinition } from '@nwm/core';
+import type { SealingHeader } from '../../infra/secrets/export-key';
 
 export const CONFIG_BUNDLE_KIND = 'nwm-config';
 export const CONFIG_BUNDLE_VERSION = 1;
 
 /**
  * Référence portable vers un workflow : les ids DB diffèrent d'une base à l'autre,
- * seul le couple (URL de l'instance, id n8n) est stable. Résolue à l'import — donc
- * seulement si les workflows ont déjà été synchronisés depuis n8n sur la cible.
+ * seul le couple (URL de l'instance, id n8n) est stable. Résolue à l'import, après
+ * la synchro des instances visées.
  */
 export interface WorkflowRef {
   instanceBaseUrl: string;
@@ -24,6 +25,19 @@ export interface InstanceEntry {
   baseUrl: string;
   /** null quand les secrets ont été exclus de l'export. */
   apiKey: string | null;
+  /**
+   * Champs ajoutés après la v1 du bundle : absents d'un vieux fichier, ils
+   * gardent leur valeur locale (ou le défaut `n8n` à la création).
+   */
+  platform?: string;
+  zone?: string | null;
+  externalOrgId?: string | null;
+  externalTeamId?: string | null;
+  n8nEmail?: string | null;
+  /** null quand les secrets ont été exclus de l'export. */
+  n8nPassword?: string | null;
+  /** Nom du client : l'uuid local ne vaut rien ailleurs, le client est recréé au besoin. */
+  client?: string | null;
 }
 
 export interface ExportTargetEntry {
@@ -132,6 +146,12 @@ export interface ConfigBundle {
   version: typeof CONFIG_BUNDLE_VERSION;
   exportedAt: string;
   includesSecrets: boolean;
+  /**
+   * Présent quand les secrets sont scellés par une clé d'export (sel + valeur
+   * témoin) : l'import redemande la même clé. Absent d'un export sans secrets et
+   * des fichiers d'avant la clé d'export, dont les secrets sont en clair.
+   */
+  sealed?: SealingHeader;
   instances: InstanceEntry[];
   exportTargets: ExportTargetEntry[];
   resourceMappings: ResourceMappingEntry[];
@@ -155,9 +175,16 @@ export interface SectionReport {
   skipped: number;
 }
 
+/** Instance synchronisée depuis sa plateforme pendant l'import ; `synced` null en dry-run. */
+export interface ImportSync {
+  instance: string;
+  synced: number | null;
+}
+
 export interface ImportReport {
   dryRun: boolean;
   strategy: ImportStrategy;
   sections: Record<string, SectionReport>;
   warnings: string[];
+  syncs: ImportSync[];
 }

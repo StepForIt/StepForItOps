@@ -11,12 +11,21 @@ import {
   ShowButton,
 } from '@refinedev/antd';
 import { useTable } from '../../lib/list-memory/use-list-memory';
-import { Button, Space, Tag } from 'antd';
+import { Button, Space, Tag, Typography } from 'antd';
 import { Table } from '../../components/resizable-table';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { SyncModal } from './sync-modal';
+import { ApiKeyBanner } from '../../components/api-key-banner';
+import { ApiKeyHealth, apiKeyAlert } from '../../lib/api-key/api-key-alert';
+import { useEnabledModules } from '../../lib/enabled-modules';
+import {
+  FullAccessState,
+  adminModuleEnabled,
+  needsFullAccessPrompt,
+} from '../../lib/full-access/full-access-prompt';
 
-interface Instance {
+interface Instance extends ApiKeyHealth, FullAccessState {
   id: string;
   name: string;
   baseUrl: string;
@@ -27,7 +36,13 @@ interface Instance {
 
 export default function InstancesList() {
   const t = useTranslations('settings.instances');
+  const tk = useTranslations('settings.apiKey');
+  const ta = useTranslations('settings.fullAccess');
   const tc = useTranslations('common');
+  const te = useTranslations('common.emptyState');
+  const locale = useLocale();
+  const { enabled } = useEnabledModules();
+  const adminEnabled = adminModuleEnabled(enabled);
   const { tableProps, sorters } = useTable<Instance>({
     resource: 'instances',
     syncWithLocation: true,
@@ -37,13 +52,40 @@ export default function InstancesList() {
 
   return (
     <List headerButtons={<CreateButton />}>
-      <Table {...tableProps} rowKey="id">
+      <ApiKeyBanner instances={(tableProps.dataSource ?? []) as Instance[]} target="show" />
+      <Table
+        {...tableProps}
+        rowKey="id"
+        locale={{
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              idle={{
+                title: te('noInstance.title'),
+                text: te('noInstance.text'),
+                actions: <CreateButton size="large">{te('noInstance.cta')}</CreateButton>,
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column<Instance>
           dataIndex="name"
           title={tc('columns.name')}
           sorter
           defaultSortOrder={getDefaultSortOrder('name', sorters)}
-          render={(name: string, record) => <Link href={`/instances/show/${record.id}`}>{name}</Link>}
+          render={(name: string, record) => (
+            <>
+              <Link href={`/instances/show/${record.id}`}>{name}</Link>
+              {/* La pastille mène à la fiche : c'est là que se renseigne le compte, ou que se refuse la demande. */}
+              {needsFullAccessPrompt({ ...record, adminEnabled }) && (
+                <Link href={`/instances/show/${record.id}`} style={{ marginLeft: 8 }}>
+                  <Tag color="gold">{ta('partialTag')}</Tag>
+                </Link>
+              )}
+            </>
+          )}
         />
         <Table.Column<Instance>
           dataIndex="platform"
@@ -69,6 +111,25 @@ export default function InstancesList() {
                 : (record.zone ?? '—')
               : baseUrl
           }
+        />
+        <Table.Column<Instance>
+          dataIndex="apiKeyExpiresAt"
+          title={tk('column')}
+          sorter
+          defaultSortOrder={getDefaultSortOrder('apiKeyExpiresAt', sorters)}
+          render={(_, record) => {
+            const alert = apiKeyAlert(record);
+            const label = record.apiKeyExpiresAt
+              ? new Date(record.apiKeyExpiresAt).toLocaleDateString(locale)
+              : tk('noDate');
+            if (alert?.reason === 'rejected') return <Tag color="red">{tk('rejectedTag')}</Tag>;
+            if (alert) return <Tag color={alert.level === 'error' ? 'red' : 'orange'}>{label}</Tag>;
+            return record.apiKeyExpiresAt ? (
+              label
+            ) : (
+              <Typography.Text type="secondary">{label}</Typography.Text>
+            );
+          }}
         />
         <Table.Column<Instance>
           title={tc('columns.actions')}

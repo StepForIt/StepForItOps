@@ -14,6 +14,7 @@ import { RowEffect, selectionToggle, toggleExpanded } from '../../../components/
 import { MobileRow } from '../../../components/mobile/mobile-row';
 import { WorkflowMobileItem } from './workflow-mobile-item';
 import { mobilePagination } from '../../../components/mobile/mobile-pagination';
+import { EmptyPlaceholder } from '../../../components/empty-state/list-empty-state';
 
 /**
  * Vue groupée sur mobile : une ligne par workflow métier (nom + ses envs),
@@ -32,6 +33,7 @@ export function FamiliesMobileList({
   selection,
   familySelection,
   selecting,
+  empty,
 }: {
   filters: CrudFilters;
   search?: string;
@@ -40,6 +42,8 @@ export function FamiliesMobileList({
   selection: WorkflowSelection;
   familySelection: FamilySelection;
   selecting: boolean;
+  /** Ce que montre la liste quand elle revient vide (`WorkflowsEmptyState`). */
+  empty: React.ReactNode;
 }) {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const list = useWorkflowList<WorkflowFamily>({
@@ -64,6 +68,7 @@ export function FamiliesMobileList({
       dataSource={families}
       rowKey="id"
       loading={Boolean(list.tableProps.loading) || list.syncing}
+      locale={{ emptyText: list.tableProps.loading || list.syncing ? <EmptyPlaceholder /> : empty }}
       pagination={mobilePagination(list)}
       renderItem={(family) => (
         <List.Item style={{ padding: 0 }}>

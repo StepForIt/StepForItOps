@@ -14,11 +14,38 @@ export class WorkflowRefResolver {
 
   private readonly instances = new Map<string, string | null>();
   private readonly workflows = new Map<string, string | null>();
+  /**
+   * Dry-run : instances que l'import créerait, et celles qu'il synchroniserait.
+   * Une référence qui les vise ne se résout pas encore, mais se résoudrait à
+   * l'import réel — la prévisualisation ne doit pas l'annoncer perdue.
+   */
+  private readonly plannedInstances = new Set<string>();
+  private readonly plannedSyncs = new Set<string>();
 
   /** À appeler entre deux imports : les ids créés par l'import précédent doivent être relus. */
   reset(): void {
     this.instances.clear();
     this.workflows.clear();
+    this.plannedInstances.clear();
+    this.plannedSyncs.clear();
+  }
+
+  planInstance(baseUrl: string): void {
+    this.plannedInstances.add(baseUrl);
+  }
+
+  planSync(baseUrl: string): void {
+    this.plannedSyncs.add(baseUrl);
+  }
+
+  /** L'instance existera à l'import réel (dry-run seulement). */
+  instanceExpected(baseUrl: string): boolean {
+    return this.plannedInstances.has(baseUrl);
+  }
+
+  /** Les workflows de cette instance seront synchronisés avant d'être cherchés (dry-run seulement). */
+  workflowExpected(ref: WorkflowRef): boolean {
+    return this.plannedSyncs.has(ref.instanceBaseUrl);
   }
 
   async instanceId(baseUrl: string): Promise<string | null> {

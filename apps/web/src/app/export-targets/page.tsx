@@ -6,6 +6,7 @@ import { useTable } from '../../lib/list-memory/use-list-memory';
 import { Space, Tag } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 
 interface ExportTarget {
   id: string;
@@ -24,7 +25,23 @@ export default function ExportTargetsList() {
 
   return (
     <List headerButtons={<CreateButton />}>
-      <Table {...tableProps} rowKey="id">
+      <Table
+        {...tableProps}
+        rowKey="id"
+        locale={{
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: <CreateButton />,
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column
           dataIndex="name"
           title={tc('columns.name')}

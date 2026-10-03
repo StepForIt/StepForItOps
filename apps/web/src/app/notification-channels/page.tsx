@@ -17,6 +17,7 @@ import {
   message,
 } from 'antd';
 import { useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { Table } from '../../components/resizable-table';
 import { BellOutlined, DeleteOutlined, EditOutlined, SendOutlined } from '@ant-design/icons';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
@@ -33,6 +34,7 @@ interface Channel {
   onBudget: boolean;
   onRelayBroken: boolean;
   onModelLifecycle: boolean;
+  onApiKey: boolean;
 }
 
 interface ChannelForm {
@@ -46,6 +48,7 @@ interface ChannelForm {
   onBudget: boolean;
   onRelayBroken: boolean;
   onModelLifecycle: boolean;
+  onApiKey: boolean;
 }
 
 // Libellé : `misc.notificationChannels.types.<type>`.
@@ -91,6 +94,7 @@ export default function NotificationChannelsPage() {
             onBudget: true,
             onRelayBroken: true,
             onModelLifecycle: true,
+            onApiKey: true,
           }
         : { ...channel, url: '' },
     );
@@ -146,7 +150,30 @@ export default function NotificationChannelsPage() {
       }
     >
       <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('intro')} />
-      <Table dataSource={rows} rowKey="id" loading={loading} size="small" pagination={false}>
+      <Table
+        dataSource={rows}
+        rowKey="id"
+        loading={loading}
+        size="small"
+        pagination={false}
+        locale={{
+          emptyText: loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Button type="primary" icon={<BellOutlined />} onClick={() => open('new')}>
+                    {t('add')}
+                  </Button>
+                ),
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column dataIndex="name" title={t('fields.name')} />
         <Table.Column
           dataIndex="type"
@@ -172,6 +199,7 @@ export default function NotificationChannelsPage() {
               {record.onBudget && <Tag color="gold">{t('tags.budget')}</Tag>}
               {record.onRelayBroken && <Tag color="red">{t('tags.relayBroken')}</Tag>}
               {record.onModelLifecycle && <Tag color="purple">{t('tags.modelLifecycle')}</Tag>}
+              {record.onApiKey && <Tag color="volcano">{t('tags.apiKey')}</Tag>}
             </Space>
           )}
         />
@@ -236,7 +264,7 @@ export default function NotificationChannelsPage() {
           >
             <Input placeholder="https://hooks.slack.com/services/…" />
           </Form.Item>
-          <Space size="large">
+          <Space size="large" wrap>
             <Form.Item name="onNewGroup" label={t('modal.onNewGroup')} valuePropName="checked">
               <Switch />
             </Form.Item>
@@ -261,6 +289,14 @@ export default function NotificationChannelsPage() {
               name="onModelLifecycle"
               label={t('modal.onModelLifecycle')}
               tooltip={t('modal.onModelLifecycleHelp')}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="onApiKey"
+              label={t('modal.onApiKey')}
+              tooltip={t('modal.onApiKeyHelp')}
               valuePropName="checked"
             >
               <Switch />

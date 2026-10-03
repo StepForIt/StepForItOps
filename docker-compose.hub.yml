@@ -1,0 +1,92 @@
+# Installation depuis Docker Hub, sans cloner ni construire : même stack que
+# docker-compose.yml, images publiées par .github/workflows/publish-docker.yml.
+#
+#   curl -O https://raw.githubusercontent.com/StepForIt/StepForItOps/dev/docker-compose.hub.yml
+#   docker compose -f docker-compose.hub.yml up -d
+#
+# NWM_VERSION épingle une version (0.2.0, 0.2, ou 0.2.0-arm64 pour une seule
+# archi) ; `latest` par défaut. Garder l'alias réseau de l'api : l'image web
+# joint l'API à http://stepforit-ops-api:3001, adresse figée à son build.
+# Toute variable ajoutée à docker-compose.yml se reporte ici.
+x-api-image: &api-image ${NWM_IMAGE_PREFIX:-mathieum/stepforitops}-api:${NWM_VERSION:-latest}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nwm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      POSTGRES_DB: ${POSTGRES_DB:-nwm}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nwm}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: *api-image
+    command: ['./apps/api/scripts/migrate.sh']
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nwm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nwm}?schema=public
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: *api-image
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nwm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nwm}?schema=public
+      API_PORT: 3001
+      WEB_ORIGIN: ${WEB_ORIGIN:-}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:?API_PUBLIC_URL requis (URL publique de l'API)}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-medium-latest}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GDRIVE_ACCESS_TOKEN: ${GDRIVE_ACCESS_TOKEN:-}
+      KUMA_URL: ${KUMA_URL:-}
+      KUMA_USERNAME: ${KUMA_USERNAME:-}
+      KUMA_PASSWORD: ${KUMA_PASSWORD:-}
+      API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:?API_ACCESS_TOKEN requis (jeton front → API)}
+      # Chiffrement au repos des clés API et comptes n8n (cf. .env.example). Vide : en clair.
+      SECRETS_KEY: ${SECRETS_KEY:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      default:
+        # Le nom que l'image web appelle (API_INTERNAL_URL, figé à son build). Jamais « api » seul : un web
+        # sur un réseau partagé (dokploy-network, pour Traefik) y résout aussi l'« api » d'une autre pile.
+        aliases:
+          - stepforit-ops-api
+
+  web:
+    image: ${NWM_IMAGE_PREFIX:-mathieum/stepforitops}-web:${NWM_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL requis (URL publique du front)}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_ALLOWED_DOMAIN: ${GOOGLE_ALLOWED_DOMAIN:-}
+      APP_USERNAME: ${APP_USERNAME:-}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:?API_ACCESS_TOKEN requis (jeton front → API)}
+    # Seul port publié : à mettre derrière un reverse proxy HTTPS.
+    ports:
+      - '${WEB_HOST_PORT:-3000}:3000'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

@@ -15,6 +15,7 @@ import { formatDate } from './format-date';
 import { FamilySelection, WorkflowFamily, WorkflowRow, WorkflowSelection } from './workflow-row';
 import { useEnvColor } from '../../lib/envs';
 import { useWorkflowList } from './use-workflow-list';
+import { EmptyPlaceholder } from '../../components/empty-state/list-empty-state';
 
 /**
  * Vue groupée : une ligne par workflow métier, ses environnements en dessous.
@@ -28,6 +29,7 @@ export function WorkflowFamiliesTable({
   instanceName,
   selection,
   familySelection,
+  empty,
 }: {
   filters: CrudFilters;
   /** Terme cherché : c'est lui qui autorise la synchro de rattrapage, pas les autres filtres. */
@@ -37,6 +39,8 @@ export function WorkflowFamiliesTable({
   /** Cases à cocher des actions groupées : elles vivent sur les MEMBRES, pas sur la famille — archiver « X » d'un clic emporterait la prod avec le dev. */
   selection: WorkflowSelection;
   familySelection: FamilySelection;
+  /** Ce que montre la liste quand elle revient vide (`WorkflowsEmptyState`). */
+  empty: React.ReactNode;
 }) {
   const t = useTranslations('workflowsList.shared');
   const tCommon = useTranslations('common');
@@ -106,6 +110,7 @@ export function WorkflowFamiliesTable({
       {...tableProps}
       rowKey="id"
       loading={tableProps.loading || syncing}
+      locale={{ emptyText: tableProps.loading || syncing ? <EmptyPlaceholder /> : empty }}
       rowSelection={{
         selectedRowKeys: familySelection.keys,
         onChange: (_keys, rows) => familySelection.onSelect([...(tableProps.dataSource ?? [])], rows),

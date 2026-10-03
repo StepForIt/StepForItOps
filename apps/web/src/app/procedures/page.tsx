@@ -3,14 +3,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { DeleteButton, List } from '@refinedev/antd';
 import { useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { useTable } from '../../lib/list-memory/use-list-memory';
 import { App, Button, Form, Input, InputRef, Modal, Select, Space, Typography } from 'antd';
-import { CopyOutlined, EyeOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import {
+  AimOutlined,
+  CopyOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  PlayCircleOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { Table } from '../../components/resizable-table';
 import { useReleaseRecorder } from '../../components/release-recorder/release-recorder';
 import type { Procedure } from '../../components/release-recorder/types';
 import { apiPost } from '../../lib/api';
 import { EnvDefinition, useEnvs, useEnvOptions } from '../../lib/envs';
+import { useEnabledModules } from '../../lib/enabled-modules';
+import { ImpactStudyModal, ImpactSubject } from '../../components/impact-study/impact-study-modal';
+import { ImportProceduresModal } from './import-modal';
+import { downloadProcedures } from './procedure-transfer';
 
 export default function ProceduresPage() {
   const t = useTranslations('misc.procedures');
@@ -24,8 +36,33 @@ export default function ProceduresPage() {
   const [naming, setNaming] = useState(false);
   const [replaying, setReplaying] = useState<Procedure | null>(null);
   const [copying, setCopying] = useState<Procedure | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [impact, setImpact] = useState<ImpactSubject | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const { message } = App.useApp();
+  const { envs } = useEnvs();
+  const { enabled } = useEnabledModules();
+  const canStudy = !enabled || enabled.includes('impact-study');
   const recording = recorder.mode === 'recording';
   const { refetch } = tableQuery;
+
+  const exportProcedures = async (ids?: string[]) => {
+    setExporting(true);
+    try {
+      message.success(t('exported', { count: await downloadProcedures(ids) }));
+    } catch (error) {
+      message.error((error as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // L'étude d'un rejeu porte sur le saut que proposerait « Rejouer » (cf. `defaultHop`).
+  const studyProcedure = (row: Procedure) => {
+    const hop = defaultHop(row, envs);
+    setImpact({ kind: 'procedure', id: row.id, name: row.name, source: hop.source, target: hop.target });
+  };
 
   // La liste suit l'enregistreur : une étape captée ou un arrêt se voient sans recharger.
   useEffect(() => {
@@ -36,12 +73,56 @@ export default function ProceduresPage() {
     <List
       title={t('title')}
       headerButtons={
-        <Button type="primary" danger={!recording} disabled={recording} onClick={() => setNaming(true)}>
-          {recording ? t('recordingInProgress') : t('record')}
-        </Button>
+        <Space wrap>
+          <Button icon={<UploadOutlined />} onClick={() => setImporting(true)}>
+            {t('import')}
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exporting}
+            onClick={() => exportProcedures(selectedIds)}
+          >
+            {selectedIds.length ? t('exportSelected', { count: selectedIds.length }) : t('exportAll')}
+          </Button>
+          <Button type="primary" danger={!recording} disabled={recording} onClick={() => setNaming(true)}>
+            {recording ? t('recordingInProgress') : t('record')}
+          </Button>
+        </Space>
       }
     >
-      <Table {...tableProps} rowKey="id" pagination={false}>
+      <Table
+        {...tableProps}
+        rowKey="id"
+        pagination={false}
+        locale={{
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            // Une mise en ligne s'enregistre une fois et se rejoue : c'est le geste à proposer.
+            <ListEmptyState
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Space wrap style={{ justifyContent: 'center' }}>
+                    <Button type="primary" danger onClick={() => setNaming(true)}>
+                      {t('record')}
+                    </Button>
+                    <Button icon={<UploadOutlined />} onClick={() => setImporting(true)}>
+                      {t('import')}
+                    </Button>
+                  </Space>
+                ),
+              }}
+            />
+          ),
+        }}
+        rowSelection={{
+          selectedRowKeys: selectedIds,
+          onChange: (keys) => setSelectedIds(keys.map(String)),
+          getCheckboxProps: (row: Procedure) => ({ disabled: row.status === 'recording' }),
+        }}
+      >
         <Table.Column<Procedure> dataIndex="name" title={t('name')} />
         <Table.Column<Procedure>
           title={t('steps')}
@@ -82,6 +163,24 @@ export default function ProceduresPage() {
                 aria-label={t('duplicateTo')}
                 title={t('duplicateTo')}
               />
+              {canStudy && (
+                <Button
+                  size="small"
+                  icon={<AimOutlined />}
+                  disabled={row.steps.length === 0}
+                  onClick={() => studyProcedure(row)}
+                  aria-label={t('impact')}
+                  title={t('impact')}
+                />
+              )}
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                disabled={row.status === 'recording'}
+                onClick={() => exportProcedures([row.id])}
+                aria-label={t('export')}
+                title={t('export')}
+              />
               <Button
                 size="small"
                 icon={<EyeOutlined />}
@@ -100,6 +199,15 @@ export default function ProceduresPage() {
         />
       </Table>
       <StartModal open={naming} onClose={() => setNaming(false)} />
+      <ImportProceduresModal
+        open={importing}
+        onClose={() => setImporting(false)}
+        onDone={() => {
+          setImporting(false);
+          void refetch();
+        }}
+      />
+      <ImpactStudyModal subject={impact} onClose={() => setImpact(null)} />
       <ReplayModal procedure={replaying} onClose={() => setReplaying(null)} />
       <DuplicateModal
         procedure={copying}

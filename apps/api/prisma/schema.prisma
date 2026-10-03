@@ -44,6 +44,20 @@ model Instance {
   /// cookie de session. Secret : jamais renvoyé à l'UI, qui n'en voit que l'email.
   n8nEmail            String?
   n8nPassword         String?
+  /// « Ne plus me demander pour cette instance » : sans compte n8n, la console
+  /// relance pour l'accès complet jusqu'à ce que quelqu'un refuse ici, daté et
+  /// signé. Sur l'instance et non dans un navigateur : le refus tient après
+  /// reconnexion et se lève depuis la fiche.
+  fullAccessDismissedAt DateTime?
+  fullAccessDismissedBy String?
+  /// Échéance lue dans la clé (JWT `exp`), recalculée à chaque enregistrement.
+  /// Null : clé opaque ou sans date — état « inconnu », jamais « ok ».
+  apiKeyExpiresAt     DateTime?
+  /// Posé au premier 401/403 de la plateforme, effacé au premier appel accepté.
+  apiKeyRejectedAt    DateTime?
+  /// Dernier palier d'échéance annoncé (`J-14`, `J-3`, `expired`) ; remis à null
+  /// quand la clé change, pour que la suivante ait ses propres alertes.
+  apiKeyAlertedTier   String?
   clientId            String?
   client              Client?                   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdAt           DateTime                  @default(now())
@@ -647,14 +661,14 @@ model LlmNodeTask {
 /// NodeCatalogSync : ne rien retélécharger quand l'amont n'a pas bougé, et
 /// garder les ÉCHECS — sinon un catalogue périmé ressemble à un catalogue à jour.
 model ModelCatalogSync {
-  id        String   @id @default(uuid())
+  id       String   @id @default(uuid())
   /// `litellm` ou `ai`.
-  source    String
-  revision  String?
-  proposed  Int      @default(0)
+  source   String
+  revision String?
+  proposed Int      @default(0)
   /// Renseigné quand la passe a échoué.
-  error     String?
-  at        DateTime @default(now())
+  error    String?
+  at       DateTime @default(now())
 
   @@index([source, at])
 }
@@ -699,25 +713,27 @@ model PerfDriftAlert {
 /// Canal d'alerte du module notifier (Slack incoming webhook ou webhook générique).
 /// L'`url` est un secret : jamais renvoyée à l'UI (le controller la masque).
 model NotificationChannel {
-  id            String   @id @default(uuid())
-  name          String
-  type          String // slack | webhook
-  url           String
-  enabled       Boolean  @default(true)
+  id               String   @id @default(uuid())
+  name             String
+  type             String // slack | webhook
+  url              String
+  enabled          Boolean  @default(true)
   /// Alerter quand un problème apparaît (nouveau ErrorGroup).
-  onNewGroup    Boolean  @default(true)
+  onNewGroup       Boolean  @default(true)
   /// Alerter quand un problème traité revient (rechute).
-  onRegression  Boolean  @default(true)
+  onRegression     Boolean  @default(true)
   /// Alerter quand un workflow entre en dérive de durée (module performance).
-  onPerfDrift   Boolean  @default(true)
+  onPerfDrift      Boolean  @default(true)
   /// Alerter quand le coût LLM du jour dépasse le budget (module ai-cost).
-  onBudget      Boolean  @default(true)
+  onBudget         Boolean  @default(true)
   /// Alerter quand le push vers la sonde de monitoring échoue — la surveillance elle-même.
-  onRelayBroken Boolean  @default(true)
+  onRelayBroken    Boolean  @default(true)
   /// Alerter quand un modèle du parc est déprécié ou retiré (module model-audit).
-  onModelLifecycle Boolean @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  onModelLifecycle Boolean  @default(true)
+  /// Alerter quand la clé API d'une instance approche de son échéance, expire ou est refusée.
+  onApiKey         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 /// Réglages du module ai-cost (ligne unique id = "default") : budget quotidien en

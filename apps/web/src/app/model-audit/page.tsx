@@ -18,6 +18,7 @@ import {
 } from 'antd';
 import { ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { apiGet, apiPost, apiPut } from '../../lib/api';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
 import { AuditRunResult, CatalogProposal, ModelParcRow, ModelParcSummary, TaskProfile } from './types';
@@ -165,18 +166,31 @@ export default function ModelAuditPage() {
         />
       )}
 
-      {tab === 'parc' && <ParcTable rows={summary?.models ?? []} />}
+      {tab === 'parc' && <ParcTable rows={summary?.models ?? []} onRun={runAudit} running={running} />}
       {tab === 'tasks' && <TaskProfiles profiles={profiles} onSaved={load} />}
       {tab === 'catalog' && <Proposals rows={proposals} onDecide={decide} />}
     </Card>
   );
 }
 
-function ParcTable({ rows }: { rows: ModelParcRow[] }) {
+function ParcTable({ rows, onRun, running }: { rows: ModelParcRow[]; onRun: () => void; running: boolean }) {
   const t = useTranslations('health.modelAudit.parc');
   const tt = useTranslations('health.modelAudit');
   if (rows.length === 0) {
-    return <Empty description={t('empty')} />;
+    return (
+      <ListEmptyState
+        needsInstances
+        idle={{
+          title: t('empty.title'),
+          text: t('empty.text'),
+          actions: (
+            <Button type="primary" icon={<SyncOutlined />} loading={running} onClick={onRun}>
+              {tt('runAudit')}
+            </Button>
+          ),
+        }}
+      />
+    );
   }
   return (
     <Table<ModelParcRow> dataSource={rows} rowKey="model" size="small" pagination={false}>

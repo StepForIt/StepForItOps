@@ -3,9 +3,14 @@ import { manifestProvider } from '../../infra/modules-registry/manifest.provider
 import { RELEASE_PROCEDURES_MANIFEST } from './manifest';
 import { ReleaseProceduresController } from './release-procedures.controller';
 import { ReleaseProceduresService } from './release-procedures.service';
+import { ReleaseProceduresTransferService } from './release-procedures-transfer.service';
 
 @Module({
   controllers: [ReleaseProceduresController],
-  providers: [ReleaseProceduresService, manifestProvider(RELEASE_PROCEDURES_MANIFEST)],
+  providers: [
+    ReleaseProceduresService,
+    ReleaseProceduresTransferService,
+    manifestProvider(RELEASE_PROCEDURES_MANIFEST),
+  ],
 })
 export class ReleaseProceduresModule {}

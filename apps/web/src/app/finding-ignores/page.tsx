@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Empty, Popconfirm, Select, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { Button, Card, Popconfirm, Select, Space, Tag, Tooltip, Typography, message } from 'antd';
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { Table } from '../../components/resizable-table';
 import { apiDelete, apiGet } from '../../lib/api';
 import { useRuleLabel } from '../../lib/finding-rules';
@@ -76,7 +78,24 @@ export default function FindingIgnores() {
         rowKey="id"
         loading={loading}
         locale={{
-          emptyText: <Empty description={t('empty')} />,
+          emptyText: loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              needsInstances
+              filterCount={moduleFilter ? 1 : 0}
+              onResetFilters={() => setModuleFilter(undefined)}
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Link href="/findings">
+                    <Button type="primary">{t('empty.cta')}</Button>
+                  </Link>
+                ),
+              }}
+            />
+          ),
         }}
       >
         <Table.Column<IgnoreRule>

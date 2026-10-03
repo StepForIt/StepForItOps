@@ -385,13 +385,21 @@
   "exportTargets": {
     "enabled": "Activée",
     "yes": "oui",
-    "no": "non"
+    "no": "non",
+    "empty": {
+      "title": "Aucune sauvegarde externe",
+      "text": "Envoyez chaque version de vos workflows sur GitHub ou Google Drive : une copie hors de la plateforme, toujours à jour."
+    }
   },
   "workflowGroups": {
     "group": "Groupe",
     "workflows": "Workflows",
     "none": "aucun",
-    "duplicateTooltip": "Dupliquer tous les workflows du groupe vers un env"
+    "duplicateTooltip": "Dupliquer tous les workflows du groupe vers un env",
+    "empty": {
+      "title": "Aucun groupe pour l’instant",
+      "text": "Rangez vos workflows par domaine métier (facturation, CRM…) pour filtrer, contrôler et vérifier par lot."
+    }
   },
   "workflowGroupEdit": {
     "thisGroup": "ce groupe",
@@ -410,12 +418,52 @@
     "deleteConfirm": "Supprimer ce client ? Ses instances restent, sans rattachement.",
     "new": "Nouveau client",
     "rename": "Renommer le client",
-    "name": "Nom du client"
+    "name": "Nom du client",
+    "empty": {
+      "title": "Aucun client pour l’instant",
+      "text": "Regroupez les instances de chaque client pour suivre son ROI, ses erreurs et ses coûts sur un seul écran."
+    }
   },
   "resourceMappings": {
     "discover": "Découvrir depuis un workflow",
     "provider": "Provider",
     "logicalName": "Nom logique",
-    "envs": "Environnements"
+    "envs": "Environnements",
+    "empty": {
+      "title": "Aucun mapping d’environnement",
+      "text": "Dites une fois quelle base de dev correspond à quelle base de prod : la promotion rebranche tout toute seule."
+    }
+  },
+  "apiKey": {
+    "column": "Clé expire le",
+    "noDate": "sans date",
+    "noDateLong": "Clé sans date d’expiration.",
+    "expiresOn": "Expire le {date}",
+    "rejectedTag": "refusée",
+    "rejected": "Clé API de {name} refusée par la plateforme.",
+    "expired": "Clé API de {name} expirée le {date}.",
+    "soon": "Clé API de {name} : expire le {date}.",
+    "open": "Ouvrir",
+    "replace": "Remplacer la clé"
+  },
+  "fullAccess": {
+    "title": "Accès complet à cette instance",
+    "intro": "Avec le compte propriétaire n8n, Ops lit la version de n8n et les nœuds réellement installés sur cette instance, et peut mener les actions d'administration. Sans lui, ces fonctions restent fermées.",
+    "storage": "Le mot de passe est stocké chiffré sur le serveur et n'est jamais réaffiché ni renvoyé à l'écran : seul l'e-mail reste visible.",
+    "email": "E-mail du propriétaire n8n",
+    "password": "Mot de passe",
+    "saveWith": "Enregistrer avec l'accès complet",
+    "continueWithout": "Continuer sans",
+    "dontAskAgain": "Ne plus me demander pour cette instance",
+    "partialTag": "accès partiel",
+    "banner": "Accès partiel : le compte propriétaire n8n de {name} n'est pas renseigné.",
+    "fill": "Renseigner",
+    "dismiss": "Ne plus demander pour cette instance",
+    "dismissedOn": "Accès complet refusé le {date}",
+    "dismissedBy": " par {by}",
+    "askAgain": "Redemander l'accès complet",
+    "saved": "Compte propriétaire enregistré : accès complet actif.",
+    "dismissed": "Compris : Ops ne redemandera plus pour cette instance.",
+    "askedAgain": "Ops redemandera l'accès complet pour cette instance."
   }
 }

@@ -6,9 +6,10 @@ import { WorkflowRefResolver } from './workflow-ref.resolver';
 
 /**
  * Sections du bundle accrochées à des workflows (règles d'exclusion de findings,
- * groupes, liens manuels de la carte). Elles ne peuvent aboutir qu'une fois les
- * workflows synchronisés depuis n8n sur la base cible : chaque référence non
- * résolue est signalée plutôt que créée à moitié.
+ * groupes, liens manuels de la carte). L'import a synchronisé les instances
+ * visées juste avant (`ConfigImportSyncService`) : une référence encore non
+ * résolue vise un workflow que la plateforme ne sert plus, et elle est signalée
+ * plutôt que créée à moitié.
  */
 @Injectable()
 export class ConfigImportWorkflowScopedService {
@@ -49,6 +50,11 @@ export class ConfigImportWorkflowScopedService {
       let workflowId: string | null = null;
       if (entry.workflowRef) {
         workflowId = await this.refs.workflowId(entry.workflowRef);
+        if (!workflowId && this.refs.workflowExpected(entry.workflowRef)) {
+          // Dry-run : le workflow arrivera avec la synchro de l'import réel.
+          act(false, strategy, section);
+          continue;
+        }
         if (!workflowId) {
           // Créer la règle sans workflow l'élargirait à toute la plateforme : on s'abstient.
           section.skipped++;
@@ -125,6 +131,10 @@ export class ConfigImportWorkflowScopedService {
     const section = report.sections.workflowGroups;
     for (const entry of bundle.workflowGroups ?? []) {
       const instanceId = await this.refs.instanceId(entry.instanceBaseUrl);
+      if (!instanceId && this.refs.instanceExpected(entry.instanceBaseUrl)) {
+        act(false, strategy, section);
+        continue;
+      }
       if (!instanceId) {
         section.skipped++;
         report.warnings.push(
@@ -141,7 +151,7 @@ export class ConfigImportWorkflowScopedService {
         const ref = { instanceBaseUrl: entry.instanceBaseUrl, externalId };
         const id = await this.refs.workflowId(ref);
         if (id) memberIds.push(id);
-        else {
+        else if (!this.refs.workflowExpected(ref)) {
           report.warnings.push(
             WorkflowRefResolver.missing(
               msg('platform.importSubject', { kind: 'group', name: entry.name }),
@@ -187,6 +197,12 @@ export class ConfigImportWorkflowScopedService {
     for (const entry of bundle.workflowLinks ?? []) {
       const fromId = await this.refs.workflowId(entry.from);
       const toId = await this.refs.workflowId(entry.to);
+      const fromOk = fromId || this.refs.workflowExpected(entry.from);
+      const toOk = toId || this.refs.workflowExpected(entry.to);
+      if (fromOk && toOk && (!fromId || !toId)) {
+        act(false, strategy, section);
+        continue;
+      }
       if (!fromId || !toId) {
         section.skipped++;
         report.warnings.push(
@@ -195,7 +211,7 @@ export class ConfigImportWorkflowScopedService {
               kind: 'link',
               name: entry.label || msg('platform.importNoLabel'),
             }),
-            fromId ? entry.to : entry.from,
+            fromOk ? entry.to : entry.from,
           ),
         );
         continue;

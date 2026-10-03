@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAuthEnabled } from '../../../lib/auth/auth-config';
-import { dbAuthState } from '../../../lib/auth/db-auth';
+import { apiBase, dbAuthState } from '../../../lib/auth/db-auth';
 
 /**
  * État de la configuration de sécurité, lu côté serveur Next (seul à voir les
@@ -10,7 +10,23 @@ import { dbAuthState } from '../../../lib/auth/db-auth';
 
 export const dynamic = 'force-dynamic';
 
-export type SecurityWarningCode = 'auth-open' | 'api-open' | 'no-session-secret';
+export type SecurityWarningCode = 'auth-open' | 'api-open' | 'no-session-secret' | 'secrets-plain';
+
+/**
+ * `SECRETS_KEY` est une variable de l'API, que Next ne voit pas : on le lui
+ * demande. API muette ⇒ null, et rien n'est affirmé.
+ */
+async function secretsEncrypted(): Promise<boolean | null> {
+  try {
+    const headers: Record<string, string> = {};
+    if (process.env.API_ACCESS_TOKEN) headers['x-api-token'] = process.env.API_ACCESS_TOKEN;
+    const response = await fetch(`${apiBase()}/security/status`, { headers, cache: 'no-store' });
+    if (!response.ok) return null;
+    return ((await response.json()) as { secretsEncrypted: boolean }).secretsEncrypted;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(): Promise<NextResponse> {
   const db = await dbAuthState();
@@ -24,5 +40,6 @@ export async function GET(): Promise<NextResponse> {
   if (authEnabled && !process.env.SESSION_SECRET && !db?.sessionSecret) {
     warnings.push('no-session-secret');
   }
+  if ((await secretsEncrypted()) === false) warnings.push('secrets-plain');
   return NextResponse.json({ warnings });
 }

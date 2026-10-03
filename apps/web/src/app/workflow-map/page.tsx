@@ -20,6 +20,8 @@ import { Table } from '../../components/resizable-table';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { ListEmptyState } from '../../components/empty-state/list-empty-state';
+import { SyncInstancesButton } from '../../components/empty-state/sync-instances-button';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 import { keyColor } from '../../lib/graph-colors';
 import { useInstanceScope } from '../../lib/instance-scope';
@@ -434,26 +436,49 @@ export default function WorkflowMapPage() {
         </div>
       </Card>
 
-      <WorkflowMapHelp defaultOpen={loaded && links.length === 0} />
+      {/* Parc vide : l’aide repliée laisse voir l’état vide et son bouton de synchro. */}
+      <WorkflowMapHelp defaultOpen={loaded && links.length === 0 && nodes.length > 0} />
 
       {loaded && nodes.length === 0 && !busy && (
-        <Alert
-          style={{ marginTop: 16 }}
-          type="info"
-          showIcon
-          message={t('noWorkflow')}
-          description={t('noWorkflowDescription')}
-        />
+        <Card style={{ marginTop: 16 }}>
+          <ListEmptyState
+            needsInstances
+            idle={{
+              title: t('noWorkflow'),
+              text: t('noWorkflowDescription'),
+              actions: <SyncInstancesButton instanceId={scope} onSynced={() => void load()} />,
+            }}
+          />
+        </Card>
       )}
 
+      {/* Les réglages par défaut (prod seule, isolés masqués) suffisent à tout cacher sur
+          un parc sans appels : les retirer d'un clic montre au moins les workflows. */}
       {loaded && nodes.length > 0 && visible.nodes.length === 0 && !busy && (
-        <Alert
-          style={{ marginTop: 16 }}
-          type="info"
-          showIcon
-          message={t('nothingToShow')}
-          description={t('nothingToShowDescription')}
-        />
+        <Card style={{ marginTop: 16 }}>
+          <ListEmptyState
+            search={q}
+            onClearSearch={() => setQ('')}
+            filterCount={
+              [kinds.length < ALL_KINDS.length, hideIsolated, prodOnly, hideArchived].filter(Boolean).length
+            }
+            onResetFilters={() => {
+              setKinds(ALL_KINDS);
+              setHideIsolated(false);
+              setProdOnly(false);
+              setHideArchived(false);
+            }}
+            idle={{
+              title: t('nothingToShow'),
+              text: t('nothingToShowDescription'),
+              actions: (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>
+                  {t('addLink')}
+                </Button>
+              ),
+            }}
+          />
+        </Card>
       )}
 
       {visible.nodes.length > 0 && view === 'graphe' && (

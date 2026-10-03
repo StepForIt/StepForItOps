@@ -8,6 +8,7 @@ import { CrudFilters } from '@refinedev/core';
 import { Tag, Tooltip, Typography } from 'antd';
 import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
+import { EmptyPlaceholder } from '../../components/empty-state/list-empty-state';
 import { VersionActions, VersionHandlers, formatDateTime } from './version-actions';
 import { VersionHistoryTable } from './history-table';
 
@@ -37,11 +38,14 @@ export function LatestVersionsTable({
   scope,
   instanceName,
   handlers,
+  empty,
 }: {
   filters: CrudFilters;
   scope: string | null;
   instanceName: (id?: string) => string;
   handlers: VersionHandlers;
+  /** Ce que montre la liste quand elle revient vide. */
+  empty: React.ReactNode;
 }) {
   const c = useTranslations('inventory.versions.columns');
   const tt = useTranslations('inventory.versions.table');
@@ -56,6 +60,7 @@ export function LatestVersionsTable({
     <Table
       {...tableProps}
       rowKey="id"
+      locale={{ emptyText: tableProps.loading ? <EmptyPlaceholder /> : empty }}
       expandable={{
         // Une version unique n'a rien à déplier : pas de chevron qui ouvre du vide.
         rowExpandable: (record) => record.versionCount > 1,

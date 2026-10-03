@@ -232,7 +232,7 @@ export const platform = defineMessages(
     unknownType: 'unknown',
     // config-transfer
     importWorkflowMissing:
-      '{what}: workflow not found ({instanceUrl} / {externalId}) — sync the workflows from n8n then re-import the same file',
+      '{what}: workflow not found ({instanceUrl} / {externalId}) — the instance no longer serves it, or could not be synchronized',
     importSubject:
       '{kind, select, findingIgnore {Finding exclusion "{name}"} group {Group "{name}"} link {Manual link "{name}"} monitor {Monitor "{name}"} other {{name}}}',
     importNoLabel: 'no label',
@@ -247,9 +247,28 @@ export const platform = defineMessages(
       'Export target "{name}" created without its secrets (token…): to be filled in manually',
     importMonitorUnresolved:
       'Monitor "{name}": instance not resolved ({hasRef, select, true {instance {instanceRef} missing from this platform} other {bundle predating the addition of instanceRef}}) — imported disabled, to be re-enabled after choosing its instance',
+    importSyncFailed: 'Instance "{name}": synchronization failed during import ({error})',
     importKumaNoPassword:
       'Uptime Kuma settings imported without password (export without secrets): to be filled in manually',
     importAiNoKey: 'AI settings imported without API key (export without secrets): to be filled in manually',
+    exportKeyRequired:
+      'Export key required to include secrets: it seals them in the file and will be asked again on import',
+    exportKeyTooShort: 'Export key too short: at least {min} characters',
+    exportKeyFileSealed: 'Sealed file: enter the export key chosen at export time',
+    exportKeyWrong: 'Wrong export key, or altered file: nothing was imported',
+    backupInvalidFile: 'Invalid file: this is not a full backup of the platform',
+    backupUnsupportedVersion: 'Unsupported backup version: {version} (expected: {expected})',
+    backupTruncated: 'Truncated backup: the end marker is missing, the file was cut off during download',
+    backupUnreadable: 'Unreadable backup at line {line}: {error}',
+    backupUnknownUpload: 'Uploaded backup not found or expired: upload the file again',
+    backupBusy: 'A restore is already running',
+    backupConfirmRequired: 'Restore not confirmed: it replaces ALL the data of the platform',
+    backupUnknownTable: 'Table "{table}" ({count} rows) does not exist in this version: ignored',
+    backupUnknownColumns: 'Table "{table}": columns unknown in this version, ignored ({columns})',
+    backupSchemaDiffers:
+      'Backup taken on another schema version ({from}, here {to}): new columns take their default value',
+    backupOrderFallback:
+      'Tables are not in the order this version expects: the restore will read the file once per table (slower)',
     // instances
     instanceNotFoundAnon: 'Instance not found',
     instanceNotFound: 'Instance {id} not found',
@@ -531,7 +550,7 @@ export const platform = defineMessages(
     unknownType: 'inconnu',
     // config-transfer
     importWorkflowMissing:
-      '{what} : workflow introuvable ({instanceUrl} / {externalId}) — synchronisez les workflows depuis n8n puis ré-importez le même fichier',
+      "{what} : workflow introuvable ({instanceUrl} / {externalId}) — l'instance ne le sert plus, ou n'a pas pu être synchronisée",
     importSubject:
       '{kind, select, findingIgnore {Exclusion de finding "{name}"} group {Groupe "{name}"} link {Lien manuel "{name}"} monitor {Monitor "{name}"} other {{name}}}',
     importNoLabel: 'sans libellé',
@@ -546,9 +565,29 @@ export const platform = defineMessages(
       'Cible export "{name}" créée sans ses secrets (token…) : à renseigner manuellement',
     importMonitorUnresolved:
       'Monitor "{name}" : instance non résolue ({hasRef, select, true {instance {instanceRef} absente de cette plateforme} other {bundle antérieur à l\'ajout de instanceRef}}) — importé désactivé, à réactiver après avoir choisi son instance',
+    importSyncFailed: 'Instance "{name}" : échec de la synchronisation pendant l\'import ({error})',
     importKumaNoPassword:
       'Réglages Uptime Kuma importés sans mot de passe (export sans secrets) : à renseigner manuellement',
     importAiNoKey: 'Réglages IA importés sans clé API (export sans secrets) : à renseigner manuellement',
+    exportKeyRequired:
+      "Clé d'export requise pour sortir les secrets : elle les scelle dans le fichier et sera redemandée à l'import",
+    exportKeyTooShort: "Clé d'export trop courte : {min} caractères au moins",
+    exportKeyFileSealed: "Fichier scellé : donnez la clé d'export choisie au moment de l'export",
+    exportKeyWrong: "Clé d'export incorrecte, ou fichier altéré : rien n'a été importé",
+    backupInvalidFile: "Fichier invalide : ce n'est pas une sauvegarde complète de la plateforme",
+    backupUnsupportedVersion: 'Version de sauvegarde non prise en charge : {version} (attendue : {expected})',
+    backupTruncated:
+      'Sauvegarde tronquée : le marqueur de fin manque, le fichier a été coupé pendant le téléchargement',
+    backupUnreadable: 'Sauvegarde illisible à la ligne {line} : {error}',
+    backupUnknownUpload: 'Sauvegarde téléversée introuvable ou expirée : téléversez à nouveau le fichier',
+    backupBusy: 'Une restauration est déjà en cours',
+    backupConfirmRequired: 'Restauration non confirmée : elle remplace TOUTES les données de la plateforme',
+    backupUnknownTable: 'Table « {table} » ({count} lignes) inconnue de cette version : ignorée',
+    backupUnknownColumns: 'Table « {table} » : colonnes inconnues de cette version, ignorées ({columns})',
+    backupSchemaDiffers:
+      'Sauvegarde prise sur une autre version du schéma ({from}, ici {to}) : les nouvelles colonnes prennent leur valeur par défaut',
+    backupOrderFallback:
+      "Les tables ne sont pas dans l'ordre attendu par cette version : la restauration relira le fichier une fois par table (plus lent)",
     // instances
     instanceNotFoundAnon: 'Instance introuvable',
     instanceNotFound: 'Instance {id} introuvable',

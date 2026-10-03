@@ -6,7 +6,8 @@
  * Il est donc **fermé par défaut** et ne s'ouvre que là où l'opérateur est
  * devant sa machine : `docker-compose.override.yml` (dev local) pose
  * `CONFIG_EXPORT_ENABLED=1`. La prod (`docker-compose.yml`) ne la pose pas —
- * sur un serveur, la route répond 403 quoi qu'il arrive.
+ * sur un serveur, la route répond 403 sauf déploiement sur
+ * `docker-compose.export.yml` (la prod, export ouvert), le temps d'un export.
  *
  * La variante « sans secrets » est fermée elle aussi : elle emporte quand même
  * les jetons et URLs push des monitors, et la topologie complète des instances.

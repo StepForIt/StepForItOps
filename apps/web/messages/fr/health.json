@@ -129,6 +129,10 @@
       "backfillTitle": "Importer l'historique d'erreurs depuis n8n",
       "backfillOk": "Importer les {days} derniers jours",
       "backfillInstance": "Choisir l'instance n8n"
+    },
+    "empty": {
+      "title": "Aucune erreur sur les {days} derniers jours",
+      "text": "Vos workflows surveillés tournent sans accroc. Les erreurs plus anciennes s’importent en un clic."
     }
   },
   "llmCosts": {
@@ -211,7 +215,12 @@
       "model": "Modèle",
       "budgetTitle": "Budget quotidien",
       "budgetHint": "Alerte une fois par jour au-delà du seuil. Vide = désactivée.",
-      "perDay": "$ / jour"
+      "perDay": "$ / jour",
+      "empty": {
+        "title": "Aucun appel IA détecté pour l’instant",
+        "text": "Chaque appel à un modèle dans vos workflows est chiffré ici, sans rien installer : par workflow, par modèle, par jour.",
+        "cta": "Rafraîchir les coûts"
+      }
     }
   },
   "performance": {
@@ -226,7 +235,11 @@
     "title": "Performance des workflows",
     "searchPlaceholder": "Rechercher un workflow…",
     "onlyDrifted": "Uniquement les dérives",
-    "empty": "Aucune exécution sur la période.",
+    "empty": {
+      "title": "Pas encore de mesure sur la période",
+      "text": "Durées, taux de succès et dérives de vos workflows surveillés s’affichent ici dès les premières exécutions.",
+      "cta": "Mesurer maintenant"
+    },
     "percent": "{value} %",
     "failures": "{count} échec(s)",
     "driftTooltip": "Médiane ×{ratio} vs les {days} jours précédents",
@@ -273,7 +286,10 @@
     "refreshCatalog": "Rafraîchir le catalogue",
     "staleCatalog": "Catalogue périmé ({days} j) : obsolescence et économies en pause.",
     "parc": {
-      "empty": "Aucun nœud LLM dans le parc synchronisé.",
+      "empty": {
+        "title": "Aucun modèle IA audité pour l’instant",
+        "text": "L’audit repère les modèles retirés, inadaptés ou trop chers pour la tâche, et chiffre l’économie possible."
+      },
       "model": "Modèle",
       "status": "État",
       "unknownTooltip": "Absent du catalogue",
@@ -399,7 +415,11 @@
       "bulkTitle": "Créer les sondes Kuma d'une instance",
       "bulkOk": "Créer les sondes",
       "bulkHint": "Pour chaque workflow <b>actif</b> sans monitor heartbeat : crée le monitor local + la sonde push dans Uptime Kuma. Il restera à coller le snippet heartbeat dans chaque workflow.",
-      "chooseInstance": "Choisir l'instance n8n"
+      "chooseInstance": "Choisir l'instance n8n",
+      "empty": {
+        "title": "Rien n’est surveillé pour l’instant",
+        "text": "Un monitor vous prévient dès qu’un workflow tombe en erreur ou cesse de battre, avant vos clients."
+      }
     }
   }
 }

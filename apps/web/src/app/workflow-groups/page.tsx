@@ -10,6 +10,7 @@ import { Table } from '../../components/resizable-table';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { GroupDuplicateModal } from '../../components/group-duplicate-modal';
 import { useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 
 interface GroupRow {
   id: string;
@@ -34,7 +35,24 @@ export default function WorkflowGroupsList() {
 
   return (
     <List headerButtons={<CreateButton />}>
-      <Table {...tableProps} rowKey="id">
+      <Table
+        {...tableProps}
+        rowKey="id"
+        locale={{
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              needsInstances
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: <CreateButton />,
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column
           dataIndex="name"
           title={t('group')}

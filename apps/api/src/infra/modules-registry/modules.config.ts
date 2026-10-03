@@ -59,6 +59,11 @@ export const FEATURE_MODULES: Array<{ id: string; path: string; className: strin
     className: 'ReleaseProceduresModule',
   },
   {
+    id: 'impact-study',
+    path: '../../modules/impact-study/impact-study.module',
+    className: 'ImpactStudyModule',
+  },
+  {
     id: 'workflow-chat',
     path: '../../modules/workflow-chat/workflow-chat.module',
     className: 'WorkflowChatModule',

@@ -295,6 +295,51 @@ describe('API (bout en bout)', () => {
     });
   });
 
+  describe('une instance', () => {
+    it("rend l'échéance et l'état de la clé API, jamais la clé", async () => {
+      const exp = Math.floor(Date.now() / 1000) + 10 * 24 * 3600;
+      const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+      const apiKey = `${encode({ alg: 'HS256' })}.${encode({ sub: 'u', exp })}.secret-signature`;
+
+      const created = await request(app.getHttpServer())
+        .post('/instances')
+        .send({ name: 'Prod', baseUrl: 'http://n8n', apiKey })
+        .expect(201);
+      const list = await request(app.getHttpServer()).get('/instances').expect(200);
+      const one = await request(app.getHttpServer()).get(`/instances/${created.body.id}`).expect(200);
+
+      for (const body of [created.body, list.body[0], one.body]) {
+        expect(body).toMatchObject({
+          apiKeyState: 'soon',
+          apiKeyExpiresAt: new Date(exp * 1000).toISOString(),
+        });
+        expect(body).not.toHaveProperty('apiKey');
+      }
+      for (const text of [created.text, list.text, one.text]) expect(text).not.toContain('secret-signature');
+    });
+
+    // L'auteur du refus vient de l'en-tête que pose le proxy de la console :
+    // c'est le seul endroit où cette signature existe, d'où un cas de bout en bout.
+    it("signe « ne plus demander l'accès complet » de qui l'a dit, et ne rend jamais le mot de passe", async () => {
+      const created = await request(app.getHttpServer())
+        .post('/instances')
+        .set('x-user-email', 'mathieu@stepforit.fr')
+        .send({ name: 'Prod', baseUrl: 'http://n8n', apiKey: 'n8n_api_key', fullAccessDismiss: true })
+        .expect(201);
+      expect(created.body.fullAccessDismissedBy).toBe('mathieu@stepforit.fr');
+      expect(created.body.fullAccessDismissedAt).toEqual(expect.any(String));
+
+      const asked = await request(app.getHttpServer())
+        .patch(`/instances/${created.body.id}`)
+        .send({ fullAccessDismiss: false, n8nEmail: 'owner@n8n', n8nPassword: 'très-secret' })
+        .expect(200);
+      expect(asked.body.fullAccessDismissedAt).toBeNull();
+      expect(asked.body.fullAccessDismissedBy).toBeNull();
+      expect(asked.body.hasN8nLogin).toBe(true);
+      expect(asked.text).not.toContain('très-secret');
+    });
+  });
+
   describe('les modules', () => {
     // 404 et non 403 : un module désactivé n'existe pas pour l'appelant, ses
     // routes non plus. C'est le choix de `ModuleEnabledGuard`.
@@ -388,5 +433,155 @@ describe('API protégée par un jeton', () => {
       .get('/workflows')
       .set('x-api-token', 'jeton-de-test')
       .expect(200);
+  });
+});
+
+/**
+ * Les secrets d'instance chiffrés au repos, l'application entière démarrée avec
+ * `SECRETS_KEY` : c'est le seul niveau où la clé est lue dans l'environnement, où
+ * le client Prisma injecté porte le chiffrement, et où la console apprend s'il
+ * est actif. La base est relue en SQL brut : c'est ce qu'elle contient vraiment.
+ */
+describe('secrets d’instance chiffrés au repos', () => {
+  let sealed: TestApp;
+
+  beforeAll(async () => {
+    await resetDb();
+    sealed = await startTestApp({ env: { SECRETS_KEY: Buffer.alloc(32, 7).toString('base64') } });
+  });
+
+  afterAll(async () => {
+    await sealed.close();
+    // Des secrets chiffrés laissés en base empêcheraient une application sans clé de démarrer.
+    await resetDb();
+  });
+
+  it('stocke la clé API chiffrée et le dit à la console', async () => {
+    await request(sealed.app.getHttpServer())
+      .post('/instances')
+      .send({
+        name: 'Prod',
+        baseUrl: 'http://n8n',
+        apiKey: 'cle-en-clair',
+        n8nEmail: 'o@n8n',
+        n8nPassword: 'mdp',
+      })
+      .expect(201);
+
+    const [row] = await prisma.$queryRaw<Array<{ apiKey: string; n8nPassword: string }>>`
+      SELECT "apiKey", "n8nPassword" FROM "Instance"`;
+    expect(row.apiKey).toMatch(/^enc:v1:/);
+    expect(row.n8nPassword).toMatch(/^enc:v1:/);
+
+    const status = await request(sealed.app.getHttpServer()).get('/security/status').expect(200);
+    expect(status.body).toEqual({ secretsEncrypted: true });
+  });
+});
+
+describe('secrets d’instance sans clé', () => {
+  let open: TestApp;
+
+  beforeAll(async () => {
+    open = await startTestApp({ env: { SECRETS_KEY: undefined } });
+  });
+
+  afterAll(async () => {
+    await open.close();
+  });
+
+  it('le dit à la console, qui l’affiche dans sa bannière de sécurité', async () => {
+    const status = await request(open.app.getHttpServer()).get('/security/status').expect(200);
+    expect(status.body).toEqual({ secretsEncrypted: false });
+  });
+});
+
+/**
+ * La clé d'export, de la requête au fichier : ce qui sort n'est lisible ni en
+ * clair ni par `SECRETS_KEY` (le chiffré de la base ne quitte jamais la base),
+ * et la clé ne voyage jamais dans une URL — corps de formulaire pour la
+ * sauvegarde, en-tête pour son téléversement.
+ */
+describe("secrets exportés sous clé d'export", () => {
+  let app: TestApp;
+  const EXPORT_KEY = 'cheval-agrafe-batterie';
+  const binary = (res: request.Response, done: (err: Error | null, body: Buffer) => void) => {
+    const chunks: Buffer[] = [];
+    res.on('data', (c: Buffer) => chunks.push(c));
+    res.on('end', () => done(null, Buffer.concat(chunks)));
+  };
+
+  beforeAll(async () => {
+    await resetDb();
+    app = await startTestApp({
+      env: { SECRETS_KEY: Buffer.alloc(32, 7).toString('base64'), CONFIG_EXPORT_ENABLED: '1' },
+    });
+    await request(app.app.getHttpServer())
+      .post('/instances')
+      .send({ name: 'Prod', baseUrl: 'http://n8n', apiKey: 'cle-en-clair' })
+      .expect(201);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await resetDb();
+  });
+
+  it("l'export de configuration scelle les secrets, et refuse de les sortir sans clé", async () => {
+    const server = app.app.getHttpServer();
+    const sealed = await request(server)
+      .post('/config-transfer/export')
+      .send({ exportKey: EXPORT_KEY })
+      .expect(200);
+    const file = JSON.stringify(sealed.body);
+    expect(file).not.toContain('cle-en-clair');
+    // Le chiffré de la base (`enc:v1:`) ne sort pas : seul celui de la clé d'export (`xenc:v1:`).
+    expect(file).not.toMatch(/"enc:v1:/);
+    expect(sealed.body.sealed.kdf).toBe('scrypt');
+
+    const refused = await request(server).post('/config-transfer/export').send({}).expect(400);
+    expect(refused.body.message).toMatch(/clé d'export|export key/i);
+
+    const plain = await request(server).get('/config-transfer/export').expect(200);
+    expect(plain.body.instances[0].apiKey).toBeNull();
+
+    const preview = await request(server)
+      .post('/config-transfer/import')
+      .send({ bundle: sealed.body, dryRun: true, exportKey: 'une-autre-cle-longue' })
+      .expect(400);
+    expect(preview.body.message).toMatch(/incorrecte|wrong/i);
+  });
+
+  it('la sauvegarde complète part scellée et ne se téléverse qu’avec sa clé', async () => {
+    const server = app.app.getHttpServer();
+    await request(server)
+      .post('/config-transfer/backup')
+      .type('form')
+      .send({ exportKey: 'court' })
+      .expect(400);
+
+    const backup = await request(server)
+      .post('/config-transfer/backup')
+      .type('form')
+      .send({ exportKey: EXPORT_KEY })
+      .buffer(true)
+      .parse(binary)
+      .expect(200);
+    const bytes = backup.body as Buffer;
+    expect(bytes.subarray(0, 8).toString()).toBe('NWMSEAL1');
+    expect(bytes.includes(Buffer.from('cle-en-clair'))).toBe(false);
+
+    await request(server)
+      .post('/config-transfer/restore/upload')
+      .set('content-type', 'application/octet-stream')
+      .set('x-export-key', 'une-autre-cle-longue')
+      .send(bytes)
+      .expect(400);
+    const staged = await request(server)
+      .post('/config-transfer/restore/upload')
+      .set('content-type', 'application/octet-stream')
+      .set('x-export-key', EXPORT_KEY)
+      .send(bytes)
+      .expect(201);
+    expect(staged.body.tables.find((t: { table: string }) => t.table === 'Instance').inFile).toBe(1);
   });
 });

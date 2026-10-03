@@ -5,6 +5,7 @@ import { Alert, Button, Card, Input, Modal, Popconfirm, Space, Tag, message } fr
 import { Table } from '../../components/resizable-table';
 import { DeleteOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 
 interface Client {
@@ -76,7 +77,37 @@ export default function ClientsPage() {
       }
     >
       <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('info')} />
-      <Table dataSource={rows} rowKey="id" loading={loading} size="small" pagination={false}>
+      <Table
+        dataSource={rows}
+        rowKey="id"
+        loading={loading}
+        size="small"
+        pagination={false}
+        locale={{
+          emptyText: loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              idle={{
+                title: t('empty.title'),
+                text: t('empty.text'),
+                actions: (
+                  <Button
+                    type="primary"
+                    icon={<TeamOutlined />}
+                    onClick={() => {
+                      setEditing('new');
+                      setName('');
+                    }}
+                  >
+                    {t('add')}
+                  </Button>
+                ),
+              }}
+            />
+          ),
+        }}
+      >
         <Table.Column dataIndex="name" title={tc('columns.name')} />
         <Table.Column<Client>
           dataIndex="instanceCount"

@@ -8,6 +8,7 @@ import { CrudFilters } from '@refinedev/core';
 import { Space, Tag, Tooltip, Typography } from 'antd';
 import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
+import { EmptyPlaceholder } from '../../components/empty-state/list-empty-state';
 import { useEnvColor } from '../../lib/envs';
 import { VersionActions, VersionHandlers, formatDateTime } from './version-actions';
 import { VersionHistoryTable } from './history-table';
@@ -55,11 +56,14 @@ export function VersionFamiliesTable({
   scope,
   instanceName,
   handlers,
+  empty,
 }: {
   filters: CrudFilters;
   scope: string | null;
   instanceName: (id?: string) => string;
   handlers: VersionHandlers;
+  /** Ce que montre la liste quand elle revient vide. */
+  empty: React.ReactNode;
 }) {
   const envColor = useEnvColor();
   const c = useTranslations('inventory.versions.columns');
@@ -156,6 +160,7 @@ export function VersionFamiliesTable({
     <Table
       {...tableProps}
       rowKey="id"
+      locale={{ emptyText: tableProps.loading ? <EmptyPlaceholder /> : empty }}
       mobileLayout={{ badges: ['envs'] }}
       expandable={{ expandedRowRender: members }}
     >

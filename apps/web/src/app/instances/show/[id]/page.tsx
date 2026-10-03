@@ -11,8 +11,12 @@ import { useLocale, useTranslations } from 'next-intl';
 import { apiPost } from '../../../../lib/api';
 import { MonitoringChecklistModal } from '../../monitoring-checklist-modal';
 import { SyncModal } from '../../sync-modal';
+import { ApiKeyBanner } from '../../../../components/api-key-banner';
+import { FullAccessReminder } from '../../../../components/full-access-reminder';
+import { ApiKeyHealth } from '../../../../lib/api-key/api-key-alert';
+import { FullAccessState } from '../../../../lib/full-access/full-access-prompt';
 
-interface Instance {
+interface Instance extends ApiKeyHealth, FullAccessState {
   id: string;
   name: string;
   baseUrl: string;
@@ -20,6 +24,7 @@ interface Instance {
   zone: string | null;
   externalOrgId: string | null;
   externalTeamId: string | null;
+  fullAccessDismissedBy: string | null;
 }
 
 interface TestResult {
@@ -31,11 +36,12 @@ interface TestResult {
 /** Détail d'une instance : identité, état de la connexion, workflows synchronisés, actions. */
 export default function InstanceShow() {
   const t = useTranslations('settings.instanceShow');
+  const tk = useTranslations('settings.apiKey');
   const tc = useTranslations('common');
   const locale = useLocale();
   const params = useParams<{ id: string }>();
   const instanceId = params.id;
-  const { data, isLoading } = useOne<Instance>({ resource: 'instances', id: instanceId });
+  const { data, isLoading, refetch } = useOne<Instance>({ resource: 'instances', id: instanceId });
   const instance = data?.data;
 
   // Dernier workflow synchronisé : donne le total (x-total-count) et la date de dernière synchro.
@@ -72,6 +78,8 @@ export default function InstanceShow() {
       title={instance?.name ?? tc('columns.instance')}
       headerButtons={<EditButton recordItemId={instanceId} />}
     >
+      {instance && <ApiKeyBanner instances={[instance]} target="edit" />}
+      {instance && <FullAccessReminder instance={instance} onChanged={() => void refetch()} />}
       <Descriptions bordered column={1} size="small">
         <Descriptions.Item label={tc('columns.name')}>{instance?.name}</Descriptions.Item>
         <Descriptions.Item label={t('platform')}>
@@ -99,6 +107,11 @@ export default function InstanceShow() {
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {t('storedHint')}
           </Typography.Text>
+          <div>
+            {instance?.apiKeyExpiresAt
+              ? tk('expiresOn', { date: new Date(instance.apiKeyExpiresAt).toLocaleDateString(locale) })
+              : tk('noDateLong')}
+          </div>
         </Descriptions.Item>
         <Descriptions.Item label={t('synced')}>
           {workflows?.total ?? 0}

@@ -22,6 +22,8 @@ import {
 import { Table } from '../../components/resizable-table';
 import { EditOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { ListEmptyState } from '../../components/empty-state/list-empty-state';
+import { SyncInstancesButton } from '../../components/empty-state/sync-instances-button';
 import { apiGet, apiPost } from '../../lib/api';
 import { useIsMobile } from '../../components/mobile/use-is-mobile';
 import { useInstanceScope } from '../../lib/instance-scope';
@@ -115,6 +117,8 @@ export default function ResourcesPage() {
   // Prod seule par défaut, comme la carte : les exemplaires dev et preprod d'un
   // même workflow métier faisaient compter deux ou trois fois le même usage.
   const [includeOtherEnvs, setIncludeOtherEnvs] = usePersistedState('includeOtherEnvs', false);
+  // Sans ce drapeau, la liste vide du premier rendu se lirait « aucune ressource ».
+  const [resourcesLoaded, setResourcesLoaded] = useState(false);
 
   const loadResources = useCallback(() => {
     const params = new URLSearchParams();
@@ -122,7 +126,8 @@ export default function ResourcesPage() {
     if (includeOtherEnvs) params.set('includeOtherEnvs', '1');
     apiGet<ResourceSummary[]>(`/dep-graph/resources?${params}`)
       .then(setResources)
-      .catch((error: Error) => message.error(error.message));
+      .catch((error: Error) => message.error(error.message))
+      .finally(() => setResourcesLoaded(true));
   }, [scope, includeOtherEnvs]);
 
   // Scope connu dès le premier rendu (InstanceScopeGate) : premier chargement déjà filtré.
@@ -482,7 +487,26 @@ export default function ResourcesPage() {
 
       {!resourceKey && (
         <Card style={{ marginTop: 8 }}>
-          <Empty description={t('empty')} />
+          {resourcesLoaded && resources.length === 0 ? (
+            // Rien de détecté : soit rien n'est importé, soit seule la prod est lue et elle n'a rien.
+            <ListEmptyState
+              needsInstances
+              idle={{
+                title: t('emptyNone.title'),
+                text: t('emptyNone.text'),
+                actions: (
+                  <Space wrap style={{ justifyContent: 'center' }}>
+                    <SyncInstancesButton instanceId={scope} onSynced={loadResources} />
+                    {!includeOtherEnvs && (
+                      <Button onClick={() => setIncludeOtherEnvs(true)}>{t('emptyNone.otherEnvs')}</Button>
+                    )}
+                  </Space>
+                ),
+              }}
+            />
+          ) : (
+            <Empty description={t('empty')} />
+          )}
         </Card>
       )}
 

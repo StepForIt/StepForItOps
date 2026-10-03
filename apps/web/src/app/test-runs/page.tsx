@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { List, getDefaultSortOrder } from '@refinedev/antd';
 import { usePersistedState, useTable } from '../../lib/list-memory/use-list-memory';
 import { useSelect } from '@refinedev/core';
-import { Empty, Select, Space, Tag, Typography } from 'antd';
+import { Button, Select, Space, Tag, Typography } from 'antd';
+import { ExperimentOutlined } from '@ant-design/icons';
+import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 import { useLocale, useTranslations } from 'next-intl';
 import { Table } from '../../components/resizable-table';
 import { useInstanceScope } from '../../lib/instance-scope';
@@ -83,15 +85,27 @@ export default function TestRunsList() {
         rowKey="id"
         mobileLayout={{ badges: ['status'] }}
         locale={{
-          emptyText: (
-            <Empty
-              description={
-                <>
-                  {t('emptyTitle')}
-                  <br />
-                  {t.rich('emptyHint', { b: (chunks) => <b>{chunks}</b> })}
-                </>
-              }
+          emptyText: tableProps.loading ? (
+            <EmptyPlaceholder />
+          ) : (
+            <ListEmptyState
+              needsInstances
+              filterCount={workflowId ? 1 : 0}
+              onResetFilters={() => {
+                setWorkflowId(undefined);
+                setFilters([{ field: 'workflowId', operator: 'eq', value: undefined }], 'merge');
+              }}
+              idle={{
+                title: t('emptyTitle'),
+                text: t.rich('emptyHint', { b: (chunks) => <b>{chunks}</b> }),
+                actions: (
+                  <Link href="/workflows">
+                    <Button type="primary" icon={<ExperimentOutlined />}>
+                      {t('emptyCta')}
+                    </Button>
+                  </Link>
+                ),
+              }}
             />
           ),
         }}
