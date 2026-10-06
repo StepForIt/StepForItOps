@@ -172,6 +172,7 @@ export function ModelPricesModal({
               width: 130,
               render: (value: number, row) => (
                 <InputNumber
+                  aria-label={t('input')}
                   size="small"
                   min={0}
                   step={0.05}
@@ -186,6 +187,7 @@ export function ModelPricesModal({
               width: 130,
               render: (value: number, row) => (
                 <InputNumber
+                  aria-label={t('output')}
                   size="small"
                   min={0}
                   step={0.05}
@@ -198,7 +200,13 @@ export function ModelPricesModal({
               width: 50,
               render: (_, row) => (
                 <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(row)}>
-                  <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                  <Button
+                    aria-label={tc('delete')}
+                    size="small"
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                  />
                 </Popconfirm>
               ),
             },

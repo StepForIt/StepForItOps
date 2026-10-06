@@ -66,7 +66,13 @@ export function ExecutionSamplesPanel({
       />
       <Space wrap>
         <span>{t('sampled')}</span>
-        <InputNumber min={1} max={100} value={limit} onChange={(v) => setLimit(v ?? 10)} />
+        <InputNumber
+          aria-label={t('sampled')}
+          min={1}
+          max={100}
+          value={limit}
+          onChange={(v) => setLimit(v ?? 10)}
+        />
         {data && data.sampledExecutions !== limit && (
           <Tag>{t('used', { count: data.sampledExecutions })}</Tag>
         )}

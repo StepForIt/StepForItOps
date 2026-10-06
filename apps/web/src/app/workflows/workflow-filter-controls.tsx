@@ -48,6 +48,7 @@ export function WorkflowFilterControls({
     <>
       {!scoped && (
         <Select
+          aria-label={t('instance')}
           placeholder={t('instance')}
           allowClear
           style={{ width: width(200) }}
@@ -57,6 +58,7 @@ export function WorkflowFilterControls({
         />
       )}
       <Select
+        aria-label={t('env')}
         placeholder={t('env')}
         allowClear
         style={{ width: width(130) }}
@@ -65,6 +67,7 @@ export function WorkflowFilterControls({
         onChange={set('env')}
       />
       <Select
+        aria-label={t('divergence')}
         placeholder={t('divergence')}
         allowClear
         style={{ width: width(210) }}
@@ -74,6 +77,7 @@ export function WorkflowFilterControls({
       />
       {groupOptions && groupOptions.length > 0 && (
         <Select
+          aria-label={t('group')}
           placeholder={t('group')}
           allowClear
           showSearch
@@ -85,6 +89,7 @@ export function WorkflowFilterControls({
         />
       )}
       <Select
+        aria-label={t('status')}
         placeholder={t('status')}
         allowClear
         style={{ width: width(130) }}
@@ -96,6 +101,7 @@ export function WorkflowFilterControls({
         onChange={set('active')}
       />
       <Select
+        aria-label={t('archivedLabel')}
         style={{ width: width(200) }}
         value={filters.archived}
         onChange={(value) => setFilters((current) => ({ ...current, archived: value }))}

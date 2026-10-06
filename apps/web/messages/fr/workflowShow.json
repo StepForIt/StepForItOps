@@ -322,7 +322,8 @@
     "pin": "Bouchonner {count, plural, one {# nœud sortant} other {# nœuds sortants}}",
     "rename": "Renommer aussi en « {name} - {env} »",
     "alreadyTagged": "déjà env:{env}",
-    "unmapped": "{count} ressource(s) sans mapping"
+    "unmapped": "{count} ressource(s) sans mapping",
+    "targetEnvLabel": "Env cible"
   },
   "promote": {
     "diff": {

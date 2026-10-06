@@ -119,6 +119,7 @@ export function WebhookPathsModal({ open, onClose }: { open: boolean; onClose: (
 
         <Space>
           <Select
+            aria-label={t('chooseInstance')}
             style={{ width: 360 }}
             placeholder={t('chooseInstance')}
             value={instanceId}

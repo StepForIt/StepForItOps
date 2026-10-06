@@ -528,7 +528,14 @@ export function ResizableTable<RecordType extends object = any>({
                         shownIds.reduce((sum, id) => sum + (widths[id] ?? MIN_WIDTH), 0),
                     ),
             }
-          : scroll
+          : // Sans largeur mémorisée, antd sans `scroll.x` rend la table à sa
+            // largeur naturelle : sous 768 px c'est la PAGE entière qui part en
+            // défilement latéral, pas le seul tableau. Le défaut `max-content`
+            // fait défiler le tableau en interne et tenir la page ; un `x`
+            // explicite (nombre, `true`, `max-content`) posé par l'appelant prime.
+            scroll?.x === undefined
+            ? { ...scroll, x: 'max-content' }
+            : scroll
       }
     >
       {shownChildren}

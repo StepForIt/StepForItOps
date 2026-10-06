@@ -33,8 +33,12 @@ export async function showOnePerWorkflow(page: Page): Promise<void> {
   // Encore faut-il que React ÉCOUTE : tant que la page n'est pas hydratée,
   // l'événement part dans le vide. On attend donc que la liste ait rendu ses
   // données — elles viennent d'un fetch côté client, qui n'a lieu qu'une fois
-  // React branché.
-  await expect(page.getByRole('row', { name: /Facturation/ }).first()).toBeVisible();
+  // React branché. Timeout large (comme le test « réunit ») : sur un runner
+  // chargé, l'hydratation puis le fetch dépassent parfois les 15 s par défaut,
+  // et cette attente n'est qu'un préalable à la bascule, jamais le cœur du test.
+  await expect(page.getByRole('row', { name: /Facturation/ }).first()).toBeVisible({
+    timeout: 30_000,
+  });
 
   // Et l'on réessaie, borné : l'hydratation n'a pas d'événement public qu'on
   // puisse attendre, et une passe de rendu peut encore remplacer le nœud entre

@@ -502,6 +502,7 @@ export default function ErrorsPage() {
                   record.n8nUrl && (
                     <Tooltip title={t('page.openExecution')}>
                       <Button
+                        aria-label={t('page.openExecution')}
                         size="small"
                         type="text"
                         icon={<ExportOutlined />}
@@ -539,6 +540,7 @@ export default function ErrorsPage() {
         confirmLoading={busy}
       >
         <Select
+          aria-label={t('page.backfillInstance')}
           placeholder={t('page.backfillInstance')}
           style={{ width: '100%' }}
           options={instances.map((instance) => ({ label: instance.name, value: instance.id }))}

@@ -414,6 +414,7 @@ export function WorkflowChatPanel({
       title={
         <Space wrap>
           <Select
+            aria-label={t('sessionSelect')}
             size="small"
             style={{ minWidth: 220 }}
             value={session?.id}
@@ -468,7 +469,7 @@ export function WorkflowChatPanel({
               okText={tCommon('delete')}
               cancelText={tCommon('cancel')}
             >
-              <Button size="small" danger icon={<DeleteOutlined />} />
+              <Button aria-label={tCommon('delete')} size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           )}
         </Space>
@@ -615,6 +616,7 @@ export function WorkflowChatPanel({
         />
         <Tooltip title={t('attachTooltip')}>
           <Button
+            aria-label={t('attachTooltip')}
             icon={<PaperClipOutlined />}
             disabled={sending || !session}
             onClick={() => fileInput.current?.click()}
@@ -631,6 +633,7 @@ export function WorkflowChatPanel({
         ) : (
           <Tooltip title={t('sendTooltip')}>
             <Button
+              aria-label={t('sendTooltip')}
               type="primary"
               icon={<SendOutlined />}
               disabled={(!draft.trim() && attachments.count === 0) || !session}

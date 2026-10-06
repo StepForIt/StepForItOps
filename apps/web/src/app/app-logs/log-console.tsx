@@ -42,6 +42,10 @@ export function LogConsole({ entries }: { entries: AppLogEntry[] }) {
   return (
     <div
       ref={container}
+      // Zone défilante atteignable au clavier (axe scrollable-region-focusable).
+      tabIndex={0}
+      role="log"
+      aria-label={t('ariaLabel')}
       style={{
         height: '60vh',
         overflow: 'auto',

@@ -190,6 +190,7 @@ export default function AppLogsPage() {
             options={LEVELS.map((level) => ({ label: t(`levels.${level.value}`), value: level.value }))}
           />
           <Select
+            aria-label={t('allContexts')}
             allowClear
             placeholder={t('allContexts')}
             style={{ minWidth: 220 }}

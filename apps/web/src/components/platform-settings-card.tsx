@@ -41,6 +41,7 @@ export function PlatformSettingsCard() {
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Space align="start">
           <Switch
+            aria-label={t('includeArchived')}
             checked={settings?.includeArchived ?? false}
             loading={saving || settings === null}
             onChange={(includeArchived) =>
@@ -58,6 +59,7 @@ export function PlatformSettingsCard() {
         </Space>
         <Space align="start">
           <Switch
+            aria-label={t('includeMissing')}
             checked={settings?.includeMissing ?? false}
             loading={saving || settings === null}
             onChange={(includeMissing) =>
@@ -73,6 +75,7 @@ export function PlatformSettingsCard() {
         </Space>
         <Space align="start">
           <Select
+            aria-label={t('defaultLocale')}
             size="small"
             style={{ width: 110 }}
             value={settings?.defaultLocale}

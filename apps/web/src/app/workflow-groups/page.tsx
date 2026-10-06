@@ -91,6 +91,7 @@ export default function WorkflowGroupsList() {
             <Space>
               <Tooltip title={t('duplicateTooltip')}>
                 <Button
+                  aria-label={t('duplicateTooltip')}
                   size="small"
                   icon={<CopyOutlined />}
                   disabled={record.workflows.length === 0}

@@ -6,6 +6,8 @@ import {
   explainLeafChanges,
   explainNodeChange,
 } from './change-impact';
+import { pairRenamedNodes } from './node-pairing';
+import { safeRenameNodes } from './safe-rename';
 
 /** Une ligne de diff unifié : contexte, ajout ou suppression. */
 export interface DiffLine {
@@ -117,7 +119,7 @@ const NODE_FIELDS = [
 /**
  * Champs du nœud qui diffèrent — TOUS, pas une liste fermée : un `retryOnFail` ou un
  * `onError` qui bouge change l'exécution autant qu'un paramètre, et un diff qui le tait
- * se lit « rien n'a changé ». L'`id` n'a pas de sens métier, le `name` sert à apparier.
+ * se lit « rien n'a changé ». L'`id` n'a pas de sens métier, le `name` sert à apparier (renommages compris).
  */
 function changedFields(before: N8nNode, after: N8nNode): string[] {
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
@@ -145,8 +147,12 @@ export interface DiffOptions {
 }
 
 /**
- * Compare deux workflows n8n : nœuds ajoutés / supprimés / modifiés (avec diff
- * ligne à ligne), plus les connexions et les réglages.
+ * Compare deux workflows n8n : nœuds ajoutés / supprimés / modifiés / renommés (avec
+ * diff ligne à ligne), plus les connexions et les réglages.
+ *
+ * Les renommages sont appariés d'abord (`pairRenamedNodes`), puis l'avant est relu sous
+ * les nouveaux noms : une expression ou une connexion qui ne fait que suivre un
+ * renommage n'est pas un changement — le renommage, lui, se voit sur son nœud.
  */
 export function diffWorkflows(
   before: N8nWorkflow,
@@ -155,57 +161,53 @@ export function diffWorkflows(
 ): WorkflowDiff {
   const compared = (a: N8nNode, b: N8nNode): string[] =>
     options.compareAs ? changedFields(options.compareAs(a), options.compareAs(b)) : changedFields(a, b);
-  const beforeNodes = byName(before.nodes);
+  const afterNames = new Set((after.nodes ?? []).map((node) => node.name));
+  const beforeNames = new Set((before.nodes ?? []).map((node) => node.name));
+  const renames = pairRenamedNodes(
+    (before.nodes ?? []).filter((node) => !afterNames.has(node.name)),
+    (after.nodes ?? []).filter((node) => !beforeNames.has(node.name)),
+  );
+  const renamedFrom = new Map(renames.map((rename) => [rename.newName, rename.oldName]));
+  // Un ancien nom n'est jamais un nouveau nom (on n'apparie que des noms propres à un côté) :
+  // les renommages s'appliquent en série sans se marcher dessus.
+  const aligned = safeRenameNodes({ ...before, nodes: before.nodes ?? [] }, renames);
+  const beforeNodes = byName(aligned.nodes);
   const afterNodes = byName(after.nodes);
   const nodes: NodeDiff[] = [];
-  const added: N8nNode[] = [];
 
   for (const [name, node] of afterNodes) {
     const previous = beforeNodes.get(name);
+    const oldName = renamedFrom.get(name);
     if (!previous) {
-      added.push(node);
-      continue;
-    }
-    const fields = compared(previous, node);
-    if (fields.length > 0) {
       nodes.push({
         name,
         nodeType: node.type,
-        change: 'modified',
-        fields,
-        lines: diffJson(displayable(previous), displayable(node)),
-        explanations: explainNodeChange(previous, node),
+        change: 'added',
+        fields: [],
+        lines: diffJson(undefined, displayable(node)),
+        explanations: explainNodeChange(undefined, node),
       });
+      continue;
     }
-  }
-
-  // Un renommage se lit « disparu ici, apparu là » : on le recolle par l'id n8n,
-  // stable au renommage — sinon la revue affiche un ajout + une suppression.
-  const removed = [...beforeNodes.values()].filter((node) => !afterNodes.has(node.name));
-  const renamedFor = new Map<string, N8nNode>();
-  for (const node of removed) {
-    const match = node.id ? added.find((candidate) => candidate.id === node.id) : undefined;
-    if (match) renamedFor.set(match.name, node);
-  }
-
-  for (const node of added) {
-    const previous = renamedFor.get(node.name);
+    // L'avant garde son ancien nom à l'affichage : c'est la seule ligne que le renommage change.
+    const shown = oldName ? { ...previous, name: oldName } : previous;
+    const fields = compared(previous, node);
+    if (!oldName && fields.length === 0) continue;
     nodes.push({
-      name: node.name,
+      name,
       nodeType: node.type,
-      change: previous ? 'renamed' : 'added',
-      ...(previous ? { renamedFrom: previous.name } : {}),
-      fields: previous ? compared(previous, node) : [],
-      lines: diffJson(previous ? displayable(previous) : undefined, displayable(node)),
-      explanations: explainNodeChange(previous, node),
+      change: oldName ? 'renamed' : 'modified',
+      ...(oldName ? { renamedFrom: oldName } : {}),
+      fields,
+      lines: diffJson(displayable(shown), displayable(node)),
+      explanations: explainNodeChange(shown, node),
     });
   }
 
-  const renamedFrom = new Set([...renamedFor.values()].map((node) => node.name));
-  for (const node of removed) {
-    if (renamedFrom.has(node.name)) continue;
+  for (const [name, node] of beforeNodes) {
+    if (afterNodes.has(name)) continue;
     nodes.push({
-      name: node.name,
+      name,
       nodeType: node.type,
       change: 'removed',
       fields: [],
@@ -214,8 +216,7 @@ export function diffWorkflows(
     });
   }
 
-  const connectionsChanged =
-    JSON.stringify(before.connections ?? {}) !== JSON.stringify(after.connections ?? {});
+  const connectionsChanged = stableJson(aligned.connections ?? {}) !== stableJson(after.connections ?? {});
   const settingsChanged = JSON.stringify(before.settings ?? {}) !== JSON.stringify(after.settings ?? {});
   const nameChange = before.name !== after.name ? { before: before.name, after: after.name } : null;
 
@@ -231,8 +232,10 @@ export function diffWorkflows(
     nodes,
     connections: {
       changed: connectionsChanged,
-      lines: connectionsChanged ? diffJson(before.connections ?? {}, after.connections ?? {}) : [],
-      explanations: connectionsChanged ? explainConnectionChanges(before.connections, after.connections) : [],
+      lines: connectionsChanged ? diffJson(aligned.connections ?? {}, after.connections ?? {}) : [],
+      explanations: connectionsChanged
+        ? explainConnectionChanges(aligned.connections, after.connections)
+        : [],
     },
     settings: {
       changed: settingsChanged,

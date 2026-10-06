@@ -312,7 +312,8 @@
       "assistantLearning": "L'assistant n'apprend plus de tes corrections.",
       "workflowChat": "L'assistant IA (chat, correctifs, création guidée) n'est plus disponible.",
       "default": "Ses fonctions et sa page disparaissent de la console."
-    }
+    },
+    "enableAria": "Activer le module {name}"
   },
   "instances": {
     "platform": "Plateforme",

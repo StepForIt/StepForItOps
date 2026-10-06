@@ -52,6 +52,7 @@ export function CodeBlock({
 }) {
   return (
     <pre
+      tabIndex={0}
       style={{
         margin: 0,
         maxWidth: 640,

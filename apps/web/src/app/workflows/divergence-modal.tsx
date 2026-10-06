@@ -172,6 +172,7 @@ export function DivergenceModal({ workflowId, onClose }: { workflowId: string | 
               <Space>
                 <Typography.Text>{t('compareTo')}</Typography.Text>
                 <Select
+                  aria-label={t('compareTo')}
                   style={{ minWidth: 320 }}
                   value={data.reference.id}
                   onChange={setReferenceId}

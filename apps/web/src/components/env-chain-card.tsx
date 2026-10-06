@@ -148,6 +148,7 @@ export function EnvChainCard() {
     ),
     color: (env) => (
       <Select
+        aria-label={t('columns.color')}
         value={env.color}
         style={{ width: mobile ? controlWidth : 120 }}
         onChange={(value) => edit(env.id, { color: value })}
@@ -159,6 +160,7 @@ export function EnvChainCard() {
         <Typography.Text type="secondary">{t('root')}</Typography.Text>
       ) : (
         <Select
+          aria-label={t('columns.after')}
           value={env.after ?? undefined}
           style={{ width: controlWidth }}
           onChange={(value) => edit(env.id, { after: value })}
@@ -182,7 +184,7 @@ export function EnvChainCard() {
     remove: (env) =>
       env.id === FIRST_ENV_ID || env.id === PROD_ENV_ID ? null : (
         <Popconfirm title={t('removeConfirm')} description={t('removeHint')} onConfirm={() => remove(env.id)}>
-          <Button type="text" danger icon={<DeleteOutlined />} />
+          <Button aria-label={tc('delete')} type="text" danger icon={<DeleteOutlined />} />
         </Popconfirm>
       ),
   };
@@ -216,7 +218,13 @@ export function EnvChainCard() {
             ))}
           </Space>
         ) : (
-          <Table<EnvDefinition> dataSource={envs} rowKey="id" size="small" pagination={false}>
+          <Table<EnvDefinition>
+            dataSource={envs}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+          >
             <Table.Column<EnvDefinition>
               title={<Tooltip title={t('idTooltip', { tag: 'env:<id>' })}>{t('columns.id')}</Tooltip>}
               dataIndex="id"

@@ -2,7 +2,19 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Checkbox, List, Modal, Select, Space, Spin, Tag, Tooltip, Typography, message } from 'antd';
+import {
+  Alert,
+  Checkbox,
+  List,
+  Modal,
+  Select,
+  Skeleton,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+} from 'antd';
 import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
 import { useEnvColor, useEnvs } from '../lib/envs';
@@ -146,6 +158,7 @@ export function GroupDuplicateModal({
           <Space wrap>
             <Typography.Text type="secondary">{t('targetEnv')}</Typography.Text>
             <Select
+              aria-label={t('targetEnv')}
               style={{ width: 140 }}
               value={env}
               onChange={(value) => setEnv(value)}
@@ -157,7 +170,7 @@ export function GroupDuplicateModal({
         {result ? (
           <ResultView result={result} envColor={envColor} />
         ) : loading ? (
-          <Spin />
+          <Skeleton active paragraph={{ rows: 5 }} />
         ) : preview ? (
           <>
             <Typography.Text>

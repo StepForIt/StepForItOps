@@ -196,6 +196,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
 
   const envSelect = (
     <Select
+      aria-label={t('envPlaceholder')}
       placeholder={t('envPlaceholder')}
       style={{ minWidth: 160 }}
       value={env}
@@ -220,6 +221,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
             ]}
           />
           <Select
+            aria-label={t('instancePlaceholder')}
             placeholder={t('instancePlaceholder')}
             style={{ minWidth: 180 }}
             value={instanceId}
@@ -228,6 +230,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
           />
           {mode === 'workflow' ? (
             <Select
+              aria-label={t('workflowPlaceholder')}
               showSearch
               optionFilterProp="label"
               placeholder={t('workflowPlaceholder')}
@@ -238,6 +241,7 @@ export function WorkflowScanDrawer({ open, onClose }: { open: boolean; onClose: 
             />
           ) : (
             <Select
+              aria-label={groups.length === 0 ? t('noGroups') : t('groupPlaceholder')}
               showSearch
               optionFilterProp="label"
               placeholder={groups.length === 0 ? t('noGroups') : t('groupPlaceholder')}

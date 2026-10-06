@@ -6,7 +6,7 @@ import { Alert, Badge, Button, Input, Select, Space, Switch, Tag, Tooltip, Typog
 import { Table } from '../../components/resizable-table';
 import { ExportOutlined } from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
-import { apiGet, apiPost } from '../../lib/api';
+import { apiGet, apiGetList, apiPost } from '../../lib/api';
 import { runWithConcurrency } from '../../lib/concurrency';
 import { useInstanceScope } from '../../lib/instance-scope';
 import { RenameSuggestionsModal } from '../../components/rename-suggestions-modal';
@@ -51,6 +51,8 @@ interface Finding {
 
 /** Workflows analysés de front lors d'un « Tout vérifier ». */
 const MASS_RUN_CONCURRENCY = 4;
+/** Findings chargés d'un coup pour un workflow. Au-delà, on l'annonce au lieu de masquer en silence. */
+const FINDINGS_PAGE_SIZE = 500;
 
 /** Aplatit `data` : la liste ne connaît que des champs, pas la forme libre de la règle. */
 function toDisplay(finding: Finding): DisplayFinding {
@@ -85,6 +87,7 @@ function FindingsDetail({
 }) {
   const t = useTranslations('inventory.findings.detail');
   const [findings, setFindings] = useState<Finding[]>([]);
+  const [total, setTotal] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [stickyOpen, setStickyOpen] = useState(false);
@@ -96,11 +99,16 @@ function FindingsDetail({
     // Sans branche d'erreur, un échec laissait la liste PRÉCÉDENTE à l'écran :
     // on lisait les findings d'un autre workflow, ou ceux d'avant l'analyse,
     // en croyant lire les siens.
-    apiGet<Finding[]>(`/findings?workflowId=${workflowId}&_start=0&_end=500`)
-      .then((rows) => current && setFindings(rows))
+    apiGetList<Finding>(`/findings?workflowId=${workflowId}&_start=0&_end=${FINDINGS_PAGE_SIZE}`)
+      .then(({ data, total }) => {
+        if (!current) return;
+        setFindings(data);
+        setTotal(total);
+      })
       .catch((error: unknown) => {
         if (!current) return;
         setFindings([]);
+        setTotal(0);
         setLoadError((error as Error).message);
       });
     return () => {
@@ -130,6 +138,15 @@ function FindingsDetail({
 
   return (
     <>
+      {total > findings.length && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 8 }}
+          message={t('truncated', { shown: findings.length, total, hidden: total - findings.length })}
+          description={t('truncatedHint')}
+        />
+      )}
       {loadError && (
         <Alert
           type="error"
@@ -363,6 +380,7 @@ export default function FindingsCoverage() {
   const filterControls = (
     <>
       <Select
+        aria-label={t('severity')}
         mode="multiple"
         allowClear
         placeholder={t('severity')}
@@ -376,6 +394,7 @@ export default function FindingsCoverage() {
         ]}
       />
       <Select
+        aria-label={t('moduleFilter')}
         allowClear
         placeholder={t('moduleFilter')}
         style={{ minWidth: width(200) }}
@@ -384,6 +403,7 @@ export default function FindingsCoverage() {
         options={moduleOptions}
       />
       <Select
+        aria-label={t('env')}
         allowClear
         placeholder={t('env')}
         style={{ minWidth: width(120) }}

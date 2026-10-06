@@ -115,6 +115,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Space>
           <Select
+            aria-label={t('selectTarget')}
             style={{ width: 360 }}
             placeholder={t('selectTarget')}
             value={targetId}

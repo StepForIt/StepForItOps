@@ -28,6 +28,13 @@ test.describe('les modules', () => {
     await expect(page.getByText(/Désactiver .*Vérification/)).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
 
+    // Annuler la confirmation abandonne : le module reste actif, rien n'est écrit.
+    await page.getByRole('button', { name: 'Annuler' }).click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    // Reprendre et confirmer coupe pour de bon.
+    await toggle.click();
+    await expect(page.getByText(/Désactiver .*Vérification/)).toBeVisible();
     await page.getByRole('button', { name: 'Désactiver' }).click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
 
@@ -43,17 +50,6 @@ test.describe('les modules', () => {
     // Réactiver est direct — aucune confirmation, on n'arrête rien.
     await reloaded.click();
     await expect(reloaded).toHaveAttribute('aria-checked', 'true');
-  });
-
-  test('annuler la confirmation laisse le module actif', async ({ page }) => {
-    const row = page.getByRole('row', { name: /Vérification/ }).first();
-    const toggle = row.getByRole('switch');
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
-
-    await toggle.click();
-    await page.getByRole('button', { name: 'Annuler' }).click();
-
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
   });
 
   test('n’offre pas de désactiver un module core', async ({ page }) => {

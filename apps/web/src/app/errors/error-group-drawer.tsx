@@ -289,6 +289,7 @@ export function ErrorGroupDrawer({ group, onClose, onChanged }: Props) {
                       row.n8nUrl ? (
                         <Button
                           key="n8n"
+                          aria-label={t('page.openExecution')}
                           size="small"
                           type="text"
                           icon={<ExportOutlined />}

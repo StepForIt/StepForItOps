@@ -312,7 +312,8 @@
       "assistantLearning": "The assistant no longer learns from your corrections.",
       "workflowChat": "The AI assistant (chat, fixes, guided creation) is no longer available.",
       "default": "Its features and page disappear from the console."
-    }
+    },
+    "enableAria": "Enable the {name} module"
   },
   "instances": {
     "platform": "Platform",

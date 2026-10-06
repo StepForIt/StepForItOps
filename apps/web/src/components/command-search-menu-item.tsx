@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { Tooltip, Typography, theme } from 'antd';
+import { Button, Tooltip, Typography, theme } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useCommandPalette } from './command-palette';
 
@@ -26,11 +26,19 @@ export function CommandSearchMenuItem({ collapsed }: { collapsed: boolean }) {
   // Lu après le montage : le rendu serveur ne connaît pas la plateforme du visiteur.
   React.useEffect(() => setShortcut(shortcutLabel()), []);
 
+  // Un vrai `<Button>` et non un `<div role="button">` : sans lui, la recherche
+  // n'était ni atteignable au clavier ni nommée (axe aria-command-name), là où
+  // install-app-button.tsx montrait déjà la bonne façon de faire dans ce menu.
   if (collapsed) {
     return (
       <Tooltip placement="right" title={t('tooltip')}>
-        <div style={{ textAlign: 'center', padding: '12px 0', cursor: 'pointer' }} onClick={open}>
-          <SearchOutlined style={{ color: token.colorTextSecondary }} />
+        <div style={{ textAlign: 'center', padding: '12px 0' }}>
+          <Button
+            type="text"
+            aria-label={t('tooltip')}
+            icon={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
+            onClick={open}
+          />
         </div>
       </Tooltip>
     );
@@ -38,17 +46,17 @@ export function CommandSearchMenuItem({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div style={{ padding: '12px 12px 4px' }} onClick={(event) => event.stopPropagation()}>
-      <div
-        role="button"
+      <Button
         onClick={open}
+        aria-label={t('tooltip')}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 8,
+          width: '100%',
+          height: 'auto',
           padding: '5px 11px',
-          cursor: 'pointer',
-          borderRadius: token.borderRadius,
-          border: `1px solid ${token.colorBorder}`,
+          textAlign: 'left',
           color: token.colorTextSecondary,
         }}
       >
@@ -57,7 +65,7 @@ export function CommandSearchMenuItem({ collapsed }: { collapsed: boolean }) {
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           {shortcut}
         </Typography.Text>
-      </div>
+      </Button>
     </div>
   );
 }

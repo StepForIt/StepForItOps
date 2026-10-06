@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, List, Modal, Spin, Tag, Tooltip, Typography, message } from 'antd';
+import { Alert, Button, List, Modal, Skeleton, Tag, Tooltip, Typography, message } from 'antd';
 import {
   CheckCircleTwoTone,
   CloseCircleTwoTone,
@@ -101,7 +101,7 @@ export function MonitoringChecklistModal({
       width={720}
     >
       {error && <Alert type="error" showIcon message={t('unavailable')} description={error} />}
-      {!error && !checklist && <Spin />}
+      {!error && !checklist && <Skeleton active paragraph={{ rows: 6 }} />}
       {checklist && (
         <List
           dataSource={checklist.steps}

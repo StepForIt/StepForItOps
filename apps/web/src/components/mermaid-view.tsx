@@ -252,19 +252,30 @@ export function MermaidView({
       >
         <Space size={2}>
           <Tooltip title={t('zoomOut')}>
-            <Button size="small" icon={<ZoomOutOutlined />} onClick={() => zoomBy(1 / 1.25)} />
+            <Button
+              aria-label={t('zoomOut')}
+              size="small"
+              icon={<ZoomOutOutlined />}
+              onClick={() => zoomBy(1 / 1.25)}
+            />
           </Tooltip>
           <span style={{ minWidth: 44, textAlign: 'center', fontSize: 12, color: BRAND.slate }}>
             {t('zoom', { percent: Math.round(transform.scale * 100) })}
           </span>
           <Tooltip title={t('zoomIn')}>
-            <Button size="small" icon={<ZoomInOutlined />} onClick={() => zoomBy(1.25)} />
+            <Button
+              aria-label={t('zoomIn')}
+              size="small"
+              icon={<ZoomInOutlined />}
+              onClick={() => zoomBy(1.25)}
+            />
           </Tooltip>
           <Tooltip title={t('fit')}>
-            <Button size="small" icon={<CompressOutlined />} onClick={fit} />
+            <Button aria-label={t('fit')} size="small" icon={<CompressOutlined />} onClick={fit} />
           </Tooltip>
           <Tooltip title={t('actualSize')}>
             <Button
+              aria-label={t('actualSize')}
               size="small"
               icon={<ExpandOutlined />}
               onClick={() => setTransform({ scale: 1, x: 0, y: 0 })}
@@ -272,6 +283,7 @@ export function MermaidView({
           </Tooltip>
           <Tooltip title={fullscreen ? t('exitFullscreen') : t('fullscreen')}>
             <Button
+              aria-label={fullscreen ? t('exitFullscreen') : t('fullscreen')}
               size="small"
               icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
               onClick={() => {

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Popover, Space, Spin, Tag, Typography } from 'antd';
+import { Popover, Skeleton, Space, Tag, Typography } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { apiGet } from '../../../../lib/api';
@@ -55,7 +55,7 @@ function GroupTag({ group, currentId }: { group: { id: string; name: string }; c
   };
 
   const content = loading ? (
-    <Spin size="small" />
+    <Skeleton active title={false} paragraph={{ rows: 3 }} style={{ width: 260 }} />
   ) : detail === null ? (
     <Typography.Text type="secondary">{t('unreadable')}</Typography.Text>
   ) : (

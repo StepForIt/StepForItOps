@@ -490,6 +490,9 @@ export default function WorkflowShow() {
           content={
             <Space direction="vertical" size={8} style={{ maxWidth: 260 }}>
               <InputNumber
+                aria-label={
+                  timeSavedEstimate ? t('timeSaved.placeholder', { minutes: timeSavedEstimate.minutes }) : '—'
+                }
                 autoFocus
                 min={0}
                 step={0.5}
@@ -713,6 +716,7 @@ export default function WorkflowShow() {
               <>
                 <Space wrap style={{ marginBottom: 12 }}>
                   <Select
+                    aria-label={t('filters.module')}
                     allowClear
                     placeholder={t('filters.module')}
                     style={{ width: mobile ? '100%' : 180 }}
@@ -727,6 +731,7 @@ export default function WorkflowShow() {
                     ]}
                   />
                   <Select
+                    aria-label={t('filters.severity')}
                     allowClear
                     placeholder={t('filters.severity')}
                     style={{ width: mobile ? '100%' : 150 }}

@@ -112,6 +112,7 @@ export function ErrorGroupsTable({ filters, instanceName, showInstance, onOpen, 
           onChange={(value) => setStatus(value as ErrorGroupStatus | 'all')}
         />
         <Select
+          aria-label={t('groups.categoryPlaceholder')}
           allowClear
           placeholder={t('groups.categoryPlaceholder')}
           style={{ minWidth: 170 }}

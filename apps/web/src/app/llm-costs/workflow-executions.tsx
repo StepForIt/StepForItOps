@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Empty, Spin, Tag, Tooltip, Typography } from 'antd';
+import { Empty, Skeleton, Tag, Tooltip, Typography } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
@@ -28,7 +28,7 @@ export function WorkflowExecutions({
     ).then(setExecutions);
   }, [instanceId, externalWorkflowId, days]);
 
-  if (!executions) return <Spin size="small" />;
+  if (!executions) return <Skeleton active paragraph={{ rows: 3 }} />;
   if (executions.length === 0) {
     return <Empty description={t('executions.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }

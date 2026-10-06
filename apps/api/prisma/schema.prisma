@@ -847,6 +847,8 @@ model EventLog {
   name      String
   payload   Json?
   createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
 }
 
 // --- Module workflow-chat : conversation IA sur un workflow ---

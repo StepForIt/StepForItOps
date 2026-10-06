@@ -121,6 +121,7 @@ export default function ClientsPage() {
           render={(_, record) => (
             <Space>
               <Button
+                aria-label={tc('edit')}
                 size="small"
                 icon={<EditOutlined />}
                 onClick={() => {
@@ -129,7 +130,7 @@ export default function ClientsPage() {
                 }}
               />
               <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record)}>
-                <Button size="small" danger icon={<DeleteOutlined />} />
+                <Button aria-label={tc('delete')} size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
             </Space>
           )}

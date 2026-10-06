@@ -319,6 +319,7 @@ export function EnvAssistantModal({
             <div>
               {t('whichGroup')}
               <Select
+                aria-label={t('whichGroup')}
                 value={groupId}
                 onChange={setGroupId}
                 style={{ width: 260, marginLeft: 8 }}
@@ -331,6 +332,7 @@ export function EnvAssistantModal({
               {intent === 'copy' && t('copyQuestion')}
               {intent === 'mark' && t('markQuestion')}
               <Select
+                aria-label={t('targetEnvLabel')}
                 value={targetEnv}
                 onChange={setTargetEnv}
                 style={{ width: 160, marginLeft: 8 }}

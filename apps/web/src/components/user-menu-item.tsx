@@ -40,7 +40,13 @@ export function UserMenuItem({ collapsed }: { collapsed: boolean }) {
     return (
       <Tooltip placement="right" title={t('logoutTooltip', { email: session.user.email })}>
         <div style={{ textAlign: 'center', padding: '12px 0' }}>
-          <Button type="text" size="small" icon={<LogoutOutlined />} onClick={logout} />
+          <Button
+            type="text"
+            size="small"
+            aria-label={t('logout')}
+            icon={<LogoutOutlined />}
+            onClick={logout}
+          />
         </div>
       </Tooltip>
     );

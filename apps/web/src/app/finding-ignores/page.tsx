@@ -65,6 +65,7 @@ export default function FindingIgnores() {
     <Card title={t('title')} extra={<Button onClick={load}>{t('refresh')}</Button>}>
       <Space style={{ marginBottom: 16 }}>
         <Select
+          aria-label={t('module')}
           allowClear
           placeholder={t('module')}
           style={{ minWidth: 200 }}

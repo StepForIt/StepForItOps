@@ -75,11 +75,8 @@ export class N8nProbeService {
    * déjà obtenu — le workflow resté là se rattrape par les « restes » de la découverte.
    */
   private async cleanup(config: N8nInstanceConfig, externalId: string): Promise<void> {
-    try {
-      await this.n8n.activateWorkflow(config, externalId, false);
-    } catch {
-      /* déjà inactif */
-    }
+    // L'adapter dépublie puis supprime, en rejouant le temps que n8n 2.x finisse la
+    // dépublication : supprimer d'un coup laissait la sonde dans le n8n du client.
     try {
       await this.n8n.deleteWorkflow(config, externalId);
     } catch (error) {

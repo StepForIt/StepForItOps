@@ -321,6 +321,7 @@ function FindingsTable({
             {record.autoFix ? (
               <Tooltip title={t('autofixTooltip')}>
                 <Button
+                  aria-label={t('autofixTooltip')}
                   size="small"
                   icon={<ThunderboltOutlined />}
                   loading={fixing === record.id}
@@ -330,6 +331,7 @@ function FindingsTable({
             ) : (
               <Tooltip title={t('fixWithAi')}>
                 <Button
+                  aria-label={t('fixWithAi')}
                   size="small"
                   icon={<RobotOutlined />}
                   loading={fixing === record.id}

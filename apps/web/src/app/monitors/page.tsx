@@ -389,6 +389,7 @@ export default function MonitorsList() {
       >
         <p>{t.rich('bulkHint', { b: (chunks) => <b>{chunks}</b> })}</p>
         <Select
+          aria-label={t('chooseInstance')}
           placeholder={t('chooseInstance')}
           style={{ width: '100%' }}
           options={instanceOptions}

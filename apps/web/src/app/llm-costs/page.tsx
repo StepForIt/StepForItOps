@@ -392,6 +392,7 @@ export default function LlmCostsPage() {
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           <Typography.Text>{t('page.budgetHint')}</Typography.Text>
           <InputNumber
+            aria-label={t('page.budgetTitle')}
             min={0}
             step={0.5}
             placeholder="—"

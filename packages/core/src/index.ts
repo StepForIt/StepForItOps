@@ -72,6 +72,7 @@ export * from './domain/api-key-expiry';
 export * from './domain/error-signature';
 export * from './domain/error-category';
 export * from './domain/app-log';
+export * from './domain/event-log-entry';
 export * from './domain/execution-stats';
 export * from './domain/test-snapshot';
 export * from './domain/n8n/llm-usage';

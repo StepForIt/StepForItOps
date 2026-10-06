@@ -351,6 +351,7 @@ export default function ResourcesPage() {
         {/* Empilés pleine largeur sur mobile : à 460 px, le sélecteur sortait de l'écran. */}
         <Space wrap direction={mobile ? 'vertical' : 'horizontal'} style={{ width: '100%' }}>
           <Select
+            aria-label={t('selectPlaceholder')}
             showSearch
             allowClear
             placeholder={t('selectPlaceholder')}
@@ -365,6 +366,7 @@ export default function ResourcesPage() {
           {selected && (
             <Tooltip title={t('rename')}>
               <Button
+                aria-label={t('rename')}
                 icon={<EditOutlined />}
                 onClick={() => {
                   setRenaming(selected);
@@ -375,6 +377,7 @@ export default function ResourcesPage() {
           )}
           {!isApi && (
             <AutoComplete
+              aria-label={t('columnPlaceholder')}
               allowClear
               style={{ width: mobile ? '100%' : 260 }}
               placeholder={t('columnPlaceholder')}

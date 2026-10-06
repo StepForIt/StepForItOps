@@ -174,7 +174,8 @@
     "stop": "Arrêter",
     "sendTooltip": "Entrée : envoyer · Maj+Entrée : nouvelle ligne · Tab : compléter",
     "imageOnlyRequest": "Voici une capture d’écran. Que montre-t-elle, et que faut-il en faire ?",
-    "fileOnlyRequest": "Voici un ou plusieurs fichiers joints. Que contiennent-ils, et qu’en faire ?"
+    "fileOnlyRequest": "Voici un ou plusieurs fichiers joints. Que contiennent-ils, et qu’en faire ?",
+    "sessionSelect": "Conversation"
   },
   "review": {
     "gate": {

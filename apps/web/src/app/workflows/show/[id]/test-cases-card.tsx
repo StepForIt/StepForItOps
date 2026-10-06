@@ -103,6 +103,7 @@ const STATUS_COLOR: Record<NonNullable<TestCaseRow['lastStatus']>, string> = {
  */
 export function TestCasesCard({ workflowId }: { workflowId: string }) {
   const t = useTranslations('workflowShow.testCases');
+  const tc = useTranslations('common');
   const locale = useLocale();
   const [rows, setRows] = useState<TestCaseRow[]>([]);
   const [executions, setExecutions] = useState<ExecutionOption[]>([]);
@@ -191,6 +192,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
     >
       <Space style={{ marginBottom: 12 }}>
         <Select
+          aria-label={t('selectPlaceholder')}
           style={{ minWidth: 320 }}
           placeholder={t('selectPlaceholder')}
           value={selectedExecution}
@@ -278,6 +280,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
             <Space>
               <Tooltip title={t('replayTooltip')}>
                 <Button
+                  aria-label={t('replayTooltip')}
                   size="small"
                   icon={<CaretRightOutlined />}
                   loading={busy === record.id}
@@ -285,7 +288,7 @@ export function TestCasesCard({ workflowId }: { workflowId: string }) {
                 />
               </Tooltip>
               <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record.id)}>
-                <Button size="small" danger icon={<DeleteOutlined />} />
+                <Button size="small" danger aria-label={tc('delete')} icon={<DeleteOutlined />} />
               </Popconfirm>
             </Space>
           )}

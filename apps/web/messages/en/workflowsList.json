@@ -120,7 +120,8 @@
     "pathsTooltip": "Env copies sharing their original's path",
     "paths": "Shared entry points…",
     "viewFlat": "One per n8n workflow",
-    "viewGrouped": "Grouped by env"
+    "viewGrouped": "Grouped by env",
+    "archivedLabel": "Archived"
   },
   "webhookPaths": {
     "title": "Shared entry points",

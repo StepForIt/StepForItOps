@@ -50,5 +50,20 @@
   "middleware": {
     "notConfigured": "Platform not configured — go to /setup.",
     "sessionExpired": "Session expired — please log in again."
+  },
+  "screen": {
+    "home": "Home",
+    "workflow": "Workflow",
+    "instance": "Instance",
+    "create": "Create: {label}",
+    "edit": "Edit: {label}"
+  },
+  "menuSlots": {
+    "search": "Search",
+    "instanceScope": "Instance scope",
+    "installApp": "Install the app",
+    "language": "Language",
+    "account": "Account",
+    "license": "License"
   }
 }

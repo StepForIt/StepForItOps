@@ -75,7 +75,8 @@
   "instanceScope": {
     "tooltipAll": "Instance : toutes",
     "tooltipOne": "Instance : {name}",
-    "all": "Toutes les instances"
+    "all": "Toutes les instances",
+    "scopeLabel": "Périmètre d'instance"
   },
   "license": {
     "summary": "StepForIt Ops — Business Source License 1.1. Usage libre, y compris commercial, y compris pour piloter les instances n8n de vos clients. En faire une offre hébergée ou revendue n'est pas couvert : mathieu@stepforit.fr."

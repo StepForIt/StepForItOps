@@ -193,7 +193,13 @@ function ParcTable({ rows, onRun, running }: { rows: ModelParcRow[]; onRun: () =
     );
   }
   return (
-    <Table<ModelParcRow> dataSource={rows} rowKey="model" size="small" pagination={false}>
+    <Table<ModelParcRow>
+      dataSource={rows}
+      rowKey="model"
+      size="small"
+      pagination={false}
+      scroll={{ x: 'max-content' }}
+    >
       <Table.Column<ModelParcRow>
         title={t('model')}
         dataIndex="model"
@@ -298,13 +304,20 @@ function TaskProfiles({ profiles, onSaved }: { profiles: TaskProfile[]; onSaved:
 
   return (
     <>
-      <Table<TaskProfile> dataSource={profiles} rowKey="task" size="small" pagination={false}>
+      <Table<TaskProfile>
+        dataSource={profiles}
+        rowKey="task"
+        size="small"
+        pagination={false}
+        scroll={{ x: 'max-content' }}
+      >
         <Table.Column<TaskProfile> title={t('taskProfiles.task')} dataIndex="label" />
         <Table.Column<TaskProfile>
           title={t('taskProfiles.minTier')}
           dataIndex="minTier"
           render={(minTier: string, row) => (
             <Select
+              aria-label={t('taskProfiles.minTier')}
               size="small"
               style={{ width: 180 }}
               value={minTier}
@@ -350,6 +363,7 @@ function Proposals({
         size="small"
         pagination={false}
         rowSelection={{ selectedRowKeys: selected, onChange: setSelected }}
+        scroll={{ x: 'max-content' }}
       >
         <Table.Column<CatalogProposal> title={t('model')} dataIndex="pattern" />
         <Table.Column<CatalogProposal> title={t('field')} dataIndex="field" />

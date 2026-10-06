@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Checkbox, Empty, Input, Space, Spin, Tag, Typography } from 'antd';
+import { Checkbox, Empty, Input, Skeleton, Space, Tag, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
 import { WorkflowFamily } from '../app/workflows/workflow-row';
@@ -112,7 +112,7 @@ export function GroupMemberPicker({
         }}
       >
         {loading ? (
-          <Spin size="small" />
+          <Skeleton active title={false} paragraph={{ rows: 4 }} />
         ) : visible.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('empty')} />
         ) : (

@@ -36,6 +36,7 @@ export function InstanceScopeMenuItem({ collapsed }: { collapsed: boolean }) {
       onClick={(event) => event.stopPropagation()}
     >
       <Select
+        aria-label={t('scopeLabel')}
         style={{ width: '100%' }}
         value={scope ?? 'all'}
         onChange={(value) => setScope(value === 'all' ? null : value)}

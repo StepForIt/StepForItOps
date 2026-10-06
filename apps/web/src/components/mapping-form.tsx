@@ -115,6 +115,7 @@ function DiscoveryPicker() {
 /** Formulaire mapping : une ligne par ressource à basculer, une colonne par env déclaré. */
 export function MappingForm({ formProps }: { formProps: FormProps }) {
   const t = useTranslations('settings.mappingForm');
+  const tc = useTranslations('common');
   const { envs } = useEnvs();
   const initialValues = (formProps.initialValues?.values ?? undefined) as EnvMap | undefined;
   // Un env retiré des réglages dont le mapping porte encore des valeurs : la colonne
@@ -181,33 +182,46 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
       <Form.List name="rows">
         {(fields, { add, remove }) => (
           <>
-            <Space style={{ marginBottom: 4, fontWeight: 600 }}>
-              <span style={{ display: 'inline-block', width: 180 }}>{t('rowName')}</span>
-              {columns.map((env) => (
-                <span key={env.id} style={{ display: 'inline-block', width: 220 }}>
-                  <Tag color={env.color}>{env.label}</Tag>
-                </span>
-              ))}
-            </Space>
-            {fields.map((field) => (
-              <Space key={field.key} align="baseline" style={{ display: 'flex' }}>
-                {/* Grille dense sous un en-tête de colonnes : le libellé de chaque
-                    input est porté par aria-label, la colonne le rappelant à l'œil. */}
-                <Form.Item name={[field.name, 'key']}>
-                  <Input aria-label={t('rowName')} placeholder={t('optional')} style={{ width: 180 }} />
-                </Form.Item>
+            {/* Les colonnes sont à largeur fixe (une par env) : sous 768 px leur
+                total dépasse la page et la faisait déborder en latéral. On les
+                enferme dans un conteneur qui défile pour lui seul — le même
+                parti que les tableaux —, en gardant le bouton d'ajout hors du
+                défilement, à portée sur mobile. */}
+            <div style={{ overflowX: 'auto' }}>
+              <Space style={{ marginBottom: 4, fontWeight: 600 }}>
+                <span style={{ display: 'inline-block', width: 180 }}>{t('rowName')}</span>
                 {columns.map((env) => (
-                  <Form.Item key={env.id} name={[field.name, 'v', env.id]}>
-                    <Input
-                      aria-label={t('identifier', { env: env.label })}
-                      placeholder={`app${env.id.toUpperCase()}…`}
-                      style={{ width: 220 }}
-                    />
-                  </Form.Item>
+                  <span key={env.id} style={{ display: 'inline-block', width: 220 }}>
+                    <Tag color={env.color}>{env.label}</Tag>
+                  </span>
                 ))}
-                <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(field.name)} />
               </Space>
-            ))}
+              {fields.map((field) => (
+                <Space key={field.key} align="baseline" style={{ display: 'flex' }}>
+                  {/* Grille dense sous un en-tête de colonnes : le libellé de chaque
+                      input est porté par aria-label, la colonne le rappelant à l'œil. */}
+                  <Form.Item name={[field.name, 'key']}>
+                    <Input aria-label={t('rowName')} placeholder={t('optional')} style={{ width: 180 }} />
+                  </Form.Item>
+                  {columns.map((env) => (
+                    <Form.Item key={env.id} name={[field.name, 'v', env.id]}>
+                      <Input
+                        aria-label={t('identifier', { env: env.label })}
+                        placeholder={`app${env.id.toUpperCase()}…`}
+                        style={{ width: 220 }}
+                      />
+                    </Form.Item>
+                  ))}
+                  <Button
+                    type="text"
+                    danger
+                    aria-label={tc('delete')}
+                    icon={<DeleteOutlined />}
+                    onClick={() => remove(field.name)}
+                  />
+                </Space>
+              ))}
+            </div>
             <Button icon={<PlusOutlined />} onClick={() => add({ key: '' })}>
               {t('addField')}
             </Button>

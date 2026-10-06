@@ -6,6 +6,7 @@ import { workflowFamilyKey } from '../workflow-family';
 import { paramString } from './n8n-params';
 import { canonicalLocators } from './resource-locator-form';
 import { hasEntryUrl, withDeclaredEntryPath } from './entry-path';
+import { withNeutralNodeNames } from './deploy-node-names';
 import { N8nNode, N8nWorkflow } from './workflow.types';
 
 /** `values` d'un ResourceMapping : { dev: { baseId, tableIds: {...} }, prod: {...} }. */
@@ -29,9 +30,11 @@ export interface DeployKeyContext {
  * - les sous-workflows et le workflow d'erreur, ramenés au nom métier de la cible —
  *   un id n8n ne vaut que dans son instance ;
  * - le path et le `webhookId` des points d'entrée, que la promotion reprend de la cible ;
+ * - le suffixe d'env et le numéro de version dans le nom des NŒUDS (« Call 'X (1.2.2) - DEV' »),
+ *   références d'expressions comprises ;
  * - le nom (suffixe d'env, numéro de version), les libellés affichés (`cachedResultName`,
  *   nom de credential), l'écriture d'un sélecteur (liste ou id tapé, `=id` sans gabarit),
- *   le `pinData`, les ids et positions de nœuds.
+ *   le `pinData`, les ids et positions de nœuds, un réglage écrit à sa valeur par défaut.
  *
  * Tout le reste compte, y compris une ressource NON mappée qui diffère entre les deux
  * envs : la promotion l'écraserait, c'est donc un vrai écart.
@@ -46,19 +49,31 @@ export function deployKey(workflow: N8nWorkflow, context: DeployKeyContext = {})
  * Ce que `deployKey` hache, sous une forme de workflow : clés ordonnées, nom vidé,
  * rien de ce que la promotion neutralise. Deux exemplaires de même empreinte ont
  * exactement la même forme — c'est ce qui permet de MONTRER l'écart que la clé
- * se contente de constater (`deploy-diff.ts`).
+ * se contente de constater (`deploy-diff.ts`). `keepNodeIds` sert ce diff seul : l'id
+ * n'est pas un écart, mais c'est lui qui reconnaît un nœud renommé.
  */
-export function deployForm(workflow: N8nWorkflow, context: DeployKeyContext = {}): N8nWorkflow {
+export function deployForm(
+  source: N8nWorkflow,
+  context: DeployKeyContext = {},
+  options: { keepNodeIds?: boolean } = {},
+): N8nWorkflow {
   const envs = context.envs ?? DEFAULT_ENV_IDS;
+  const workflow = withNeutralNodeNames(source, envs);
   const workflowRef = (externalId: string): string => {
     const name = context.workflowName?.(externalId);
     return name ? `⟨workflow:${workflowFamilyKey(name, envs)}⟩` : externalId;
   };
 
   const nodes = [...(workflow.nodes ?? [])]
-    .map((node) => normalizeNode(node, workflowRef))
+    .map((node) => {
+      const normalized = normalizeNode(node, workflowRef);
+      return options.keepNodeIds && node.id ? { ...normalized, id: node.id } : normalized;
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
   const settings: Record<string, unknown> = { ...(workflow.settings ?? {}) };
+  for (const [key, value] of Object.entries(IMPLICIT_SETTINGS)) {
+    if (settings[key] === value) delete settings[key];
+  }
   if (typeof settings['errorWorkflow'] === 'string') {
     settings['errorWorkflow'] = workflowRef(settings['errorWorkflow']);
   }
@@ -69,6 +84,12 @@ export function deployForm(workflow: N8nWorkflow, context: DeployKeyContext = {}
   );
   return { name: '', ...(JSON.parse(stableJson(significant)) as Omit<N8nWorkflow, 'name'>) };
 }
+
+/**
+ * Réglages que n8n écrit à leur valeur par défaut quand un éditeur récent enregistre :
+ * absent et présent à cette valeur se comportent pareil, seul l'âge du dernier save diffère.
+ */
+const IMPLICIT_SETTINGS: Record<string, unknown> = { binaryMode: 'separate' };
 
 function normalizeNode(node: N8nNode, workflowRef: (externalId: string) => string): N8nNode {
   const { id: _id, position: _position, webhookId: _webhookId, ...rest } = node;

@@ -11,8 +11,8 @@ import {
   Radio,
   Segmented,
   Select,
+  Skeleton,
   Space,
-  Spin,
   Tag,
   Tooltip,
   Typography,
@@ -159,7 +159,7 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
   if (!catalog || !resolved) {
     return (
       <Modal open={open} onCancel={onClose} footer={null} title={t('title')}>
-        <Spin />
+        <Skeleton active paragraph={{ rows: 6 }} />
       </Modal>
     );
   }
@@ -263,6 +263,7 @@ export function CheckSelectionModal({ open, workflowId, onClose, onRun, onSaved 
               )}
               <Tooltip title={t('scopeTooltip')}>
                 <Select
+                  aria-label={t('scopeTooltip')}
                   size="small"
                   style={{ minWidth: 320 }}
                   value={scope}

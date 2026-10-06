@@ -362,6 +362,8 @@
       "loadFailed": "Findings non chargés",
       "retry": "Réessayer",
       "emptyLoadFailed": "Findings non chargés : voir le message ci-dessus.",
+      "truncated": "Affichage des {shown} premiers findings sur {total} : {hidden} de plus ne sont pas listés.",
+      "truncatedHint": "Affine par sévérité ou par module, ou traite ceux-ci d'abord : la liste se recharge après chaque « Ignorer ».",
       "emptyNone": "Aucun finding — lance une analyse.",
       "emptyFiltered": "Tous les findings de ce workflow sont masqués par les filtres.",
       "renameNodes": "Renommer les nœuds (suggestions IA)",

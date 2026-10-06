@@ -42,7 +42,8 @@ export function ErrorHeatmap({ stats, selected, onSelectCell }: Props) {
   const labelEvery = Math.ceil(stats.buckets.length / 15);
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    // Zone défilante atteignable au clavier (axe scrollable-region-focusable).
+    <div tabIndex={0} role="group" aria-label={t('heatmap.ariaLabel')} style={{ overflowX: 'auto' }}>
       <svg width={width} height={height} role="img" aria-label={t('heatmap.ariaLabel')}>
         {stats.buckets.map((bucket, index) =>
           index % labelEvery === 0 ? (

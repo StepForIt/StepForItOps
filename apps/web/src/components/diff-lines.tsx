@@ -61,6 +61,8 @@ export function DiffLines({ lines, maxHeight = 360 }: { lines: DiffLine[]; maxHe
   }
   return (
     <div
+      // Zone défilante atteignable au clavier (axe scrollable-region-focusable).
+      tabIndex={0}
       style={{
         maxHeight,
         overflow: 'auto',

@@ -206,6 +206,7 @@ function toMermaid(
 
 export default function WorkflowMapPage() {
   const t = useTranslations('inventory.workflowMap.page');
+  const tc = useTranslations('common');
   const { scope } = useInstanceScope();
   const [nodes, setNodes] = useState<WorkflowMapNode[]>([]);
   const [links, setLinks] = useState<WorkflowMapLink[]>([]);
@@ -582,7 +583,12 @@ export default function WorkflowMapPage() {
               render={(_, record) => (
                 <Space>
                   <Tooltip title={t('editHint')}>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => setEditing(record)} />
+                    <Button
+                      aria-label={t('editHint')}
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => setEditing(record)}
+                    />
                   </Tooltip>
                   <Popconfirm
                     title={t('deleteConfirm')}
@@ -590,7 +596,7 @@ export default function WorkflowMapPage() {
                     cancelText={t('cancel')}
                     onConfirm={() => removeLink(record.id)}
                   >
-                    <Button size="small" danger icon={<DeleteOutlined />} />
+                    <Button size="small" danger aria-label={tc('delete')} icon={<DeleteOutlined />} />
                   </Popconfirm>
                 </Space>
               )}

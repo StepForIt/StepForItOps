@@ -31,7 +31,13 @@ export function InstallAppButton({ collapsed }: { collapsed: boolean }) {
   const button = collapsed ? (
     <Tooltip placement="right" title={t('button')}>
       <div style={{ textAlign: 'center', padding: '8px 0' }}>
-        <Button type="text" size="small" icon={<DownloadOutlined />} onClick={onClick} />
+        <Button
+          type="text"
+          size="small"
+          aria-label={t('button')}
+          icon={<DownloadOutlined />}
+          onClick={onClick}
+        />
       </div>
     </Tooltip>
   ) : (

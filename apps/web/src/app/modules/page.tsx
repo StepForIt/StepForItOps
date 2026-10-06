@@ -112,28 +112,45 @@ export default function ModulesPage() {
           dataIndex="enabled"
           title={t('columns.enabled')}
           render={(enabled: boolean, record) => (
-            // Activer est direct ; DÉSACTIVER passe par une confirmation qui nomme
-            // l'effet — l'interrupteur reste sur ON tant qu'elle n'est pas validée
-            // (onChange ignore la valeur `false`, seul onConfirm coupe vraiment).
-            <Popconfirm
-              title={t('disableConfirm', { name: record.name })}
-              description={
-                <div style={{ maxWidth: 320 }}>{t(`disableEffects.${disableEffectKey(record)}`)}</div>
-              }
-              okText={t('disable')}
-              cancelText={tc('cancel')}
-              okButtonProps={{ danger: true }}
-              disabled={record.core || !enabled}
-              onConfirm={() => toggle(record, false)}
+            // Cible tactile de 44 px : l'interrupteur antd ne fait que 22 px de
+            // haut, sous le minimum tapable au doigt sur mobile. On ne grossit
+            // pas l'interrupteur (le visuel reste le même) mais la zone qui
+            // l'entoure. Un clic dans la marge n'ENCLENCHE que ; couper passe par
+            // la confirmation qui nomme l'effet (onChange ignore `false`, seul
+            // onConfirm coupe vraiment). Un module core n'est jamais basculable.
+            <span
+              data-testid="module-toggle"
+              onClick={(event) => {
+                if (event.target === event.currentTarget && !record.core && !enabled) toggle(record, true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: 44,
+                cursor: record.core ? 'default' : 'pointer',
+              }}
             >
-              <Switch
-                checked={enabled}
-                disabled={record.core}
-                onChange={(value) => {
-                  if (value) toggle(record, true);
-                }}
-              />
-            </Popconfirm>
+              <Popconfirm
+                title={t('disableConfirm', { name: record.name })}
+                description={
+                  <div style={{ maxWidth: 320 }}>{t(`disableEffects.${disableEffectKey(record)}`)}</div>
+                }
+                okText={t('disable')}
+                cancelText={tc('cancel')}
+                okButtonProps={{ danger: true }}
+                disabled={record.core || !enabled}
+                onConfirm={() => toggle(record, false)}
+              >
+                <Switch
+                  checked={enabled}
+                  disabled={record.core}
+                  aria-label={t('enableAria', { name: record.name })}
+                  onChange={(value) => {
+                    if (value) toggle(record, true);
+                  }}
+                />
+              </Popconfirm>
+            </span>
           )}
         />
       </Table>

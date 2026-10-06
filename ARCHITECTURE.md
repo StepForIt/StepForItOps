@@ -123,7 +123,7 @@ système continue (couplage uniquement par événements).
 - `Monitor` — moniteur heartbeat/actif (+ push URL Kuma)
 - `WorkflowDoc` — doc générée (mermaid + résumé)
 - `ModuleState` — état d'activation des modules
-- `EventLog` — journal des événements (debug/audit)
+- `EventLog` — journal des événements (debug/audit) : nom et ids seulement (une valeur de plus de 1 Ko est remplacée par sa taille, `event-log-entry.ts`), purgé au-delà de 30 jours en gardant la dernière ligne de chaque nom, que lit ops-cloud
 
 ## 5. Détail des modules
 

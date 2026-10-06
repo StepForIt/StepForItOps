@@ -26,6 +26,12 @@ export const CONSOLE_THEME: ThemeConfig = {
     colorWarningText: BRAND.warning,
     colorErrorText: BRAND.danger,
     colorTextBase: BRAND.nuit,
+    // Textes secondaires : antd les dérive de colorTextBase à 65 % et 45 % d'opacité,
+    // et le tertiaire (horodatages, aides) tombe sous 4,5:1. Relevés ici, sur la nuit de
+    // la charte, au-dessus du seuil AA sur blanc comme sur papier.
+    colorTextSecondary: 'rgba(6, 24, 45, 0.7)',
+    colorTextTertiary: 'rgba(6, 24, 45, 0.62)',
+    colorTextDescription: 'rgba(6, 24, 45, 0.7)',
     colorBorderSecondary: BRAND.hairline,
     colorBgLayout: BRAND.papier,
     colorSuccessBg: BRAND.papier,
@@ -57,6 +63,10 @@ export const SIDER_THEME: ThemeConfig = {
     colorBgElevated: '#0B2440',
     colorBorder: 'rgba(232, 238, 242, 0.16)',
     colorBorderSecondary: 'rgba(232, 238, 242, 0.08)',
+    // Les textes secondaires relevés de la console sont faits pour un fond clair : ici, ceux d'antd.
+    colorTextSecondary: undefined,
+    colorTextTertiary: undefined,
+    colorTextDescription: undefined,
     colorSuccessBg: undefined,
     colorWarningBg: undefined,
     colorErrorBg: undefined,

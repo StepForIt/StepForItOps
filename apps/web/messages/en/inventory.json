@@ -362,6 +362,8 @@
       "loadFailed": "Findings not loaded",
       "retry": "Retry",
       "emptyLoadFailed": "Findings not loaded: see the message above.",
+      "truncated": "Showing the first {shown} findings of {total}: {hidden} more are not listed.",
+      "truncatedHint": "Narrow by severity or module, or handle these first: the list reloads after each \"Ignore\".",
       "emptyNone": "No findings — run an analysis.",
       "emptyFiltered": "All of this workflow's findings are hidden by the filters.",
       "renameNodes": "Rename nodes (AI suggestions)",

@@ -174,7 +174,8 @@
     "stop": "Stop",
     "sendTooltip": "Enter: send · Shift+Enter: new line · Tab: complete",
     "imageOnlyRequest": "Here is a screenshot. What does it show, and what should be done about it?",
-    "fileOnlyRequest": "Here are one or more attached files. What do they contain, and what should be done with them?"
+    "fileOnlyRequest": "Here are one or more attached files. What do they contain, and what should be done with them?",
+    "sessionSelect": "Conversation"
   },
   "review": {
     "gate": {

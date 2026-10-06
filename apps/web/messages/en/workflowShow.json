@@ -322,7 +322,8 @@
     "pin": "Stub {count, plural, one {# outgoing node} other {# outgoing nodes}}",
     "rename": "Also rename to “{name} - {env}”",
     "alreadyTagged": "already env:{env}",
-    "unmapped": "{count, plural, one {# resource} other {# resources}} without mapping"
+    "unmapped": "{count, plural, one {# resource} other {# resources}} without mapping",
+    "targetEnvLabel": "Target env"
   },
   "promote": {
     "diff": {

@@ -12,6 +12,7 @@ import {
   NodeTypeVersionRef,
   msg,
 } from '@nwm/core';
+import { deleteAfterUnpublish } from './n8n-delete';
 import { n8nRequest } from './n8n-http';
 import { n8nSessionGet, n8nSessionPost } from './n8n-session';
 
@@ -138,8 +139,12 @@ export class N8nApiAdapter implements N8nApiPort {
     await n8nRequest(instance, 'POST', `/workflows/${workflowId}/publish`, {});
   }
 
+  /** Dépublie puis supprime, en rejouant le temps que n8n finisse la dépublication (`n8n-delete.ts`). */
   async deleteWorkflow(instance: N8nInstanceConfig, workflowId: string): Promise<void> {
-    await n8nRequest(instance, 'DELETE', `/workflows/${workflowId}`);
+    await deleteAfterUnpublish(
+      () => this.activateWorkflow(instance, workflowId, false),
+      () => n8nRequest(instance, 'DELETE', `/workflows/${workflowId}`),
+    );
   }
 
   async listExecutions(

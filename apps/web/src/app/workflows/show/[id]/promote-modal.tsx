@@ -423,6 +423,7 @@ export function PromoteModal({
             </>
           )}
           <Select
+            aria-label={t('targetInstance')}
             placeholder={t('targetInstance')}
             style={{ width: 240, marginRight: 8 }}
             value={targetInstanceId}
@@ -433,6 +434,7 @@ export function PromoteModal({
             }))}
           />
           <Select
+            aria-label={onSameInstance ? t('envRequired') : t('envOptional')}
             allowClear={!onSameInstance}
             status={onSameInstance && !targetEnv ? 'warning' : undefined}
             placeholder={onSameInstance ? t('envRequired') : t('envOptional')}

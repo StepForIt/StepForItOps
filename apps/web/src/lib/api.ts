@@ -89,7 +89,12 @@ export function setLockOverrideHandler(handler: LockOverrideAsk): () => void {
  * qui en touche plusieurs peut en rencontrer un second : la modale revient, et
  * les levées s'additionnent.
  */
-async function apiRequest<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+async function apiExchange<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<{ data: T; headers: Headers }> {
   let lifted: string[] = [];
   let reason = '';
   for (;;) {
@@ -126,8 +131,12 @@ async function apiRequest<T>(method: string, path: string, body?: unknown, signa
     }
     const result = (await response.json()) as T;
     if (method !== 'GET') writeListeners.forEach((listener) => listener({ method, path, body }));
-    return result;
+    return { data: result, headers: response.headers };
   }
+}
+
+async function apiRequest<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  return (await apiExchange<T>(method, path, body, signal)).data;
 }
 
 /** Appels d'action custom (endpoints hors CRUD Refine). */
@@ -149,4 +158,20 @@ export function apiDelete<T>(path: string): Promise<T> {
 
 export function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   return apiRequest<T>('GET', path, undefined, signal);
+}
+
+/**
+ * Liste paginée façon Refine simple-rest : rend les lignes ET le total réel lu
+ * dans `x-total-count`. Sert à dire « 500 premiers sur N » là où l'appel borné
+ * (`_end=…`) masquait silencieusement le reste. Header absent ⇒ on retombe sur
+ * la taille du lot (pas de reste connu).
+ */
+export async function apiGetList<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<{ data: T[]; total: number }> {
+  const { data, headers } = await apiExchange<T[]>('GET', path, undefined, signal);
+  const header = headers.get('x-total-count');
+  const total = header !== null ? Number(header) : NaN;
+  return { data, total: Number.isFinite(total) ? total : data.length };
 }

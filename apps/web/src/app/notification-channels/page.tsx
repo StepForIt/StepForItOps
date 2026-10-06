@@ -217,6 +217,7 @@ export default function NotificationChannelsPage() {
             <Space>
               <Tooltip title={t('sendTest')}>
                 <Button
+                  aria-label={t('sendTest')}
                   size="small"
                   icon={<SendOutlined />}
                   loading={testing === record.id}
@@ -230,7 +231,7 @@ export default function NotificationChannelsPage() {
                 aria-label={tc('edit')}
               />
               <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record)}>
-                <Button size="small" danger icon={<DeleteOutlined />} />
+                <Button aria-label={tc('delete')} size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
             </Space>
           )}

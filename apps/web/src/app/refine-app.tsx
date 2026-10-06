@@ -46,6 +46,7 @@ import { CommandSearchMenuItem } from '../components/command-search-menu-item';
 import { InstallAppButton } from '../components/install-app-button';
 import { InstanceScopeMenuItem } from '../components/instance-scope-menu-item';
 import { MenuNavProgress } from '../components/menu-nav-progress';
+import { ScreenTitle } from '../components/screen-title';
 import { SecurityWarnings } from '../components/security-warnings';
 import { UserMenuItem } from '../components/user-menu-item';
 import { LicenseNotice } from '../components/license-notice';
@@ -278,6 +279,7 @@ function Console({ children }: { children: React.ReactNode }) {
   const { enabled } = useEnabledModules();
   const tMenu = useTranslations('app.menu');
   const tGroups = useTranslations('app.menuGroups');
+  const tSlots = useTranslations('app.menuSlots');
   const i18nProvider = useI18nProvider();
   const resources = React.useMemo(
     () =>
@@ -294,7 +296,16 @@ function Console({ children }: { children: React.ReactNode }) {
       notificationProvider={useNotificationProvider}
       i18nProvider={i18nProvider}
       resources={resources}
-      options={{ syncWithLocation: true, warnWhenUnsavedChanges: true, reactQuery: REACT_QUERY }}
+      // `disableTelemetry` : @refinedev/core poste sinon vers telemetry.refine.dev
+      // à chaque chargement. Une console d'exploitation auto-hébergée, qui porte
+      // les noms de workflows de clients, ne parle à aucun tiers sans que ce soit
+      // un choix.
+      options={{
+        syncWithLocation: true,
+        warnWhenUnsavedChanges: true,
+        reactQuery: REACT_QUERY,
+        disableTelemetry: true,
+      }}
     >
       <InstanceScopeProvider>
         <MenuNavProgress>
@@ -315,15 +326,33 @@ function Console({ children }: { children: React.ReactNode }) {
                         />
                       )}
                       render={({ items, logout, collapsed }) => (
+                        // Ces encarts sont injectés DANS le `<Menu role="menu">` d'antd, qui n'admet que
+                        // des enfants `role="menuitem"` (ou group/separator). `role="none"` ne suffit pas :
+                        // axe (aria-required-children) traverse les éléments présentationnels et retrouve
+                        // les boutons internes comme enfants interdits. `menuitem` est une feuille autorisée
+                        // qu'axe n'explore pas ; chacun porte un nom (aria-command-name).
+                        // `{items}`/`{logout}` sont de vrais menuitem antd : on n'y touche pas.
                         <>
-                          <CommandSearchMenuItem collapsed={collapsed} />
-                          <InstanceScopeMenuItem collapsed={collapsed} />
+                          <div role="menuitem" aria-label={tSlots('search')}>
+                            <CommandSearchMenuItem collapsed={collapsed} />
+                          </div>
+                          <div role="menuitem" aria-label={tSlots('instanceScope')}>
+                            <InstanceScopeMenuItem collapsed={collapsed} />
+                          </div>
                           {items}
                           {logout}
-                          <InstallAppButton collapsed={collapsed} />
-                          <LanguageMenuItem collapsed={collapsed} />
-                          <UserMenuItem collapsed={collapsed} />
-                          <LicenseNotice collapsed={collapsed} />
+                          <div role="menuitem" aria-label={tSlots('installApp')}>
+                            <InstallAppButton collapsed={collapsed} />
+                          </div>
+                          <div role="menuitem" aria-label={tSlots('language')}>
+                            <LanguageMenuItem collapsed={collapsed} />
+                          </div>
+                          <div role="menuitem" aria-label={tSlots('account')}>
+                            <UserMenuItem collapsed={collapsed} />
+                          </div>
+                          <div role="menuitem" aria-label={tSlots('license')}>
+                            <LicenseNotice collapsed={collapsed} />
+                          </div>
                         </>
                       )}
                     />
@@ -335,6 +364,7 @@ function Console({ children }: { children: React.ReactNode }) {
               <WorkflowLocksProvider>
                 <WorkflowChatProvider>
                   <ReleaseRecorderProvider>
+                    <ScreenTitle />
                     <InstanceScopeGate>{children}</InstanceScopeGate>
                   </ReleaseRecorderProvider>
                 </WorkflowChatProvider>

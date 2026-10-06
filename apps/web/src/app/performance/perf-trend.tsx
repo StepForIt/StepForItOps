@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Empty, Space, Spin, Tooltip, Typography } from 'antd';
+import { Empty, Skeleton, Space, Tooltip, Typography } from 'antd';
 import { useLocale, useTranslations } from 'next-intl';
 import { apiGet } from '../../lib/api';
 import { PerfTrend, formatMs } from './types';
@@ -49,7 +49,7 @@ export function PerfTrendChart({
     ).then(setTrend);
   }, [instanceId, externalWorkflowId, days]);
 
-  if (!trend) return <Spin size="small" />;
+  if (!trend) return <Skeleton active paragraph={{ rows: 3 }} />;
   if (trend.buckets.length === 0) {
     return <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }

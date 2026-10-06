@@ -91,7 +91,13 @@ export function ChatMemory({ workflowId }: { workflowId: string }) {
                     onConfirm={() => remove(fact.id)}
                   >
                     <Tooltip title={t('forgetTooltip')}>
-                      <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                      <Button
+                        aria-label={t('forgetTooltip')}
+                        size="small"
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                      />
                     </Tooltip>
                   </Popconfirm>
                   <Typography.Text>{fact.content}</Typography.Text>

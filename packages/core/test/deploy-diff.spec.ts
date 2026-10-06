@@ -74,6 +74,11 @@ const variants: Record<string, N8nWorkflow> = {
   },
   'câblage retiré': { ...dev, connections: {} },
   'réglage du workflow': { ...dev, settings: { executionOrder: 'v0' } },
+  'réglage posé à sa valeur par défaut': {
+    ...dev,
+    settings: { executionOrder: 'v1', binaryMode: 'separate' },
+  },
+  'réglage posé hors défaut': { ...dev, settings: { executionOrder: 'v1', binaryMode: 'combined' } },
   'ressource non mappée': withNode(dev, 1, {
     parameters: { base: { __rl: true, value: 'appAUTRE999', mode: 'list' } },
   }),
@@ -113,8 +118,58 @@ describe('deployDiff', () => {
     expect(diff.nodes[0]).toMatchObject({ name: 'Airtable', fields: ['onError'] });
   });
 
+  it('ne compte pas binaryMode « separate », que n8n pose par défaut', () => {
+    const saved = { ...dev, settings: { executionOrder: 'v1', binaryMode: 'separate' } };
+    expect(deployDiff({ workflow: prod, context }, { workflow: saved, context }).hasChanges).toBe(false);
+    const combined = { ...dev, settings: { executionOrder: 'v1', binaryMode: 'combined' } };
+    expect(deployDiff({ workflow: prod, context }, { workflow: combined, context }).settings.changed).toBe(
+      true,
+    );
+  });
+
   it('ne prend pas un ordre de clés différent pour un écart', () => {
     const reordered = withNode(dev, 0, { parameters: { path: 'facture-dev', httpMethod: 'POST' } });
     expect(deployDiff({ workflow: prod, context }, { workflow: reordered, context }).hasChanges).toBe(false);
+  });
+});
+
+describe('deployDiff — nom des nœuds', () => {
+  const callNode = (id: string, name: string): N8nNode => ({
+    id,
+    name,
+    type: 'n8n-nodes-base.executeWorkflow',
+    position: [0, 0],
+    parameters: { workflowId: 'sub' },
+  });
+  const withCall = (env: string, version: string): N8nWorkflow => {
+    const call = `Call 'Scheduler send quote (${version}) - ${env}'`;
+    const sub = `Call 'Start Product Creation - SubWF - ${env}'`;
+    return {
+      name: `Quote - ${env}`,
+      nodes: [
+        callNode('a', call),
+        callNode('b', sub),
+        {
+          id: 'c',
+          name: 'Set',
+          type: 'n8n-nodes-base.set',
+          position: [0, 0],
+          parameters: { value: `={{ $('${sub.replace(/'/g, "\\'")}').item.json.id }}` },
+        },
+      ],
+      connections: { [call]: { main: [[{ node: sub, type: 'main', index: 0 }]] } },
+    };
+  };
+
+  it("ignore l'env et le numéro de version portés par le nom d'un nœud", () => {
+    const diff = deployDiff({ workflow: withCall('PROD', '2.0.0') }, { workflow: withCall('DEV', '1.2.2') });
+    expect(diff.hasChanges).toBe(false);
+    expect(deployKey(withCall('PROD', '2.0.0'))).toBe(deployKey(withCall('DEV', '1.2.2')));
+  });
+
+  it('un vrai renommage reste un écart', () => {
+    const renamed = withCall('DEV', '1.2.2');
+    renamed.nodes[0] = { ...renamed.nodes[0], name: "Call 'Other flow - DEV'" };
+    expect(deployKey(withCall('PROD', '2.0.0'))).not.toBe(deployKey(renamed));
   });
 });

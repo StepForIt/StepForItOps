@@ -71,9 +71,14 @@ describe('diffWorkflows', () => {
     expect(diff.nodes[0].renamedFrom).toBe('Code');
   });
 
-  it('reste un ajout + une suppression quand les ids diffèrent', () => {
+  it('reste un ajout + une suppression quand ni l’id ni le contenu ne correspondent', () => {
     const after = workflow();
-    after.nodes[1] = { ...after.nodes[1], id: 'nouveau', name: 'Transformation' };
+    after.nodes[1] = {
+      ...after.nodes[1],
+      id: 'nouveau',
+      name: 'Transformation',
+      parameters: { jsCode: 'return [];' },
+    };
     const diff = diffWorkflows(workflow(), after);
 
     expect(diff.counts).toEqual({ added: 1, removed: 1, modified: 0, renamed: 0 });

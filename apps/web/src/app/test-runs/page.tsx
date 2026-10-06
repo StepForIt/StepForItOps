@@ -67,6 +67,7 @@ export default function TestRunsList() {
     <List>
       <Space style={{ marginBottom: 16, display: 'flex' }}>
         <Select
+          aria-label={t('filterWorkflow')}
           placeholder={t('filterWorkflow')}
           allowClear
           showSearch

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Spin } from 'antd';
+import { Skeleton } from 'antd';
 import { apiGet } from './api';
 
 export interface InstanceOption {
@@ -74,9 +74,12 @@ export const useInstanceScope = (): InstanceScopeValue => useContext(InstanceSco
 export function InstanceScopeGate({ children }: { children: React.ReactNode }) {
   const { ready } = useInstanceScope();
   if (!ready) {
+    // Le portail retient TOUTE page avant son premier rendu : un squelette à la forme
+    // d'un écran (barre + tableau) plutôt qu'une roue nue qui ne dit ni quoi ni combien.
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-        <Spin />
+      <div style={{ padding: 24 }}>
+        <Skeleton.Input active block style={{ maxWidth: 320, marginBottom: 16 }} />
+        <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
   }

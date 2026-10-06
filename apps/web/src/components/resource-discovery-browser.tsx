@@ -230,6 +230,7 @@ export function ResourceDiscoveryBrowser({
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Space wrap>
             <Select
+              aria-label={t('instance')}
               placeholder={t('instance')}
               style={{ minWidth: 200 }}
               value={instanceId}
@@ -238,6 +239,7 @@ export function ResourceDiscoveryBrowser({
             />
             {!isCredentialMode && (
               <Select
+                aria-label={t('credential')}
                 placeholder={t('credential')}
                 style={{ minWidth: 260 }}
                 value={credentialKey}

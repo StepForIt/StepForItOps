@@ -19,7 +19,7 @@ export interface DeploySide {
  */
 export function deployDiff(reference: DeploySide, candidate: DeploySide): WorkflowDiff {
   return diffWorkflows(
-    deployForm(reference.workflow, reference.context),
-    deployForm(candidate.workflow, candidate.context),
+    deployForm(reference.workflow, reference.context, { keepNodeIds: true }),
+    deployForm(candidate.workflow, candidate.context, { keepNodeIds: true }),
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Empty, List, Select, Space, Spin, Tag, Typography } from 'antd';
+import { Empty, List, Select, Skeleton, Space, Tag, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { apiGet } from '../lib/api';
 
@@ -32,7 +32,7 @@ export function GroupCredentials({ groupId }: { groupId: string }) {
       .catch(() => setCredentials([]));
   }, [groupId]);
 
-  if (credentials === null) return <Spin />;
+  if (credentials === null) return <Skeleton active paragraph={{ rows: 4 }} />;
   if (credentials.length === 0) {
     return <Empty description={t('empty')} />;
   }
@@ -43,6 +43,7 @@ export function GroupCredentials({ groupId }: { groupId: string }) {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="small">
       <Select
+        aria-label={t('filterByType')}
         allowClear
         placeholder={t('filterByType')}
         style={{ minWidth: 240 }}

@@ -188,6 +188,7 @@ export default function VersionsList() {
     >
       <Space wrap style={{ marginBottom: 16 }}>
         <Select
+          aria-label={t('filterWorkflow')}
           placeholder={t('filterWorkflow')}
           allowClear
           showSearch
