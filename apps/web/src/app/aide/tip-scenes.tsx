@@ -543,6 +543,34 @@ function ErrorFix() {
   );
 }
 
+function EnvWhy() {
+  const t = useTranslations('misc.aide.scenes.envWhy');
+  const w = useSample();
+  return (
+    <Frame title={t('title', { name: w.billing })}>
+      <Body>
+        <Row>
+          <Tag color="green">{t('live')} 1.2.0</Tag> <span className="hp-muted">{t('clientsSafe')}</span>
+        </Row>
+        <Row className="hp-a1">
+          <Tag color="blue">{t('test')}</Tag> {t('editing')}
+        </Row>
+        <Row className="hp-a2">⇄ {t('link')}</Row>
+        <Row className="hp-a3">
+          <span className="hp-ok">✓</span> {t('checks')}
+        </Row>
+        <Tag className="hp-a5" color="green">
+          {t('released')}
+        </Tag>
+      </Body>
+      <span className="hp-btn primary hp-abs hp-p2" style={{ right: 8, bottom: 8 }}>
+        {t('promote')}
+      </span>
+      <Cursor x2={262} y2={140} mode="late" />
+    </Frame>
+  );
+}
+
 function Promote() {
   const t = useTranslations('misc.aide.scenes.promote');
   const w = useSample();
@@ -838,6 +866,7 @@ export const SCENES: Record<string, () => React.ReactElement> = {
   remote: Remote,
   assistant: Assistant,
   'error-fix': ErrorFix,
+  'env-why': EnvWhy,
   promote: Promote,
   mapping: Mapping,
   errors: Errors,

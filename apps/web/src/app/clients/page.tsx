@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Input, Modal, Popconfirm, Space, Tag, message } from 'antd';
+import { Alert, Button, Card, Input, Modal, Popconfirm, Space, Switch, Tag, Typography, message } from 'antd';
 import { Table } from '../../components/resizable-table';
 import { DeleteOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
@@ -12,6 +12,9 @@ interface Client {
   id: string;
   name: string;
   instanceCount: number;
+  workflowCount: number;
+  portalShowToday: boolean;
+  portalShowIncidents: boolean;
 }
 
 /** Clients de l'agence : de simples groupes d'instances pour les vues agrégées. */
@@ -23,6 +26,8 @@ export default function ClientsPage() {
   const [editing, setEditing] = useState<Client | null | 'new'>(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showToday, setShowToday] = useState(true);
+  const [showIncidents, setShowIncidents] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -38,8 +43,19 @@ export default function ClientsPage() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      if (editing === 'new') await apiPost('/clients', { name });
-      else if (editing) await apiPatch(`/clients/${editing.id}`, { name });
+      if (editing === 'new') {
+        const created = await apiPost<{ id: string }>('/clients', { name });
+        await apiPatch(`/clients/${created.id}`, {
+          portalShowToday: showToday,
+          portalShowIncidents: showIncidents,
+        });
+      } else if (editing) {
+        await apiPatch(`/clients/${editing.id}`, {
+          name,
+          portalShowToday: showToday,
+          portalShowIncidents: showIncidents,
+        });
+      }
       message.success(t('saved'));
       setEditing(null);
       load();
@@ -70,6 +86,8 @@ export default function ClientsPage() {
           onClick={() => {
             setEditing('new');
             setName('');
+            setShowToday(true);
+            setShowIncidents(false);
           }}
         >
           {t('add')}
@@ -98,6 +116,8 @@ export default function ClientsPage() {
                     onClick={() => {
                       setEditing('new');
                       setName('');
+                      setShowToday(true);
+                      setShowIncidents(false);
                     }}
                   >
                     {t('add')}
@@ -109,11 +129,21 @@ export default function ClientsPage() {
         }}
       >
         <Table.Column dataIndex="name" title={tc('columns.name')} />
+        {/* Une colonne de plus ferait passer la liste en lignes dépliables sur mobile (dès 4 colonnes) : les deux comptes partagent la même. */}
         <Table.Column<Client>
           dataIndex="instanceCount"
           title={t('instances')}
-          width={110}
-          render={(count: number) => <Tag color={count > 0 ? 'blue' : 'default'}>{count}</Tag>}
+          width={150}
+          render={(count: number, record) => (
+            <Space size={4}>
+              <Tag color={count > 0 ? 'blue' : 'default'}>{count}</Tag>
+              {record.workflowCount > 0 && (
+                <Tag color="cyan" title={t('workflows')}>
+                  {record.workflowCount} WF
+                </Tag>
+              )}
+            </Space>
+          )}
         />
         <Table.Column<Client>
           title=""
@@ -127,6 +157,8 @@ export default function ClientsPage() {
                 onClick={() => {
                   setEditing(record);
                   setName(record.name);
+                  setShowToday(record.portalShowToday);
+                  setShowIncidents(record.portalShowIncidents);
                 }}
               />
               <Popconfirm title={t('deleteConfirm')} onConfirm={() => remove(record)}>
@@ -153,6 +185,21 @@ export default function ClientsPage() {
           onPressEnter={save}
           autoFocus
         />
+        <Space direction="vertical" size={8} style={{ marginTop: 16, width: '100%' }}>
+          <Space>
+            <Switch checked={showToday} onChange={setShowToday} aria-label={t('portalShowToday')} />
+            {t('portalShowToday')}
+          </Space>
+          <Space>
+            <Switch
+              checked={showIncidents}
+              onChange={setShowIncidents}
+              aria-label={t('portalShowIncidents')}
+            />
+            {t('portalShowIncidents')}
+          </Space>
+          <Typography.Text type="secondary">{t('portalHint')}</Typography.Text>
+        </Space>
       </Modal>
     </Card>
   );

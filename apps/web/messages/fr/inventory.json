@@ -354,6 +354,71 @@
         "disabled": "Les nœuds désactivés sont ignorés.",
         "scope": "Le sélecteur d'instance en haut de l'application restreint la carte à une seule instance ; les liens qui la quittent apparaissent alors comme hors périmètre."
       }
+    },
+    "legend": {
+      "title": "Comment lire la carte",
+      "hide": "Masquer",
+      "show": "Afficher",
+      "intro": "Chaque boîte est un workflow. Une flèche A → B se lit « A appelle B ».",
+      "boxesTitle": "Les boîtes",
+      "arrowsTitle": "Les flèches",
+      "colorsTip": "Chaque workflow a sa couleur de flèche : suivez la couleur pour suivre tous ses appels.",
+      "boxes": {
+        "workflow": {
+          "title": "Workflow",
+          "hint": "Démarre tout seul. Ce qui le lance est écrit sous son nom."
+        },
+        "subworkflow": {
+          "title": "Sous-workflow",
+          "hint": "Il ne tourne que si un autre workflow l’appelle."
+        },
+        "inactive": {
+          "title": "Désactivé",
+          "hint": "Éteint dans n8n : il ne se déclenche plus."
+        },
+        "archived": {
+          "title": "Archivé",
+          "hint": "Rangé dans n8n. Affiché seulement s’il est encore appelé : un appel mort à corriger."
+        },
+        "external": {
+          "title": "Hors carte",
+          "hint": "Appelé mais pas synchronisé ici : il n’a pas de fiche à ouvrir."
+        },
+        "subcall": {
+          "title": "Lui-même",
+          "hint": "Le workflow se rappelle lui-même en sous-workflow."
+        },
+        "entry": {
+          "title": "Point d’entrée",
+          "hint": "Ce qui le met en route de l’extérieur : URL publique, horloge, appli tierce."
+        }
+      },
+      "arrows": {
+        "call": {
+          "title": "Appelle",
+          "hint": "Trait plein, détecté tout seul dans le JSON."
+        },
+        "webhook": {
+          "title": "Webhook",
+          "hint": "A appelle l’URL de webhook de B."
+        },
+        "tool": {
+          "title": "Outil IA",
+          "hint": "B est branché comme outil sur un agent IA de A."
+        },
+        "manual": {
+          "title": "Lien manuel",
+          "hint": "Pointillés : un enchaînement que vous avez ajouté, invisible dans le JSON."
+        },
+        "context": {
+          "title": "D'où part l'appel",
+          "hint": "Une étiquette précise si l’appel part d’une boucle (une fois par tour), d’un test manuel (au clic) ou d’une branche de sous-workflow. Le chiffre : taille de ce bout."
+        },
+        "entry": {
+          "title": "Déclencheur",
+          "hint": "Pointillés verts : ce qui démarre le workflow de l’extérieur."
+        }
+      }
     }
   },
   "findings": {

@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Badge, Button, Collapse, Segmented, Space, Tag, Tooltip, message } from 'antd';
 import { Table } from './resizable-table';
-import { RobotOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { RobotOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { apiPost } from '../lib/api';
 import { useRuleLabel } from '../lib/finding-rules';
@@ -118,6 +118,35 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
     }
   };
 
+  /** Tout d'un coup : règle puis IA, écrit d'office hors env surveillé, sinon relu en diff. */
+  const fixAll = async () => {
+    setFixing('all');
+    const done = message.loading(t('fixAllRunning'), 0);
+    try {
+      const result = await apiPost<{
+        autoApplied: number;
+        aiApplied: number;
+        reviewProposalId: string | null;
+        reviewReason: string | null;
+        remaining: number;
+      }>('/workflow-chat/finding-fix-all', { findingIds: findings.map((finding) => finding.id) });
+      const applied = result.autoApplied + result.aiApplied;
+      if (applied > 0) message.success(t('fixAllDone', { applied }));
+      if (result.remaining > 0) message.warning(t('fixAllRemaining', { count: result.remaining }));
+      if (applied === 0 && !result.reviewProposalId) message.info(t('fixAllNothing'));
+      if (result.reviewProposalId) {
+        message.info(t('fixAllReview', { reason: result.reviewReason ?? '' }));
+        setReviewing(result.reviewProposalId);
+      }
+      if (applied > 0) onChanged();
+    } catch (error) {
+      message.error((error as Error).message);
+    } finally {
+      setFixing(null);
+      done();
+    }
+  };
+
   if (findings.length === 0) {
     return <p style={{ color: '#999' }}>{emptyText ?? t('empty')}</p>;
   }
@@ -125,6 +154,11 @@ export function FindingsList({ findings, onChanged, actions, emptyText }: Props)
   return (
     <>
       <Space wrap style={{ marginBottom: 12 }}>
+        <Tooltip title={t('fixAllTooltip')}>
+          <Button type="primary" icon={<ToolOutlined />} loading={fixing === 'all'} onClick={fixAll}>
+            {t('fixAll', { count: findings.length })}
+          </Button>
+        </Tooltip>
         <Segmented<GroupBy>
           size="small"
           value={groupBy}

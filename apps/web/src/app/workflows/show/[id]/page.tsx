@@ -222,6 +222,30 @@ export default function WorkflowShow() {
       .catch(() => setTimeSavedEstimate(null));
   }, [workflowId]);
 
+  // Espace client : affectation du workflow à un client et nom montré à celui-ci.
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [publicName, setPublicName] = useState('');
+  useEffect(() => {
+    apiGet<{ id: string; name: string }[]>('/clients?_start=0&_end=200')
+      .then(setClients)
+      .catch(() => setClients([]));
+  }, []);
+  useEffect(() => {
+    const w = workflow as { clientId?: string | null; publicName?: string | null } | undefined;
+    setClientId(w?.clientId ?? null);
+    setPublicName(w?.publicName ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflow?.name]);
+  const saveCustomerSpace = async () => {
+    try {
+      await apiPatch(`/workflows/${workflowId}/client`, { clientId, publicName: publicName.trim() || null });
+      message.success(t('customer.saved'));
+    } catch (error) {
+      message.error((error as Error).message);
+    }
+  };
+
   const saveMinutesSaved = async () => {
     try {
       await apiPatch(`/workflows/${workflowId}/time-saved`, { minutes: minutesSaved });
@@ -529,6 +553,44 @@ export default function WorkflowShow() {
               : timeSavedEstimate
                 ? t('timeSaved.estimatedValue', { minutes: timeSavedEstimate.minutes })
                 : t('timeSaved.toFill')}
+          </Typography.Link>
+        </Popover>
+        <Popover
+          trigger="click"
+          title={t('customer.title')}
+          content={
+            <Space direction="vertical" size={8} style={{ width: 280 }}>
+              <Select
+                allowClear
+                aria-label={t('customer.client')}
+                placeholder={t('customer.clientPlaceholder')}
+                value={clientId}
+                onChange={(value) => setClientId(value ?? null)}
+                options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                style={{ width: '100%' }}
+              />
+              <Input
+                aria-label={t('customer.publicName')}
+                placeholder={t('customer.publicNamePlaceholder')}
+                value={publicName}
+                disabled={clientId === null}
+                maxLength={100}
+                onChange={(event) => setPublicName(event.target.value)}
+              />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t('customer.hint')}
+              </Typography.Text>
+              <Button size="small" type="primary" onClick={saveCustomerSpace}>
+                {t('customer.save')}
+              </Button>
+            </Space>
+          }
+        >
+          <Typography.Link style={{ fontSize: 12 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t('customer.label')}{' '}
+            </Typography.Text>
+            {clients.find((c) => c.id === clientId)?.name ?? t('customer.none')}
           </Typography.Link>
         </Popover>
         <PublishRunBanner workflowId={workflowId} pushed={publishRun} />

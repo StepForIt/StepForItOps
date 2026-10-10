@@ -150,6 +150,13 @@
       "module": "By module",
       "none": "Flat"
     },
+    "fixAll": "Fix all ({count})",
+    "fixAllTooltip": "Fixes everything in one go: rules first, AI for the rest. Written straight away outside monitored environments, otherwise reviewed as a diff.",
+    "fixAllRunning": "Fixing…",
+    "fixAllDone": "{applied, plural, one {# finding fixed} other {# findings fixed}} and written to n8n.",
+    "fixAllReview": "A fix is waiting for your review: {reason}",
+    "fixAllRemaining": "{count, plural, one {# finding remains} other {# findings remain}} to handle by hand.",
+    "fixAllNothing": "Nothing could be fixed automatically.",
     "autofixTooltip": "Fix computed by the rule, no AI — reviewed as a diff before writing",
     "fixWithAi": "Fix with AI",
     "fix": "Fix",

@@ -94,6 +94,12 @@
         "where": "Errors → Propose a fix (AI)",
         "keywords": "error fix diagnosis credential ai"
       },
+      "env-why": {
+        "title": "Edit without risk, go live in one click",
+        "text": "You work on a test copy; checks run before going live and the platform links test and live bases for you.",
+        "where": "Workflow page → Environments",
+        "keywords": "environment env test dev prod copy match mapping benefit why start begin"
+      },
       "promote": {
         "title": "Promote to prod",
         "text": "Tests, findings and remote columns are checked before writing; the version follows.",
@@ -103,7 +109,7 @@
       "mapping": {
         "title": "Rewire resources",
         "text": "Bases, tables and credentials move from dev to prod, display names included.",
-        "where": "Env mappings",
+        "where": "Test / live matches",
         "keywords": "mapping switch resource base table credential dev prod"
       },
       "errors": {
@@ -233,6 +239,17 @@
         "fix": "✦ AI fix",
         "expired": "Stripe credential expired.",
         "renew": "Renew it in n8n: nothing to change in the workflow."
+      },
+      "envWhy": {
+        "title": "{name}",
+        "live": "Live",
+        "clientsSafe": "customers protected",
+        "test": "Test copy",
+        "editing": "editing here",
+        "link": "test base = live base",
+        "checks": "Checks passed",
+        "released": "1.3.0 live",
+        "promote": "Go live"
       },
       "promote": {
         "title": "Promote · {name}",
@@ -649,7 +666,7 @@
       "onModelLifecycle": "Model deprecated or retired",
       "onModelLifecycleHelp": "A model called by a workflow in the fleet is no longer served by its provider.",
       "onApiKey": "Instance API key",
-      "onApiKeyHelp": "Expiry at D-14 and D-3, key expired or refused by the platform."
+      "onApiKeyHelp": "Expiry at D-14 and D-3, key expired or refused by the platform, AI credential refused or account out of credit."
     },
     "empty": {
       "title": "No alert channel",

@@ -39,6 +39,7 @@ const TIP_DEFS = [
   { id: 'remote', group: 'quality', href: '/workflows' },
   { id: 'assistant', group: 'assistant', href: '/workflows', module: 'workflow-chat' },
   { id: 'error-fix', group: 'assistant', href: '/errors', module: 'workflow-chat' },
+  { id: 'env-why', group: 'environments', href: '/resource-mappings', module: 'env-switcher' },
   { id: 'promote', group: 'environments', href: '/workflows', module: 'env-switcher' },
   { id: 'mapping', group: 'environments', href: '/resource-mappings', module: 'env-switcher' },
   { id: 'errors', group: 'health', href: '/errors', module: 'monitoring' },

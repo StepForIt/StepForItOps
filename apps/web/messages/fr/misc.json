@@ -94,6 +94,12 @@
         "where": "Erreurs → Proposer un correctif (IA)",
         "keywords": "erreur correctif diagnostic credential ia"
       },
+      "env-why": {
+        "title": "Modifier sans risque, mettre en ligne en un clic",
+        "text": "Tu travailles sur une copie de test ; les contrôles passent avant la mise en ligne et la plateforme relie toute seule base de test et base réelle.",
+        "where": "Page d’un workflow → Environnements",
+        "keywords": "environnement env test dev prod copie correspondance mapping gain pourquoi demarrer debuter"
+      },
       "promote": {
         "title": "Promouvoir vers la prod",
         "text": "Tests, findings et colonnes distantes sont vérifiés avant d’écrire ; la version suit.",
@@ -103,7 +109,7 @@
       "mapping": {
         "title": "Rebrancher les ressources",
         "text": "Bases, tables et credentials passent de dev à prod, noms affichés compris.",
-        "where": "Mappings env",
+        "where": "Correspondances test / réel",
         "keywords": "mapping bascule ressource base table credential dev prod"
       },
       "errors": {
@@ -233,6 +239,17 @@
         "fix": "✦ Correctif IA",
         "expired": "Credential Stripe expirée.",
         "renew": "À renouveler dans n8n : rien à changer au workflow."
+      },
+      "envWhy": {
+        "title": "{name}",
+        "live": "En ligne",
+        "clientsSafe": "clients protégés",
+        "test": "Copie de test",
+        "editing": "je modifie ici",
+        "link": "base test = base réelle",
+        "checks": "Contrôles passés",
+        "released": "1.3.0 en ligne",
+        "promote": "Mettre en ligne"
       },
       "promote": {
         "title": "Promouvoir · {name}",
@@ -649,7 +666,7 @@
       "onModelLifecycle": "Modèle déprécié ou retiré",
       "onModelLifecycleHelp": "Un modèle appelé par un workflow du parc n'est plus servi par son provider.",
       "onApiKey": "Clé API d’instance",
-      "onApiKeyHelp": "Échéance à J-14 et J-3, clé expirée ou refusée par la plateforme."
+      "onApiKeyHelp": "Échéance à J-14 et J-3, clé expirée ou refusée par la plateforme, credential IA refusée ou compte à sec."
     },
     "empty": {
       "title": "Aucun canal d’alerte",

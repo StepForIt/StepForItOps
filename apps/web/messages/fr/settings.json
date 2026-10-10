@@ -134,8 +134,31 @@
     "help": "Une ligne par identifiant à basculer (base, table, credential…). Laisse vide les envs non concernés — le remplacement se fait entre les valeurs d'une même ligne. Le nom de la ligne ne sert qu'à s'y retrouver : rien dans n8n ne s'y compare, et laissé vide il est rempli tout seul.",
     "rowName": "Nom de la ligne",
     "optional": "facultatif",
+    "displayName": "Nom affiché {env}",
+    "displayNamePlaceholder": "nom affiché (facultatif)",
     "identifier": "Identifiant {env}",
     "addField": "Ajouter un champ"
+  },
+  "envExplainer": {
+    "title": "À quoi servent les environnements ?",
+    "tagline": "Modifie sans risque. Mets en ligne en un clic.",
+    "show": "Afficher l’explication",
+    "hide": "Masquer",
+    "gains": {
+      "safe": "<strong>Tu testes sur une copie.</strong> Le workflow que tes clients utilisent n’est jamais touché pendant que tu travailles.",
+      "checks": "<strong>Les contrôles passent avant la mise en ligne.</strong> Tests, ressources, credentials : un oubli est bloqué avant d’atteindre un client.",
+      "versions": "<strong>Chaque mise en ligne a son numéro de version</strong> et un point de retour : tu sais toujours ce qui tourne, et tu peux revenir en arrière."
+    },
+    "mappingTitle": "Et les correspondances test / réel ?",
+    "mappingText": "Ta copie de test écrit dans une base de test. Une correspondance dit « cette base de test = cette base réelle » : à la mise en ligne, la plateforme change les adresses toute seule. Tu la déclares une fois, tu ne retouches plus jamais un identifiant à la main.",
+    "stepsTitle": "Comment démarrer, en 3 étapes",
+    "steps": {
+      "copy": "<strong>Copier</strong> : sur la page d’un workflow, bouton « Environnements », puis « Copier vers un env ». Ta copie de test est créée, l’original reste intact.",
+      "link": "<strong>Relier</strong> : déclare une correspondance test / réel pour chaque base, table ou compte utilisé, depuis n8n ou à la main.",
+      "promote": "<strong>Mettre en ligne</strong> : bouton « Promouvoir ». La plateforme vérifie, bascule les ressources et pose le numéro de version."
+    },
+    "seeAnimation": "Voir l’animation",
+    "example": "Exemple : base « CRM (test) » appD3v123 = base « CRM (réel) » appPr0456"
   },
   "groupMemberPicker": {
     "chooseInstance": "Choisis d’abord une instance.",
@@ -304,6 +327,7 @@
       "depGraph": "La carte des workflows et la page Ressources externes disparaissent.",
       "optimizer": "La détection de naming / nœuds inutiles et le renommage sûr s'arrêtent.",
       "modelAudit": "L'audit continu des modèles LLM (adéquation, cycle de vie, surdimensionnement) s'arrête.",
+      "credentialCheck": "Le test des credentials des fournisseurs IA n’est plus disponible.",
       "aiCost": "Le suivi des coûts LLM s'arrête ; la page Coûts IA n'est plus alimentée.",
       "appLogs": "La page des logs applicatifs disparaît (la capture des logs, hors du module, continue).",
       "resourceDiscovery": "La découverte des bases / tables réelles s'arrête.",
@@ -423,7 +447,11 @@
     "empty": {
       "title": "Aucun client pour l’instant",
       "text": "Regroupez les instances de chaque client pour suivre son ROI, ses erreurs et ses coûts sur un seul écran."
-    }
+    },
+    "workflows": "Workflows affectés",
+    "portalShowToday": "Exécutions du jour visibles par le client",
+    "portalShowIncidents": "Incidents en cours visibles par le client",
+    "portalHint": "Le client voit le nom public du workflow touché et son impact (exécutions manquées, travail à refaire), jamais le message technique."
   },
   "resourceMappings": {
     "discover": "Découvrir depuis un workflow",
@@ -431,8 +459,8 @@
     "logicalName": "Nom logique",
     "envs": "Environnements",
     "empty": {
-      "title": "Aucun mapping d’environnement",
-      "text": "Dites une fois quelle base de dev correspond à quelle base de prod : la promotion rebranche tout toute seule."
+      "title": "Aucune correspondance test / réel",
+      "text": "Dis une fois quelle base de test correspond à quelle base réelle : à la mise en ligne, la plateforme rebranche tout toute seule."
     }
   },
   "apiKey": {
@@ -466,5 +494,25 @@
     "saved": "Compte propriétaire enregistré : accès complet actif.",
     "dismissed": "Compris : Ops ne redemandera plus pour cette instance.",
     "askedAgain": "Ops redemandera l'accès complet pour cette instance."
+  },
+  "credentialCheckSettings": {
+    "title": "Test des credentials IA",
+    "saved": "Fréquences enregistrées",
+    "enabled": "Tester automatiquement les credentials",
+    "enabledHint": "Alerte sur vos canaux (Paramètres → Alertes, option « Clé API ») quand une clé est refusée ou qu’un compte est à sec. Une seule alerte par panne.",
+    "hours": "{count, plural, one {toutes les # h} other {toutes les # h}}",
+    "days": "{count, plural, one {tous les jours} other {tous les # jours}}",
+    "accessEveryHours": {
+      "label": "Test d’accès",
+      "hint": "La clé est-elle acceptée ? Gratuit chez OpenAI, Anthropic et Mistral."
+    },
+    "paidAccessEveryHours": {
+      "label": "Test d’accès sans option gratuite",
+      "hint": "Perplexity n’a pas de test gratuit : chaque test est un appel d’un jeton, environ 0,5 centime."
+    },
+    "creditEveryHours": {
+      "label": "Test de crédit",
+      "hint": "Le compte est-il à sec ? Un appel d’un jeton, quelques millièmes de centime (environ 0,5 centime chez Perplexity)."
+    }
   }
 }

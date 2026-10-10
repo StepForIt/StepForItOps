@@ -4,6 +4,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import {
   AiCostBudgetExceededEvent,
   AlertDigestBuffer,
+  CredentialCheckFailedEvent,
   EVENTS,
   ErrorGroupNotableEvent,
   InstanceApiKeyExpiryEvent,
@@ -307,6 +308,27 @@ export class NotifierService {
       body: [
         msg('ops.alertApiKeyRejectedBody', { status: event.status, reason: event.reason }),
         msg('ops.alertApiKeyRejectedImpact'),
+      ].join('\n'),
+    });
+  }
+
+  /**
+   * Une credential de fournisseur IA refusée ou à sec. Même toggle que la clé API d'instance
+   * (`onApiKey`) : c'est la même famille de panne — une clé qui ne marche plus — et un
+   * interrupteur de plus aurait demandé une colonne, une migration et un écran pour distinguer
+   * deux alertes que personne ne voudrait séparer.
+   */
+  @OnEvent(EVENTS.credentialCheckFailed)
+  async onCredentialCheckFailed(event: CredentialCheckFailedEvent): Promise<void> {
+    const noCredit = event.verdict === 'no-credit';
+    await this.apiKey({
+      title: msg(noCredit ? 'ops.alertCredentialNoCreditTitle' : 'ops.alertCredentialRejectedTitle', {
+        provider: event.provider,
+        name: event.credentialName ?? event.credentialId,
+      }),
+      body: [
+        msg('ops.alertCredentialBody', { instance: event.instanceName, detail: event.detail ?? '—' }),
+        msg(noCredit ? 'ops.alertCredentialNoCreditImpact' : 'ops.alertCredentialRejectedImpact'),
       ].join('\n'),
     });
   }

@@ -4,6 +4,7 @@ import {
   AiPort,
   N8nWorkflow,
   TimeSavedEstimate,
+  MAX_TIME_SAVED_MINUTES,
   estimateTimeSaved,
   msg,
   writeInLanguage,
@@ -16,7 +17,7 @@ const MAX_TOKENS = 1024;
 /** Au-delà, le modèle n'apprend plus rien de la liste : les gestes se répètent. */
 const MAX_NODE_LINES = 40;
 /** Même plafond que le calcul déterministe : l'IA ne doit pas pouvoir le franchir. */
-const MAX_MINUTES = 120;
+const MAX_MINUTES = MAX_TIME_SAVED_MINUTES;
 /** Taille des paquets du rattrapage au démarrage (les `raw` sont gros). */
 const PAGE = 50;
 
@@ -54,25 +55,41 @@ export class TimeSavedService implements OnModuleInit {
    * Rattrapage au démarrage : les workflows déjà en base n'ont pas d'estimation
    * tant que la synchro ne les a pas revus, et le dashboard afficherait zéro
    * pendant une heure après la mise à jour.
+   *
+   * Les estimations posées par la RÈGLE sont aussi recalculées : elles dérivent
+   * du contenu et de la formule, et une formule corrigée ne doit pas laisser les
+   * workflows inchangés sur l'ancien chiffre (la synchro ne les revoit que si leur
+   * contenu bouge). Idempotent — la règle est déterministe — et sans écriture
+   * quand rien ne change. Celles affinées par l'IA, elles, sont un jugement :
+   * on ne les écrase pas.
    */
   async onModuleInit(): Promise<void> {
     try {
       const pending = await this.prisma.workflow.findMany({
-        where: { minutesSavedEstimate: null },
+        where: { OR: [{ minutesSavedEstimate: null }, { minutesSavedEstimateFrom: 'rules' }] },
         select: { id: true },
       });
+      let updated = 0;
       // Les `raw` se lisent par paquets : un parc de plusieurs centaines de
       // workflows tiendrait mal en mémoire en une seule requête.
       for (let i = 0; i < pending.length; i += PAGE) {
         const rows = await this.prisma.workflow.findMany({
           where: { id: { in: pending.slice(i, i + PAGE).map((row) => row.id) } },
-          select: { id: true, raw: true },
+          select: { id: true, raw: true, minutesSavedEstimate: true, minutesSavedEstimateWhy: true },
         });
         for (const row of rows) {
-          await this.store(row.id, this.estimate(row.raw as unknown as N8nWorkflow), 'rules');
+          const estimate = this.estimate(row.raw as unknown as N8nWorkflow);
+          if (
+            row.minutesSavedEstimate === estimate.minutes &&
+            row.minutesSavedEstimateWhy === estimate.reason
+          ) {
+            continue;
+          }
+          await this.store(row.id, estimate, 'rules');
+          updated += 1;
         }
       }
-      if (pending.length > 0) this.logger.log(`Time saved estimated on ${pending.length} workflow(s)`);
+      if (updated > 0) this.logger.log(`Time saved re-estimated on ${updated} workflow(s)`);
     } catch (error) {
       // Une base pas encore migrée ne doit pas empêcher l'api de démarrer.
       this.logger.warn(`Initial time-saved estimate skipped: ${(error as Error).message}`);
@@ -160,15 +177,21 @@ export class TimeSavedService implements OnModuleInit {
     try {
       const answer = await this.ai.generateJson<{ minutes?: number; reason?: string }>({
         system:
-          'You estimate the HUMAN work time that one execution of this n8n workflow replaces, ' +
-          'in minutes, from the point of view of the person who would have had to do it by hand.\n' +
-          '- Count the real gestures: opening a tool and finding a piece of data, entering a row, ' +
-          'writing a message, reviewing and deciding. Do not count the plumbing (Set, IF, Merge, loops).\n' +
-          '- A sub-workflow call does not count: it has its own executions.\n' +
-          `- A deterministic rule proposes ${rules.minutes} min (${rules.reason}): only contradict it if the ` +
-          'node details justify it (volume processed, long writing, trivial gesture).\n' +
-          `- Stay between 0 and ${MAX_MINUTES} minutes, and be careful: this figure feeds an ROI.\n` +
-          'Reply in JSON: {"minutes":number,"reason":"one sentence, what it replaces"}\n' +
+          'You estimate the HUMAN time that ONE execution of this n8n workflow replaces, in minutes.\n' +
+          '- Start from WHAT THE WORKFLOW DOES for the business (e.g. "sorts one incoming email", ' +
+          '"creates one invoice"), then ask how long a person would take to do that one task by hand.\n' +
+          '- The number of nodes and their complexity are NOT a measure of time: a 40-node workflow that ' +
+          'sorts an email replaces about as much work as a 5-node one. Never add up nodes.\n' +
+          '- One execution = one unit of work (one email, one lead, one order), unless the workflow ' +
+          'clearly loops over a batch.\n' +
+          '- Reference scale: sorting or labelling an email 1-3 min, answering one 5-10 min, entering ' +
+          'a record 2-5 min, preparing a report or a quote 15-30 min. Be conservative: this figure feeds ' +
+          'an ROI and an overestimate is worse than an underestimate.\n' +
+          '- Ignore the plumbing (Set, IF, Merge, loops, sub-workflow calls).\n' +
+          `- A rough rule-based figure is ${rules.minutes} min: it ignores the purpose of the workflow, ` +
+          'so do not anchor on it, and go lower whenever the task is simple.\n' +
+          `- Stay between 0 and ${MAX_MINUTES} minutes.\n` +
+          'Reply in JSON: {"minutes":number,"reason":"one sentence: the task replaced and how long it takes by hand"}\n' +
           this.platformLocale.run(() => writeInLanguage()),
         prompt: JSON.stringify(summarize(name, raw)),
         maxTokens: MAX_TOKENS,

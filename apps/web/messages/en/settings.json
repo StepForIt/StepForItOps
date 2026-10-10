@@ -134,8 +134,31 @@
     "help": "One row per identifier to switch (base, table, credential…). Leave unrelated envs empty — replacement happens between the values of the same row. The row name is only there to find your way: nothing in n8n compares against it, and it is filled in automatically if left empty.",
     "rowName": "Row name",
     "optional": "optional",
+    "displayName": "Display name {env}",
+    "displayNamePlaceholder": "display name (optional)",
     "identifier": "{env} identifier",
     "addField": "Add a field"
+  },
+  "envExplainer": {
+    "title": "What are environments for?",
+    "tagline": "Edit without risk. Go live in one click.",
+    "show": "Show the explanation",
+    "hide": "Hide",
+    "gains": {
+      "safe": "<strong>You test on a copy.</strong> The workflow your customers rely on is never touched while you work.",
+      "checks": "<strong>Checks run before going live.</strong> Tests, resources, credentials: a slip is blocked before it reaches a customer.",
+      "versions": "<strong>Every release gets a version number</strong> and a way back: you always know what is running, and you can roll back."
+    },
+    "mappingTitle": "And test / live matches?",
+    "mappingText": "Your test copy writes to a test base. A match says \"this test base = this live base\": when you go live, the platform swaps the addresses for you. Declare it once, never edit an identifier by hand again.",
+    "stepsTitle": "How to start, in 3 steps",
+    "steps": {
+      "copy": "<strong>Copy</strong>: on a workflow page, \"Environments\" button, then \"Copy to an env\". Your test copy is created, the original stays intact.",
+      "link": "<strong>Link</strong>: declare a test / live match for each base, table or account used, from n8n or by hand.",
+      "promote": "<strong>Go live</strong>: \"Promote\" button. The platform checks, switches the resources and sets the version number."
+    },
+    "seeAnimation": "See the animation",
+    "example": "Example: base \"CRM (test)\" appD3v123 = base \"CRM (live)\" appPr0456"
   },
   "groupMemberPicker": {
     "chooseInstance": "Pick an instance first.",
@@ -304,6 +327,7 @@
       "depGraph": "The workflow map and the External resources page disappear.",
       "optimizer": "Detection of naming issues / useless nodes and safe renaming stop.",
       "modelAudit": "Continuous LLM model audit (fit, lifecycle, oversizing) stops.",
+      "credentialCheck": "Testing AI provider credentials is no longer available.",
       "aiCost": "LLM cost tracking stops; the AI costs page is no longer fed.",
       "appLogs": "The application logs page disappears (log capture, outside the module, continues).",
       "resourceDiscovery": "Discovery of real bases / tables stops.",
@@ -423,7 +447,11 @@
     "empty": {
       "title": "No client yet",
       "text": "Group each client’s instances to follow their ROI, errors and costs on a single screen."
-    }
+    },
+    "workflows": "Assigned workflows",
+    "portalShowToday": "Today's executions visible to the client",
+    "portalShowIncidents": "Ongoing incidents visible to the client",
+    "portalHint": "The client sees the public name of the affected workflow and its impact (missed runs, work to redo), never the technical message."
   },
   "resourceMappings": {
     "discover": "Discover from a workflow",
@@ -431,8 +459,8 @@
     "logicalName": "Logical name",
     "envs": "Environments",
     "empty": {
-      "title": "No environment mapping",
-      "text": "Say once which dev base matches which prod base: promotion rewires everything on its own."
+      "title": "No test / live match",
+      "text": "Say once which test base matches which live base: when you go live, the platform rewires everything on its own."
     }
   },
   "apiKey": {
@@ -466,5 +494,25 @@
     "saved": "Owner account saved: full access is on.",
     "dismissed": "Got it: Ops won't ask again for this instance.",
     "askedAgain": "Ops will ask for full access again for this instance."
+  },
+  "credentialCheckSettings": {
+    "title": "AI credential check",
+    "saved": "Frequencies saved",
+    "enabled": "Check credentials automatically",
+    "enabledHint": "Alerts on your channels (Settings → Alerts, “API key” option) when a key is refused or an account runs dry. One alert per outage.",
+    "hours": "{count, plural, one {every # h} other {every # h}}",
+    "days": "{count, plural, one {every day} other {every # days}}",
+    "accessEveryHours": {
+      "label": "Access check",
+      "hint": "Is the key accepted? Free with OpenAI, Anthropic and Mistral."
+    },
+    "paidAccessEveryHours": {
+      "label": "Access check without a free option",
+      "hint": "Perplexity has no free check: each one is a one-token call, about half a cent."
+    },
+    "creditEveryHours": {
+      "label": "Credit check",
+      "hint": "Is the account out of credit? A one-token call, a few thousandths of a cent (about half a cent with Perplexity)."
+    }
   }
 }

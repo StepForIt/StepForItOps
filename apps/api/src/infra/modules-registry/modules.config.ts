@@ -38,6 +38,11 @@ export const FEATURE_MODULES: Array<{ id: string; path: string; className: strin
     className: 'ModelAuditModule',
   },
   {
+    id: 'credential-check',
+    path: '../../modules/credential-check/credential-check.module',
+    className: 'CredentialCheckModule',
+  },
+  {
     id: 'config-transfer',
     path: '../../modules/config-transfer/config-transfer.module',
     className: 'ConfigTransferModule',

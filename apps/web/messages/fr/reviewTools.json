@@ -150,6 +150,13 @@
       "module": "Par module",
       "none": "À plat"
     },
+    "fixAll": "Tout corriger ({count})",
+    "fixAllTooltip": "Corrige tout en un geste : la règle d’abord, l’IA pour le reste. Écrit d’office hors environnement surveillé, sinon relu en diff.",
+    "fixAllRunning": "Correction en cours…",
+    "fixAllDone": "{applied, plural, one {# remarque corrigée} other {# remarques corrigées}} et écrites dans n8n.",
+    "fixAllReview": "Un correctif attend ta relecture : {reason}",
+    "fixAllRemaining": "{count, plural, one {# remarque reste} other {# remarques restent}} à traiter à la main.",
+    "fixAllNothing": "Rien n’a pu être corrigé automatiquement.",
     "autofixTooltip": "Correctif calculé par la règle, sans IA — relu en diff avant d’écrire",
     "fixWithAi": "Corriger avec l’IA",
     "fix": "Corriger",

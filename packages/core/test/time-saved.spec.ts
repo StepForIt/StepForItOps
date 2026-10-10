@@ -60,12 +60,49 @@ describe('estimateTimeSaved', () => {
     expect(estimate.reason).toContain('passage IA');
   });
 
+  it('ne suit pas le nombre de nœuds : dix écritures ne valent pas dix fois une', () => {
+    const one = estimateTimeSaved(
+      workflow([node({ name: 'A', type: 'n8n-nodes-base.airtable', parameters: { operation: 'create' } })]),
+    );
+    const many = estimateTimeSaved(
+      workflow(
+        Array.from({ length: 10 }, (_, i) =>
+          node({ name: `A${i}`, type: 'n8n-nodes-base.airtable', parameters: { operation: 'create' } }),
+        ),
+      ),
+    );
+    expect(many.minutes).toBeLessThanOrEqual(one.minutes * 3);
+  });
+
+  it('un gros workflow de tri de mails reste à quelques minutes', () => {
+    const nodes = [
+      ...Array.from({ length: 12 }, (_, i) =>
+        node({ name: `Lire ${i}`, type: 'n8n-nodes-base.gmail', parameters: { operation: 'get' } }),
+      ),
+      ...Array.from({ length: 8 }, (_, i) =>
+        node({ name: `IA ${i}`, type: '@n8n/n8n-nodes-langchain.lmChatOpenAi' }),
+      ),
+      ...Array.from({ length: 10 }, (_, i) =>
+        node({ name: `Label ${i}`, type: 'n8n-nodes-base.gmail', parameters: { operation: 'addLabels' } }),
+      ),
+    ];
+    expect(estimateTimeSaved(workflow(nodes)).minutes).toBeLessThanOrEqual(30);
+  });
+
   it('plafonne, et le dit', () => {
-    const nodes = Array.from({ length: 60 }, (_, i) =>
-      node({ name: `Écrit ${i}`, type: 'n8n-nodes-base.airtable', parameters: { operation: 'create' } }),
+    const types = [
+      ['n8n-nodes-base.airtable', { operation: 'create' }],
+      ['n8n-nodes-base.gmail', { operation: 'send' }],
+      ['n8n-nodes-base.airtable', { operation: 'search' }],
+      ['@n8n/n8n-nodes-langchain.lmChatOpenAi', {}],
+      ['n8n-nodes-base.if', {}],
+      ['n8n-nodes-base.code', {}],
+    ] as const;
+    const nodes = types.flatMap(([type, parameters], t) =>
+      Array.from({ length: 10 }, (_, i) => node({ name: `N${t}-${i}`, type, parameters })),
     );
     const estimate = estimateTimeSaved(workflow(nodes));
-    expect(estimate.minutes).toBe(120);
+    expect(estimate.minutes).toBe(30);
     expect(estimate.capped).toBe(true);
   });
 });

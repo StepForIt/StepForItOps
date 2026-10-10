@@ -61,4 +61,30 @@ describe('NotifierService — clés API', () => {
     ]);
     expect(port.sent[0].title).toContain('Prod');
   });
+
+  it('annonce une credential IA refusée ou à sec sur les mêmes canaux, en nommant le fournisseur', async () => {
+    await prisma.notificationChannel.create({
+      data: { name: 'Suivi', type: 'slack', url: 'https://hooks.example/on' },
+    });
+    const port = recordingPort();
+    const registry = { isEnabled: async () => true } as unknown as ModuleRegistryService;
+    const notifier = new NotifierService(prisma, registry, port);
+    const base = {
+      instanceId: 'i1',
+      instanceName: 'Prod',
+      credentialId: 'c1',
+      credentialName: 'Perplexity prod',
+      provider: 'perplexity',
+      detail: 'Insufficient credits',
+      occurredAt: '2026-10-08T08:00:00.000Z',
+    };
+
+    await notifier.onCredentialCheckFailed({ ...base, verdict: 'no-credit' });
+    await notifier.onCredentialCheckFailed({ ...base, verdict: 'rejected' });
+
+    expect(port.sent).toHaveLength(2);
+    expect(port.sent[0].title).toContain('à sec');
+    expect(port.sent[0].title).toContain('Perplexity prod');
+    expect(port.sent[1].title).toContain('refusée');
+  });
 });

@@ -131,6 +131,10 @@ export const env = defineMessages(
       '{count, plural, one {# copy already has} other {# copies already have}} the target name ({names}): duplicating would create a second one. Tick "duplicate anyway" to override.',
     groupUnknown: 'Group {id} unknown',
     groupEmpty: 'The group contains no workflow',
+    mappingProvider: 'Unknown provider "{provider}" (expected: {allowed}).',
+    mappingName: 'A mapping needs a name.',
+    mappingValues: 'A mapping needs at least one identifier in at least one environment.',
+    mappingShape: '"{field}" must hold, for each environment, text values only.',
   },
   {
     manifestName: "Bascule d'environnement",
@@ -251,5 +255,9 @@ export const env = defineMessages(
       '{count} copie(s) portent déjà le nom cible ({names}) : dupliquer en créerait une seconde. Coche « dupliquer quand même » pour passer outre.',
     groupUnknown: 'Groupe {id} inconnu',
     groupEmpty: 'Le groupe ne contient aucun workflow',
+    mappingProvider: 'Provider « {provider} » inconnu (attendu : {allowed}).',
+    mappingName: "Une correspondance a besoin d'un nom.",
+    mappingValues: 'Une correspondance a besoin d’au moins un identifiant dans au moins un environnement.',
+    mappingShape: '« {field} » doit contenir, pour chaque environnement, des valeurs texte uniquement.',
   },
 );

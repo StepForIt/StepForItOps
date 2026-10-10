@@ -85,7 +85,19 @@
       "mockTooltip": "Rejoue le workflow avec des réponses simulées : rien n'est écrit ni envoyé au dehors.",
       "mock": "Tester sans rien envoyer"
     },
-    "thisGroup": "ce groupe"
+    "thisGroup": "ce groupe",
+    "customer": {
+      "label": "Espace client :",
+      "none": "aucun client",
+      "title": "Espace client",
+      "client": "Client",
+      "clientPlaceholder": "Aucun client (suit son instance)",
+      "publicName": "Nom public",
+      "publicNamePlaceholder": "Nom montré au client",
+      "hint": "Le client ne voit jamais le nom interne du workflow.",
+      "save": "Enregistrer",
+      "saved": "Espace client enregistré"
+    }
   },
   "envLinks": {
     "active": "actif",

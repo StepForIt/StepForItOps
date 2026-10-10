@@ -9,6 +9,7 @@ import { useEnvLabel, useEnvs } from '../../../../lib/envs';
 import { usePromoteDefaults } from './promote-defaults';
 import { SwitchedResource, SwitchedResources } from '../../../../components/switched-resources';
 import { BRAND } from '../../../../lib/brand/colors';
+import { EnvExplainer } from '../../../../components/env-explainer';
 
 /**
  * Les gestes possibles autour des environnements. Ils ne se distinguent pas par
@@ -276,6 +277,8 @@ export function EnvAssistantModal({
     >
       {intent === null ? (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          {/* Aucune correspondance : l'utilisateur découvre les envs, on lui dit d'abord ce qu'il y gagne. */}
+          <EnvExplainer key={String(noMapping)} compact defaultOpen={noMapping} />
           <div>{t('question', { name: workflowName ?? '' })}</div>
           <Radio.Group
             style={{ width: '100%' }}

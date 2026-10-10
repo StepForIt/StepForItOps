@@ -9,6 +9,7 @@ import { ProposalService } from './proposal.service';
 import { ErrorFixService } from './error-fix.service';
 import { FindingFixService } from './finding-fix.service';
 import { FindingAutoFixService } from './finding-autofix.service';
+import { FindingFixAllService } from './finding-fix-all.service';
 import { ChatExportService } from './chat-export.service';
 import { InstanceCorpusService } from './instance-corpus.service';
 import { InstanceCredentialsService } from './instance-credentials.service';
@@ -36,6 +37,7 @@ import { MakeChatTurnService } from './make-chat-turn.service';
     ErrorFixService,
     FindingFixService,
     FindingAutoFixService,
+    FindingFixAllService,
     ChatExportService,
     InstanceCorpusService,
     InstanceCredentialsService,

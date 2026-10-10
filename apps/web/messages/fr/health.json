@@ -421,5 +421,39 @@
         "text": "Un monitor vous prévient dès qu’un workflow tombe en erreur ou cesse de battre, avant vos clients."
       }
     }
+  },
+  "credentialCheck": {
+    "title": "Test des credentials",
+    "intro": "Vérifie que vos clés IA (OpenAI, Anthropic, Mistral, Perplexity) fonctionnent encore, avant qu’un workflow ne tombe chez un client. Le test d’accès est gratuit ; le test de crédit coûte moins d’un centime.",
+    "checkAll": "Tout tester",
+    "test": "Tester l’accès",
+    "testCredit": "Tester le crédit",
+    "quotaConfirm": "Fait un vrai appel d’un jeton chez le fournisseur (moins d’un centime) pour voir si le compte est à sec.",
+    "quotaOk": "Tester",
+    "notTested": "Pas encore testée",
+    "usedBy": "{count, plural, one {# nœud} other {# nœuds}}",
+    "problems": "{count, plural, one {# credential demande une action} other {# credentials demandent une action}} : clé refusée ou compte à sec.",
+    "columns": {
+      "credential": "Credential",
+      "state": "État"
+    },
+    "verdicts": {
+      "ok": "Fonctionne",
+      "rejected": "Clé refusée",
+      "no-credit": "Plus de crédit",
+      "rate-limited": "Limite atteinte, à réessayer",
+      "unreachable": "Injoignable",
+      "unknown": "Réponse inattendue"
+    },
+    "levelDone": {
+      "auth": "Accès testé",
+      "quota": "Accès et crédit testés"
+    },
+    "empty": {
+      "title": "Aucune credential de fournisseur IA",
+      "text": "Elles apparaissent dès qu’un workflow synchronisé utilise OpenAI, Anthropic, Mistral ou Perplexity."
+    },
+    "lastChecked": "Dernier test : {date}",
+    "settingsLink": "Régler la fréquence des tests automatiques"
   }
 }

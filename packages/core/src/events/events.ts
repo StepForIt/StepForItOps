@@ -8,6 +8,7 @@ export const EVENTS = {
   instanceApiKeyExpiring: 'instance.apiKeyExpiring',
   instanceApiKeyExpired: 'instance.apiKeyExpired',
   instanceApiKeyRejected: 'instance.apiKeyRejected',
+  credentialCheckFailed: 'credential.checkFailed',
   workflowUpdated: 'workflow.updated',
   versionCreated: 'version.created',
   verificationCompleted: 'verification.completed',
@@ -88,6 +89,22 @@ export interface InstanceApiKeyRejectedEvent {
   instanceName: string;
   status: number;
   reason: string;
+  occurredAt: string; // ISO
+}
+
+/**
+ * Une credential de fournisseur IA vient d'être refusée, ou son compte est à sec. Une
+ * émission par panne (et par nature de panne), pas une par passage : l'état mémorisé
+ * dans `CredentialCheckState` empêche le test suivant de répéter ce qui est déjà dit.
+ */
+export interface CredentialCheckFailedEvent {
+  instanceId: string;
+  instanceName: string;
+  credentialId: string;
+  credentialName: string | null;
+  provider: string;
+  verdict: 'rejected' | 'no-credit';
+  detail: string | null;
   occurredAt: string; // ISO
 }
 

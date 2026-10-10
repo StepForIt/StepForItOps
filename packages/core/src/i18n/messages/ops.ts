@@ -157,6 +157,12 @@ export const ops = defineMessages(
     alertApiKeyRejectedBody: 'The platform answered {status}: {reason}',
     alertApiKeyRejectedImpact:
       'Sync, error polling and every write to this instance fail until the key is replaced.',
+    alertCredentialRejectedTitle: '{provider} key refused: {name}',
+    alertCredentialNoCreditTitle: '{provider} account out of credit: {name}',
+    alertCredentialBody: 'Instance {instance}. The provider answered: {detail}',
+    alertCredentialRejectedImpact: 'Every workflow using this credential fails until it is replaced in n8n.',
+    alertCredentialNoCreditImpact:
+      'Every workflow calling this provider with this credential fails until the account is topped up.',
 
     // Tableau de bord, coûts IA
     noClient: 'No client',
@@ -310,6 +316,13 @@ export const ops = defineMessages(
     alertApiKeyRejectedBody: 'La plateforme a répondu {status} : {reason}',
     alertApiKeyRejectedImpact:
       'Synchro, suivi des erreurs et écritures sur cette instance échouent tant que la clé n’est pas remplacée.',
+    alertCredentialRejectedTitle: 'Clé {provider} refusée : {name}',
+    alertCredentialNoCreditTitle: 'Compte {provider} à sec : {name}',
+    alertCredentialBody: 'Instance {instance}. Le fournisseur a répondu : {detail}',
+    alertCredentialRejectedImpact:
+      'Tous les workflows qui utilisent cette credential échouent tant qu’elle n’est pas remplacée dans n8n.',
+    alertCredentialNoCreditImpact:
+      'Tous les workflows qui appellent ce fournisseur avec cette credential échouent tant que le compte n’est pas rechargé.',
 
     noClient: 'Sans client',
     unknownModel: '(modèle inconnu)',

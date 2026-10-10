@@ -27,6 +27,7 @@ export * from './domain/n8n/workflow-scope';
 export * from './domain/n8n/resource-locator-labels';
 export * from './domain/n8n/resource-locator-form';
 export * from './domain/n8n/credential-labels';
+export * from './domain/n8n/credential-check';
 export * from './domain/n8n/side-effect-nodes';
 export * from './domain/n8n/stub-workflow';
 export * from './domain/n8n/test-copy';

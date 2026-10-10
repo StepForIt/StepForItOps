@@ -205,6 +205,7 @@ export const platform = defineMessages(
     exportDriveDestination: 'Google Drive{hasFolder, select, true { (folder {folderId})} other {}} → {path}',
     // workflows
     workflowNotFound: 'Workflow {id} not found',
+    clientNotFound: 'Client {id} not found',
     divergenceNothingToCompare:
       'Nothing to compare: this copy is itself the reference (prod), or its environment is undetermined.',
     divergenceNoProd: 'No prod copy for this business workflow.',
@@ -295,6 +296,10 @@ export const platform = defineMessages(
     discoveryNotProbe: '{externalId} is not a discovery workflow',
     credentialHostRequired: 'credentialId and host are required',
     instanceIdRequired: 'instanceId is required',
+    credentialCheckLevel: 'Unknown check level: expected "auth" or "quota".',
+    credentialCheckUnknown:
+      'No AI provider credential with this id appears in the instance workflows: nothing to test.',
+    credentialCheckInput: 'instanceId and credentialId are required',
     workflowUnknown: 'Workflow {id} unknown',
     groupUnknown: 'Group {id} unknown',
     untitled: 'untitled',
@@ -523,6 +528,7 @@ export const platform = defineMessages(
     exportDriveDestination: 'Google Drive{hasFolder, select, true { (dossier {folderId})} other {}} → {path}',
     // workflows
     workflowNotFound: 'Workflow {id} introuvable',
+    clientNotFound: 'Client {id} introuvable',
     divergenceNothingToCompare:
       'Rien à comparer : cet exemplaire est lui-même la référence (prod), ou son environnement est indéterminé.',
     divergenceNoProd: 'Aucun exemplaire en prod pour ce workflow métier.',
@@ -614,6 +620,10 @@ export const platform = defineMessages(
     discoveryNotProbe: "{externalId} n'est pas un workflow de découverte",
     credentialHostRequired: 'credentialId et host sont requis',
     instanceIdRequired: 'instanceId est requis',
+    credentialCheckLevel: 'Niveau de test inconnu : "auth" ou "quota" attendu.',
+    credentialCheckUnknown:
+      'Aucune credential de fournisseur IA portant cet id n’apparaît dans les workflows de l’instance : rien à tester.',
+    credentialCheckInput: 'instanceId et credentialId sont requis',
     workflowUnknown: 'Workflow {id} inconnu',
     groupUnknown: 'Groupe {id} inconnu',
     untitled: 'sans titre',

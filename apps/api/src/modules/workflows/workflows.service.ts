@@ -190,6 +190,22 @@ export class WorkflowsService {
     return withEnv(workflow, await this.settings.declaredEnvIds());
   }
 
+  /**
+   * Affecte un workflow à un client (espace client) et lui donne son nom public.
+   * Écriture locale : rien n'est modifié dans n8n ni dans Make.
+   */
+  async setClient(id: string, clientId: string | null, publicName: string | null): Promise<void> {
+    if (clientId !== null) {
+      const client = await this.prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
+      if (!client) throw new NotFoundException(msg('platform.clientNotFound', { id: clientId }));
+    }
+    await this.prisma.workflow.update({
+      where: { id },
+      // Sans client, un nom public n'a personne à qui parler : il est retiré avec l'affectation.
+      data: { clientId, publicName: clientId === null ? null : publicName },
+    });
+  }
+
   async setTimeSaved(id: string, minutes: number | null): Promise<void> {
     await this.prisma.workflow.update({
       where: { id },

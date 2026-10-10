@@ -354,6 +354,71 @@
         "disabled": "Disabled nodes are ignored.",
         "scope": "The instance selector at the top of the app restricts the map to a single instance; links leaving it then show as out of scope."
       }
+    },
+    "legend": {
+      "title": "How to read the map",
+      "hide": "Hide",
+      "show": "Show",
+      "intro": "Each box is a workflow. An arrow A → B reads “A calls B”.",
+      "boxesTitle": "Boxes",
+      "arrowsTitle": "Arrows",
+      "colorsTip": "Each workflow has its own arrow colour: follow the colour to follow all its calls.",
+      "boxes": {
+        "workflow": {
+          "title": "Workflow",
+          "hint": "Starts on its own. What starts it is written under its name."
+        },
+        "subworkflow": {
+          "title": "Sub-workflow",
+          "hint": "It only runs when another workflow calls it."
+        },
+        "inactive": {
+          "title": "Disabled",
+          "hint": "Switched off in n8n: it no longer triggers."
+        },
+        "archived": {
+          "title": "Archived",
+          "hint": "Put away in n8n. Shown only while it is still called: a dead call to fix."
+        },
+        "external": {
+          "title": "Off the map",
+          "hint": "Called but not synced here: there is no page to open."
+        },
+        "subcall": {
+          "title": "Itself",
+          "hint": "The workflow calls itself as a sub-workflow."
+        },
+        "entry": {
+          "title": "Entry point",
+          "hint": "What starts it from outside: public URL, clock, third-party app."
+        }
+      },
+      "arrows": {
+        "call": {
+          "title": "Calls",
+          "hint": "Solid line, detected on its own in the JSON."
+        },
+        "webhook": {
+          "title": "Webhook",
+          "hint": "A calls B’s webhook URL."
+        },
+        "tool": {
+          "title": "AI tool",
+          "hint": "B is plugged in as a tool on an AI agent of A."
+        },
+        "manual": {
+          "title": "Manual link",
+          "hint": "Dotted: a sequence you added yourself, invisible in the JSON."
+        },
+        "context": {
+          "title": "Where the call starts",
+          "hint": "A label says whether the call leaves from a loop (once per turn), a manual test (on click) or a sub-workflow branch. The number: size of that part."
+        },
+        "entry": {
+          "title": "Trigger",
+          "hint": "Green dotted: what starts the workflow from outside."
+        }
+      }
     }
   },
   "findings": {

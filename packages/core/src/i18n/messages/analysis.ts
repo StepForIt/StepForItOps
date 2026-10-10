@@ -19,6 +19,8 @@ export const analysis = defineMessages(
     moduleDocSchemaDescription: 'Mermaid diagram and AI summary of a workflow',
     moduleModelAuditName: 'AI model audit',
     moduleModelAuditDescription: 'Capabilities, lifecycle and cost of LLM models',
+    moduleCredentialCheckName: 'Credential check',
+    moduleCredentialCheckDescription: 'Do AI provider credentials still work, and are they out of credit',
 
     quoted: '"{name}"',
 
@@ -178,6 +180,9 @@ export const analysis = defineMessages(
     moduleDocSchemaDescription: "Schéma Mermaid et résumé IA d'un workflow",
     moduleModelAuditName: 'Audit des modèles IA',
     moduleModelAuditDescription: 'Aptitudes, cycle de vie et coût des modèles LLM',
+    moduleCredentialCheckName: 'Test des credentials',
+    moduleCredentialCheckDescription:
+      'Les credentials des fournisseurs IA fonctionnent-elles encore, et sont-elles à sec',
 
     quoted: '« {name} »',
 

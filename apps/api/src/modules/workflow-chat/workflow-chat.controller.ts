@@ -6,6 +6,7 @@ import { ChatService, SendMessageResult, SessionSummary, SessionWithMessages } f
 import { ApplyResult, ProposalReview, ProposalService } from './proposal.service';
 import { ErrorFixResult, ErrorFixService } from './error-fix.service';
 import { FindingFixResult, FindingFixService } from './finding-fix.service';
+import { FindingFixAllResult, FindingFixAllService } from './finding-fix-all.service';
 import { FindingAutoFixResult, FindingAutoFixService } from './finding-autofix.service';
 import { ChatExport, ChatExportService } from './chat-export.service';
 import { ChatMemoryService } from './chat-memory.service';
@@ -23,6 +24,7 @@ export class WorkflowChatController {
     private readonly proposals: ProposalService,
     private readonly errorFix: ErrorFixService,
     private readonly findingFix: FindingFixService,
+    private readonly findingFixAll: FindingFixAllService,
     private readonly findingAutoFix: FindingAutoFixService,
     private readonly chatExport: ChatExportService,
     private readonly memory: ChatMemoryService,
@@ -88,6 +90,12 @@ export class WorkflowChatController {
   @Post('finding-autofix')
   proposeFindingAutoFix(@Body() body: { findingIds: string[] }): Promise<FindingAutoFixResult> {
     return this.findingAutoFix.propose(body?.findingIds ?? []);
+  }
+
+  /** Tout corriger d'un workflow : règle puis IA, écrit d'office hors env surveillé. */
+  @Post('finding-fix-all')
+  fixAllFindings(@Body() body: { findingIds: string[] }): Promise<FindingFixAllResult> {
+    return this.findingFixAll.fixAll(body?.findingIds ?? []);
   }
 
   @Get('workflows/:workflowId/sessions')

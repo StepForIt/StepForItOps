@@ -85,7 +85,19 @@
       "mockTooltip": "Replays the workflow with simulated responses: nothing is written or sent outside.",
       "mock": "Test without sending anything"
     },
-    "thisGroup": "this group"
+    "thisGroup": "this group",
+    "customer": {
+      "label": "Client space:",
+      "none": "no client",
+      "title": "Client space",
+      "client": "Client",
+      "clientPlaceholder": "No client (follows its instance)",
+      "publicName": "Public name",
+      "publicNamePlaceholder": "Name shown to the client",
+      "hint": "The client never sees the workflow's internal name.",
+      "save": "Save",
+      "saved": "Client space saved"
+    }
   },
   "envLinks": {
     "active": "active",

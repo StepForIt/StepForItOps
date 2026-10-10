@@ -19,6 +19,7 @@ const MODULE_BY_RESOURCE: Record<string, string> = {
   performance: 'performance',
   'ai-cost': 'ai-cost',
   'model-audit': 'model-audit',
+  'credential-check': 'credential-check',
   'notification-channels': 'notifier',
   'workflow-map': 'dep-graph',
   resources: 'dep-graph',

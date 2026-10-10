@@ -9,6 +9,7 @@ import { Table } from '../../components/resizable-table';
 import { RobotOutlined } from '@ant-design/icons';
 import { AiSettingsModal } from '../../components/ai-settings-modal';
 import { PlatformSettingsCard } from '../../components/platform-settings-card';
+import { CredentialCheckSettingsCard } from '../../components/credential-check-settings-card';
 import { EnvChainCard } from '../../components/env-chain-card';
 import { NodeCatalogCard } from '../../components/node-catalog-card';
 import { CommunityPackageDocsCard } from '../../components/community-package-docs-card';
@@ -45,6 +46,7 @@ const MODULE_DISABLE_EFFECTS = {
   'dep-graph': 'depGraph',
   optimizer: 'optimizer',
   'model-audit': 'modelAudit',
+  'credential-check': 'credentialCheck',
   'ai-cost': 'aiCost',
   'app-logs': 'appLogs',
   'resource-discovery': 'resourceDiscovery',
@@ -92,6 +94,7 @@ export default function ModulesPage() {
       }
     >
       <PlatformSettingsCard />
+      <CredentialCheckSettingsCard />
       <EnvChainCard />
       <NodeCatalogCard />
       <CommunityPackageDocsCard />

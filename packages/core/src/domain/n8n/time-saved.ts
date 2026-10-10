@@ -47,11 +47,21 @@ const MINUTES: Record<SavedGesture, number> = {
 };
 
 /**
- * Plafond : au-delà, l'estimation dit surtout que le workflow est gros. Un
- * chiffre à trois heures par exécution passerait pour une mesure et gonflerait
- * le ROI d'un facteur qu'on ne saurait pas défendre.
+ * Plafond : au-delà, l'estimation dit surtout que le workflow est gros. Une
+ * exécution remplace UNE tâche (trier un mail, saisir une fiche), qui prend
+ * quelques minutes à la main : un chiffre à deux heures passerait pour une
+ * mesure et gonflerait le ROI d'un facteur qu'on ne saurait pas défendre.
  */
-const MAX_MINUTES = 120;
+export const MAX_TIME_SAVED_MINUTES = 30;
+
+/**
+ * Rendements décroissants : le premier geste d'un genre coûte plein tarif, les
+ * suivants un tiers — dix nœuds Gmail ne sont pas dix fois plus de travail
+ * qu'un, ce sont des variantes de la même tâche. Sans cela l'estimation suivait
+ * le nombre de nœuds, et un tri de mails en annonçait 110 minutes.
+ */
+const REPEAT_RATE = 0.3;
+const MAX_REPEAT_FACTOR = 3;
 
 /**
  * Types qui n'existent que parce que le travail est automatisé : personne ne
@@ -173,14 +183,17 @@ export function estimateTimeSaved(workflow: N8nWorkflow): TimeSavedEstimate {
     if (!gesture) continue;
     const line = lines.get(gesture) ?? { gesture, nodes: [], minutes: 0 };
     line.nodes.push(node.name);
-    line.minutes += MINUTES[gesture];
+    line.minutes = Math.min(
+      MINUTES[gesture] * (1 + REPEAT_RATE * (line.nodes.length - 1)),
+      MINUTES[gesture] * MAX_REPEAT_FACTOR,
+    );
     lines.set(gesture, line);
   }
 
   const breakdown = [...lines.values()].sort((a, b) => b.minutes - a.minutes);
   const raw = breakdown.reduce((total, line) => total + line.minutes, 0);
-  const capped = raw > MAX_MINUTES;
-  const minutes = Math.round(Math.min(raw, MAX_MINUTES) * 2) / 2;
+  const capped = raw > MAX_TIME_SAVED_MINUTES;
+  const minutes = Math.round(Math.min(raw, MAX_TIME_SAVED_MINUTES) * 2) / 2;
 
   if (minutes === 0) {
     return {
@@ -194,7 +207,7 @@ export function estimateTimeSaved(workflow: N8nWorkflow): TimeSavedEstimate {
   const detail = breakdown.map((line) => msg(LABELS[line.gesture], { count: line.nodes.length })).join(', ');
   return {
     minutes,
-    reason: capped ? msg('platform.timeSavedCapped', { detail, max: MAX_MINUTES }) : `${detail}.`,
+    reason: capped ? msg('platform.timeSavedCapped', { detail, max: MAX_TIME_SAVED_MINUTES }) : `${detail}.`,
     breakdown,
     capped,
   };

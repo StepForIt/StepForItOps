@@ -19,6 +19,7 @@ import {
 import { PromoteDefaults, PromoteDefaultsService } from './promote-defaults.service';
 import { PromotionPublishService, PublishRunView } from './promotion-publish.service';
 import { AppliedPathFix, WebhookPathFixService } from './webhook-path-fix.service';
+import { assertValidMapping } from './resource-mapping-input';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ModuleId } from '../../infra/modules-registry/module-id.decorator';
 import { RefineListQuery, toPrismaListArgs, withTotalCount } from '../../common/crud/paginate';
@@ -195,6 +196,7 @@ export class EnvSwitcherController {
   create(
     @Body() body: { provider: string; logicalName: string; values: object; labels?: object },
   ): Promise<ResourceMapping> {
+    assertValidMapping(body, false);
     return this.prisma.resourceMapping.create({ data: body });
   }
 
@@ -203,6 +205,7 @@ export class EnvSwitcherController {
     @Param('id') id: string,
     @Body() body: Partial<{ provider: string; logicalName: string; values: object; labels: object }>,
   ): Promise<ResourceMapping> {
+    assertValidMapping(body, true);
     return this.prisma.resourceMapping.update({ where: { id }, data: body });
   }
 

@@ -28,6 +28,8 @@ import { useInstanceScope } from '../../lib/instance-scope';
 import { usePersistedState } from '../../lib/list-memory/use-list-memory';
 import { MermaidView } from '../../components/mermaid-view';
 import { WorkflowMapHelp } from './workflow-map-help';
+import { WorkflowMapLegend } from './workflow-map-legend';
+import { classDefLines, nodeClass } from './map-style';
 import { WorkflowLinkModal, WorkflowLinkFormValues } from './workflow-link-modal';
 import type { TriggerKind, WorkflowMapLink, WorkflowMapNode } from './types';
 import { useEnvs } from '../../lib/envs';
@@ -68,12 +70,6 @@ const TRIGGER_KEYS = {
   manual: 'manual',
 } as const satisfies Record<TriggerKind, string>;
 
-/** Ne tourne jamais seul : hors bouton de test, il ne démarre que sur appel d'un autre workflow. */
-function isSubWorkflowOnly(node: WorkflowMapNode): boolean {
-  const real = (node.triggers ?? []).filter((kind) => kind !== 'manual');
-  return real.length === 1 && real[0] === 'sub-workflow';
-}
-
 /** Comment ce workflow démarre, en une ligne — vide s'il n'a plus aucun trigger actif. */
 function triggersLabel(node: WorkflowMapNode, t: MapT): string {
   return (node.triggers ?? []).map((kind) => t(`triggers.${TRIGGER_KEYS[kind]}`)).join(' · ');
@@ -104,15 +100,6 @@ function linkLabel(link: WorkflowMapLink, t: MapT): string | null {
 
 function workflowHref(id: string): string {
   return `/workflows/show/${encodeURIComponent(id)}?tab=graph`;
-}
-
-/** Ce que le workflow est sur la carte — c'est ce qui donne sa couleur à sa boîte. */
-function nodeClass(node: WorkflowMapNode): string {
-  if (node.external) return 'external';
-  if (node.archived) return 'archived';
-  if (node.active === false) return 'inactive';
-  if (isSubWorkflowOnly(node)) return 'subworkflow';
-  return 'workflow';
 }
 
 // Les flèches d'un même workflow partagent une couleur tirée de son id (`keyColor`) : on suit son
@@ -194,13 +181,7 @@ function toMermaid(
     lines.push(`  linkStyle ${indexes.join(',')} stroke:${color},stroke-width:1.6px;`);
   }
 
-  lines.push(`  classDef workflow fill:${BRAND.primarySoft},stroke:${BRAND.primary};`);
-  lines.push('  classDef inactive fill:#fafafa,stroke:#bfbfbf,color:#8c8c8c;');
-  lines.push('  classDef archived fill:#f5f5f5,stroke:#d9d9d9,color:#8c8c8c,stroke-dasharray: 4 4;');
-  lines.push('  classDef external fill:#fff7e6,stroke:#fa8c16,stroke-dasharray: 4 4;');
-  lines.push('  classDef subworkflow fill:#f9f0ff,stroke:#722ed1;');
-  lines.push('  classDef subcall fill:#f9f0ff,stroke:#722ed1,stroke-dasharray: 4 4;');
-  lines.push('  classDef entry fill:#f6ffed,stroke:#52c41a,stroke-dasharray: 4 4,color:#389e0d;');
+  lines.push(...classDefLines());
   return lines.join('\n');
 }
 
@@ -491,6 +472,11 @@ export default function WorkflowMapPage() {
             <Alert type="warning" showIcon message={t('tooMany')} />
           ) : (
             <>
+              <WorkflowMapLegend
+                nodes={visible.nodes}
+                links={visible.links}
+                showEntryPoints={showEntryPoints}
+              />
               <Typography.Paragraph type="secondary">{t('clickHint')}</Typography.Paragraph>
               {/* Pied de boîte des déclencheurs : une note en bas de l'encadré, pas un titre. */}
               <style>{`

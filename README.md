@@ -108,6 +108,17 @@ docker compose -f docker-compose.hub.yml up -d
 
 Open the console, create the admin account, **add the URL and API key of your n8n instances**. Sync, checks, monitoring and costs start on their own.
 
+**No n8n yet?** The `docker-compose.hub-n8n.yml` pack runs Ops **and** a ready-to-connect n8n, in one command:
+
+```bash
+curl -O https://raw.githubusercontent.com/StepForIt/StepForItOps/dev/docker-compose.hub-n8n.yml
+# same .env, plus N8N_ENCRYPTION_KEY (32 random characters, never change it afterwards)
+# and N8N_PUBLIC_URL (http://<host>:5678 or https://n8n.<domain>)
+docker compose -f docker-compose.hub-n8n.yml up -d
+```
+
+n8n opens on http://localhost:5678 (create the owner account there, then an API key). In Ops, add the instance with the internal address **`http://n8n:5678`** and that key. n8n data lives in the `n8n_data` volume: `down` then `up` loses nothing.
+
 ## 👀 Try it without connecting anything
 
 **Demo mode** runs the real console on a fictional fleet (2 clients, 17 workflows, 45 days of history), with no n8n and no AI key:

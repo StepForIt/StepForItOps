@@ -148,6 +148,11 @@ const buildResources = (t: ReturnType<typeof useTranslations<'app.menu'>>) => [
     list: '/model-audit',
     meta: { label: t('modelAudit'), icon: <RobotOutlined />, parent: 'health' },
   },
+  {
+    name: 'credential-check',
+    list: '/credential-check',
+    meta: { label: t('credentialCheck'), icon: <ApiOutlined />, parent: 'health' },
+  },
   // Même page que « Erreurs » (onglet Problèmes) : pas d'entrée de menu.
   { name: 'error-groups', meta: { hide: true } },
   {

@@ -17,9 +17,16 @@ datasource db {
 model Client {
   id        String     @id @default(uuid())
   name      String     @unique
+  /// Ce que le client voit de son espace (portail du cloud) : exécutions du jour,
+  /// et incidents en cours en langage métier. Posés ici, appliqués à la SOURCE :
+  /// éteint, le chiffre ne quitte pas la pile.
+  portalShowToday     Boolean @default(true)
+  portalShowIncidents Boolean @default(false)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   instances Instance[]
+  /// Workflows affectés à ce client (prioritaire sur le client de leur instance).
+  workflows Workflow[]
 }
 
 model Instance {
@@ -94,6 +101,13 @@ model Workflow {
   instance                 Instance                   @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   externalId               String
   name                     String
+  /// Client à qui ce workflow est affecté. Prime sur le client de l'instance :
+  /// sans lui, le workflow suit son instance (comportement d'avant).
+  clientId                 String?
+  client                   Client?                    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  /// Nom montré au client dans son espace, à la place du nom interne. Null :
+  /// le nom du workflow, débarrassé de son env et de sa version.
+  publicName               String?
   active                   Boolean                    @default(false)
   tags                     String[]                   @default([])
   hash                     String
@@ -155,6 +169,7 @@ model Workflow {
   lockOverrides            WorkflowLockOverride[]
 
   @@unique([instanceId, externalId])
+  @@index([clientId])
 }
 
 /// Verrou posé sur UN exemplaire : aucune écriture de la plateforme ne le modifie
@@ -708,6 +723,43 @@ model PerfDriftAlert {
   alertedAt          DateTime @default(now())
 
   @@unique([instanceId, externalWorkflowId])
+}
+
+/// Réglages du test automatique des credentials IA (module credential-check).
+/// Ligne unique. Trois rythmes parce que trois coûts : l'accès est gratuit chez la plupart
+/// des fournisseurs, payant chez ceux sans listing (Perplexity), et le crédit génère un appel.
+model CredentialCheckSettings {
+  id                   String   @id
+  enabled              Boolean  @default(true)
+  accessEveryHours     Int      @default(24)
+  paidAccessEveryHours Int      @default(168)
+  creditEveryHours     Int      @default(168)
+  updatedAt            DateTime @updatedAt
+}
+
+/// Dernier passage sur une credential de fournisseur IA : de quoi décider quel test est dû,
+/// afficher le dernier verdict, et n'alerter qu'une fois par panne (`alertedVerdict`).
+/// État dérivé, reconstructible : un test rejoué le recrée, comme PerfDriftAlert.
+model CredentialCheckState {
+  id             String    @id @default(uuid())
+  instanceId     String
+  credentialId   String
+  type           String
+  name           String?
+  provider       String
+  /// ok | rejected | no-credit | rate-limited | unreachable | unknown
+  verdict        String
+  /// auth | quota — le niveau du dernier test.
+  level          String
+  detail         String?
+  checkedAt      DateTime
+  /// Dernier test qui a vérifié l'ACCÈS (un test de crédit en est un aussi).
+  lastAccessAt   DateTime?
+  lastCreditAt   DateTime?
+  /// Verdict déjà annoncé et non levé depuis : un passage qui le retrouve se tait.
+  alertedVerdict String?
+
+  @@unique([instanceId, credentialId])
 }
 
 /// Canal d'alerte du module notifier (Slack incoming webhook ou webhook générique).

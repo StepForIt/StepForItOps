@@ -6,6 +6,7 @@ import type { FormProps } from 'antd';
 import { DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { DiscoveredItem, ResourceDiscoveryBrowser } from './resource-discovery-browser';
+import { EnvExplainer } from './env-explainer';
 import { EnvDefinition, useEnvs } from '../lib/envs';
 
 /**
@@ -115,6 +116,7 @@ function DiscoveryPicker() {
 /** Formulaire mapping : une ligne par ressource à basculer, une colonne par env déclaré. */
 export function MappingForm({ formProps }: { formProps: FormProps }) {
   const t = useTranslations('settings.mappingForm');
+  const te = useTranslations('settings.envExplainer');
   const tc = useTranslations('common');
   const { envs } = useEnvs();
   const initialValues = (formProps.initialValues?.values ?? undefined) as EnvMap | undefined;
@@ -150,6 +152,7 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
         });
       }}
     >
+      <EnvExplainer compact />
       <Space size="large" wrap>
         <Form.Item
           label={t('provider')}
@@ -178,6 +181,7 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
       </Space>
 
       <Typography.Paragraph type="secondary">{t('help')}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">{te('example')}</Typography.Paragraph>
 
       <Form.List name="rows">
         {(fields, { add, remove }) => (
@@ -204,13 +208,23 @@ export function MappingForm({ formProps }: { formProps: FormProps }) {
                     <Input aria-label={t('rowName')} placeholder={t('optional')} style={{ width: 180 }} />
                   </Form.Item>
                   {columns.map((env) => (
-                    <Form.Item key={env.id} name={[field.name, 'v', env.id]}>
-                      <Input
-                        aria-label={t('identifier', { env: env.label })}
-                        placeholder={`app${env.id.toUpperCase()}…`}
-                        style={{ width: 220 }}
-                      />
-                    </Form.Item>
+                    <div key={env.id} style={{ width: 220 }}>
+                      <Form.Item name={[field.name, 'v', env.id]} style={{ marginBottom: 4 }}>
+                        <Input
+                          aria-label={t('identifier', { env: env.label })}
+                          placeholder={`app${env.id.toUpperCase()}…`}
+                        />
+                      </Form.Item>
+                      {/* Le nom affiché se saisit à la main comme la découverte le remplit : sans lui
+                          la bascule estampille l'env (« CRM (prod) ») au lieu du vrai titre. */}
+                      <Form.Item name={[field.name, 'l', env.id]}>
+                        <Input
+                          size="small"
+                          aria-label={t('displayName', { env: env.label })}
+                          placeholder={t('displayNamePlaceholder')}
+                        />
+                      </Form.Item>
+                    </div>
                   ))}
                   <Button
                     type="text"

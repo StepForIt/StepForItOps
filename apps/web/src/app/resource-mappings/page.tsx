@@ -8,6 +8,7 @@ import { Table } from '../../components/resizable-table';
 import { ScanOutlined } from '@ant-design/icons';
 import { WorkflowScanDrawer } from '../../components/workflow-scan-drawer';
 import { useTranslations } from 'next-intl';
+import { EnvExplainer } from '../../components/env-explainer';
 import { EmptyPlaceholder, ListEmptyState } from '../../components/empty-state/list-empty-state';
 
 interface Mapping {
@@ -25,6 +26,7 @@ export default function MappingsList() {
     sorters: { initial: [{ field: 'logicalName', order: 'asc' }] },
   });
   const [scanOpen, setScanOpen] = useState(false);
+  const isEmpty = !tableProps.loading && (tableProps.dataSource?.length ?? 0) === 0;
 
   return (
     <List
@@ -38,6 +40,8 @@ export default function MappingsList() {
         </>
       }
     >
+      {/* La clé rouvre le bloc quand la liste se révèle vide APRÈS le chargement : l'état initial est figé au montage. */}
+      <EnvExplainer key={String(isEmpty)} defaultOpen={isEmpty} />
       <Table
         {...tableProps}
         rowKey="id"

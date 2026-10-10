@@ -181,6 +181,7 @@ export const chat = defineMessages(
     autofixStale:
       'The workflow has changed since the analysis: this fix no longer applies. Run the check again.',
     autofixSummary: 'Fix computed by the rule (no AI):',
+    fixAllNeedsReview: 'This environment is monitored: the fix is left for you to review before writing.',
     memoryEmpty: 'Empty fact',
     memoryTooLong:
       'Fact too long ({length} characters, maximum {max}): keep the constraint, not its context.',
@@ -374,6 +375,8 @@ export const chat = defineMessages(
     autofixStale:
       'Le workflow a changé depuis l’analyse : ce correctif ne s’applique plus. Relance la vérification.',
     autofixSummary: 'Correctif calculé par la règle (sans IA) :',
+    fixAllNeedsReview:
+      'Cet environnement est surveillé : le correctif attend ta relecture avant d’être écrit.',
     memoryEmpty: 'Fait vide',
     memoryTooLong:
       'Fait trop long ({length} caractères, maximum {max}) : garde la contrainte, pas son contexte.',

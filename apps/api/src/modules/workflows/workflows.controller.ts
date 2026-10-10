@@ -89,6 +89,23 @@ export class WorkflowsController {
     return this.workflows.get(id);
   }
 
+  /** Affectation à un client (espace client) et nom public ; `clientId` nul pour retirer. */
+  @Patch(':id/client')
+  async setClient(
+    @Param('id') id: string,
+    @Body() body: { clientId?: string | null; publicName?: string | null },
+  ): Promise<{ ok: true }> {
+    // Sans caractère de contrôle : le nom s'affiche tel quel chez le client.
+    const publicName =
+      Array.from(body.publicName ?? '')
+        .filter((c) => c.codePointAt(0)! > 0x1f && c.codePointAt(0) !== 0x7f)
+        .join('')
+        .trim()
+        .slice(0, 100) || null;
+    await this.workflows.setClient(id, body.clientId ?? null, publicName);
+    return { ok: true };
+  }
+
   /** Minutes de travail manuel économisées par exécution (ROI) ; null pour effacer. */
   @Patch(':id/time-saved')
   async setTimeSaved(

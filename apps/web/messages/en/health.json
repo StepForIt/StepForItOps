@@ -421,5 +421,39 @@
         "text": "A monitor warns you as soon as a workflow fails or stops beating, before your customers notice."
       }
     }
+  },
+  "credentialCheck": {
+    "title": "Credential check",
+    "intro": "Checks that your AI keys (OpenAI, Anthropic, Mistral, Perplexity) still work, before a workflow fails at a customer’s. The access test is free; the credit test costs less than a cent.",
+    "checkAll": "Test all",
+    "test": "Test access",
+    "testCredit": "Test credit",
+    "quotaConfirm": "Makes a real one-token call to the provider (under a cent) to see whether the account has run dry.",
+    "quotaOk": "Test",
+    "notTested": "Not tested yet",
+    "usedBy": "{count, plural, one {# node} other {# nodes}}",
+    "problems": "{count, plural, one {# credential needs action} other {# credentials need action}}: key rejected or account out of credit.",
+    "columns": {
+      "credential": "Credential",
+      "state": "State"
+    },
+    "verdicts": {
+      "ok": "Working",
+      "rejected": "Key rejected",
+      "no-credit": "Out of credit",
+      "rate-limited": "Rate limited, retry later",
+      "unreachable": "Unreachable",
+      "unknown": "Unexpected response"
+    },
+    "levelDone": {
+      "auth": "Access tested",
+      "quota": "Access and credit tested"
+    },
+    "empty": {
+      "title": "No AI provider credential",
+      "text": "They appear as soon as a synced workflow uses OpenAI, Anthropic, Mistral or Perplexity."
+    },
+    "lastChecked": "Last check: {date}",
+    "settingsLink": "Set how often credentials are checked automatically"
   }
 }
